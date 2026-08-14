@@ -1,0 +1,974 @@
+[
+  {
+    "id": "encadre-normal",
+    "fichier": "encadre-normal.png",
+    "dates": [
+      "2025-03-12",
+      "2025-04-09",
+      "2025-05-14"
+    ],
+    "lignes": [
+      {
+        "nom": "Hemoglobine",
+        "unite": "g/dL",
+        "valeurs": [
+          "9.8",
+          "10.9",
+          "11.7"
+        ]
+      },
+      {
+        "nom": "Leucocytes",
+        "unite": "G/L",
+        "valeurs": [
+          "14.2",
+          "9.1",
+          "7.4"
+        ]
+      },
+      {
+        "nom": "Plaquettes",
+        "unite": "G/L",
+        "valeurs": [
+          "480",
+          "365",
+          "288"
+        ]
+      },
+      {
+        "nom": "Creatinine",
+        "unite": "umol/L",
+        "valeurs": [
+          "168",
+          "132",
+          "115"
+        ]
+      },
+      {
+        "nom": "CRP",
+        "unite": "mg/L",
+        "valeurs": [
+          "96",
+          "28",
+          "7"
+        ]
+      },
+      {
+        "nom": "Albumine",
+        "unite": "g/L",
+        "valeurs": [
+          "28",
+          "33",
+          "37"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "encadre-petit",
+    "fichier": "encadre-petit.png",
+    "dates": [
+      "2025-03-12",
+      "2025-04-09",
+      "2025-05-14"
+    ],
+    "lignes": [
+      {
+        "nom": "Hemoglobine",
+        "unite": "g/dL",
+        "valeurs": [
+          "9.8",
+          "10.9",
+          "11.7"
+        ]
+      },
+      {
+        "nom": "Leucocytes",
+        "unite": "G/L",
+        "valeurs": [
+          "14.2",
+          "9.1",
+          "7.4"
+        ]
+      },
+      {
+        "nom": "Plaquettes",
+        "unite": "G/L",
+        "valeurs": [
+          "480",
+          "365",
+          "288"
+        ]
+      },
+      {
+        "nom": "Creatinine",
+        "unite": "umol/L",
+        "valeurs": [
+          "168",
+          "132",
+          "115"
+        ]
+      },
+      {
+        "nom": "CRP",
+        "unite": "mg/L",
+        "valeurs": [
+          "96",
+          "28",
+          "7"
+        ]
+      },
+      {
+        "nom": "Albumine",
+        "unite": "g/L",
+        "valeurs": [
+          "28",
+          "33",
+          "37"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "zebre-normal",
+    "fichier": "zebre-normal.png",
+    "dates": [
+      "2024-01-15",
+      "2024-03-04",
+      "2024-06-18",
+      "2024-09-02"
+    ],
+    "lignes": [
+      {
+        "nom": "Sodium",
+        "unite": "mmol/L",
+        "valeurs": [
+          "138",
+          "141",
+          "136",
+          "140"
+        ]
+      },
+      {
+        "nom": "Potassium",
+        "unite": "mmol/L",
+        "valeurs": [
+          "4.1",
+          "3.8",
+          "4.6",
+          "4.0"
+        ]
+      },
+      {
+        "nom": "Uree",
+        "unite": "mmol/L",
+        "valeurs": [
+          "8.2",
+          "6.4",
+          "12.1",
+          "7.3"
+        ]
+      },
+      {
+        "nom": "Creatinine",
+        "unite": "umol/L",
+        "valeurs": [
+          "142",
+          "118",
+          "205",
+          "131"
+        ]
+      },
+      {
+        "nom": "Calcium",
+        "unite": "mmol/L",
+        "valeurs": [
+          "2.31",
+          "2.44",
+          "2.18",
+          "2.39"
+        ]
+      },
+      {
+        "nom": "Phosphore",
+        "unite": "mmol/L",
+        "valeurs": [
+          "1.12",
+          "0.94",
+          "1.48",
+          "1.05"
+        ]
+      },
+      {
+        "nom": "Albumine",
+        "unite": "g/L",
+        "valeurs": [
+          "34",
+          "38",
+          "29",
+          "36"
+        ]
+      },
+      {
+        "nom": "CRP",
+        "unite": "mg/L",
+        "valeurs": [
+          "12",
+          "<5",
+          "48",
+          "6"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "zebre-petit",
+    "fichier": "zebre-petit.png",
+    "dates": [
+      "2024-01-15",
+      "2024-03-04",
+      "2024-06-18",
+      "2024-09-02"
+    ],
+    "lignes": [
+      {
+        "nom": "Sodium",
+        "unite": "mmol/L",
+        "valeurs": [
+          "138",
+          "141",
+          "136",
+          "140"
+        ]
+      },
+      {
+        "nom": "Potassium",
+        "unite": "mmol/L",
+        "valeurs": [
+          "4.1",
+          "3.8",
+          "4.6",
+          "4.0"
+        ]
+      },
+      {
+        "nom": "Uree",
+        "unite": "mmol/L",
+        "valeurs": [
+          "8.2",
+          "6.4",
+          "12.1",
+          "7.3"
+        ]
+      },
+      {
+        "nom": "Creatinine",
+        "unite": "umol/L",
+        "valeurs": [
+          "142",
+          "118",
+          "205",
+          "131"
+        ]
+      },
+      {
+        "nom": "Calcium",
+        "unite": "mmol/L",
+        "valeurs": [
+          "2.31",
+          "2.44",
+          "2.18",
+          "2.39"
+        ]
+      },
+      {
+        "nom": "Phosphore",
+        "unite": "mmol/L",
+        "valeurs": [
+          "1.12",
+          "0.94",
+          "1.48",
+          "1.05"
+        ]
+      },
+      {
+        "nom": "Albumine",
+        "unite": "g/L",
+        "valeurs": [
+          "34",
+          "38",
+          "29",
+          "36"
+        ]
+      },
+      {
+        "nom": "CRP",
+        "unite": "mg/L",
+        "valeurs": [
+          "12",
+          "<5",
+          "48",
+          "6"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "serif-palecontraste",
+    "fichier": "serif-palecontraste.png",
+    "dates": [
+      "2023-11-08",
+      "2023-12-06"
+    ],
+    "lignes": [
+      {
+        "nom": "ASAT",
+        "unite": "UI/L",
+        "valeurs": [
+          "62",
+          "38"
+        ]
+      },
+      {
+        "nom": "ALAT",
+        "unite": "UI/L",
+        "valeurs": [
+          "81",
+          "45"
+        ]
+      },
+      {
+        "nom": "GGT",
+        "unite": "UI/L",
+        "valeurs": [
+          "155",
+          "98"
+        ]
+      },
+      {
+        "nom": "PAL",
+        "unite": "UI/L",
+        "valeurs": [
+          "210",
+          "176"
+        ]
+      },
+      {
+        "nom": "Bilirubine totale",
+        "unite": "umol/L",
+        "valeurs": [
+          "24",
+          "15"
+        ]
+      },
+      {
+        "nom": "TP",
+        "unite": "%",
+        "valeurs": [
+          "68",
+          "84"
+        ]
+      },
+      {
+        "nom": "Fibrinogene",
+        "unite": "g/L",
+        "valeurs": [
+          "5.2",
+          "3.7"
+        ]
+      },
+      {
+        "nom": "Ferritine",
+        "unite": "ug/L",
+        "valeurs": [
+          "1240",
+          "860"
+        ]
+      },
+      {
+        "nom": "TSH",
+        "unite": "mUI/L",
+        "valeurs": [
+          "0.42",
+          "1.85"
+        ]
+      },
+      {
+        "nom": "Vitamine D",
+        "unite": "nmol/L",
+        "valeurs": [
+          "38",
+          "62"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "serif-petit",
+    "fichier": "serif-petit.png",
+    "dates": [
+      "2023-11-08",
+      "2023-12-06"
+    ],
+    "lignes": [
+      {
+        "nom": "ASAT",
+        "unite": "UI/L",
+        "valeurs": [
+          "62",
+          "38"
+        ]
+      },
+      {
+        "nom": "ALAT",
+        "unite": "UI/L",
+        "valeurs": [
+          "81",
+          "45"
+        ]
+      },
+      {
+        "nom": "GGT",
+        "unite": "UI/L",
+        "valeurs": [
+          "155",
+          "98"
+        ]
+      },
+      {
+        "nom": "PAL",
+        "unite": "UI/L",
+        "valeurs": [
+          "210",
+          "176"
+        ]
+      },
+      {
+        "nom": "Bilirubine totale",
+        "unite": "umol/L",
+        "valeurs": [
+          "24",
+          "15"
+        ]
+      },
+      {
+        "nom": "TP",
+        "unite": "%",
+        "valeurs": [
+          "68",
+          "84"
+        ]
+      },
+      {
+        "nom": "Fibrinogene",
+        "unite": "g/L",
+        "valeurs": [
+          "5.2",
+          "3.7"
+        ]
+      },
+      {
+        "nom": "Ferritine",
+        "unite": "ug/L",
+        "valeurs": [
+          "1240",
+          "860"
+        ]
+      },
+      {
+        "nom": "TSH",
+        "unite": "mUI/L",
+        "valeurs": [
+          "0.42",
+          "1.85"
+        ]
+      },
+      {
+        "nom": "Vitamine D",
+        "unite": "nmol/L",
+        "valeurs": [
+          "38",
+          "62"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "fleches-anormales",
+    "fichier": "fleches-anormales.png",
+    "dates": [
+      "2026-02-03",
+      "2026-02-17",
+      "2026-03-10"
+    ],
+    "lignes": [
+      {
+        "nom": "Leucocytes",
+        "unite": "G/L",
+        "valeurs": [
+          "3.8",
+          "5.1",
+          "6.9"
+        ]
+      },
+      {
+        "nom": "PNN",
+        "unite": "G/L",
+        "valeurs": [
+          "1.4",
+          "2.7",
+          "4.1"
+        ]
+      },
+      {
+        "nom": "Lymphocytes",
+        "unite": "G/L",
+        "valeurs": [
+          "1.9",
+          "1.7",
+          "2.2"
+        ]
+      },
+      {
+        "nom": "Plaquettes",
+        "unite": "G/L",
+        "valeurs": [
+          "96",
+          "145",
+          "232"
+        ]
+      },
+      {
+        "nom": "Hemoglobine",
+        "unite": "g/dL",
+        "valeurs": [
+          "8.4",
+          "9.6",
+          "11.2"
+        ]
+      },
+      {
+        "nom": "VGM",
+        "unite": "fL",
+        "valeurs": [
+          "104",
+          "98",
+          "92"
+        ]
+      },
+      {
+        "nom": "IgG",
+        "unite": "g/L",
+        "valeurs": [
+          "4.8",
+          "6.2",
+          "8.1"
+        ]
+      },
+      {
+        "nom": "C3",
+        "unite": "g/L",
+        "valeurs": [
+          "0.72",
+          "0.95",
+          "1.24"
+        ]
+      },
+      {
+        "nom": "Anticorps anti-DNA",
+        "unite": "UI/mL",
+        "valeurs": [
+          ">300",
+          "184",
+          "46"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "encadre-gris",
+    "fichier": "encadre-gris.png",
+    "dates": [
+      "2023-11-08",
+      "2023-12-06"
+    ],
+    "lignes": [
+      {
+        "nom": "ASAT",
+        "unite": "UI/L",
+        "valeurs": [
+          "62",
+          "38"
+        ]
+      },
+      {
+        "nom": "ALAT",
+        "unite": "UI/L",
+        "valeurs": [
+          "81",
+          "45"
+        ]
+      },
+      {
+        "nom": "GGT",
+        "unite": "UI/L",
+        "valeurs": [
+          "155",
+          "98"
+        ]
+      },
+      {
+        "nom": "PAL",
+        "unite": "UI/L",
+        "valeurs": [
+          "210",
+          "176"
+        ]
+      },
+      {
+        "nom": "Bilirubine totale",
+        "unite": "umol/L",
+        "valeurs": [
+          "24",
+          "15"
+        ]
+      },
+      {
+        "nom": "TP",
+        "unite": "%",
+        "valeurs": [
+          "68",
+          "84"
+        ]
+      },
+      {
+        "nom": "Fibrinogene",
+        "unite": "g/L",
+        "valeurs": [
+          "5.2",
+          "3.7"
+        ]
+      },
+      {
+        "nom": "Ferritine",
+        "unite": "ug/L",
+        "valeurs": [
+          "1240",
+          "860"
+        ]
+      },
+      {
+        "nom": "TSH",
+        "unite": "mUI/L",
+        "valeurs": [
+          "0.42",
+          "1.85"
+        ]
+      },
+      {
+        "nom": "Vitamine D",
+        "unite": "nmol/L",
+        "valeurs": [
+          "38",
+          "62"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "zebre-hd",
+    "fichier": "zebre-hd.png",
+    "dates": [
+      "2026-02-03",
+      "2026-02-17",
+      "2026-03-10"
+    ],
+    "lignes": [
+      {
+        "nom": "Leucocytes",
+        "unite": "G/L",
+        "valeurs": [
+          "3.8",
+          "5.1",
+          "6.9"
+        ]
+      },
+      {
+        "nom": "PNN",
+        "unite": "G/L",
+        "valeurs": [
+          "1.4",
+          "2.7",
+          "4.1"
+        ]
+      },
+      {
+        "nom": "Lymphocytes",
+        "unite": "G/L",
+        "valeurs": [
+          "1.9",
+          "1.7",
+          "2.2"
+        ]
+      },
+      {
+        "nom": "Plaquettes",
+        "unite": "G/L",
+        "valeurs": [
+          "96",
+          "145",
+          "232"
+        ]
+      },
+      {
+        "nom": "Hemoglobine",
+        "unite": "g/dL",
+        "valeurs": [
+          "8.4",
+          "9.6",
+          "11.2"
+        ]
+      },
+      {
+        "nom": "VGM",
+        "unite": "fL",
+        "valeurs": [
+          "104",
+          "98",
+          "92"
+        ]
+      },
+      {
+        "nom": "IgG",
+        "unite": "g/L",
+        "valeurs": [
+          "4.8",
+          "6.2",
+          "8.1"
+        ]
+      },
+      {
+        "nom": "C3",
+        "unite": "g/L",
+        "valeurs": [
+          "0.72",
+          "0.95",
+          "1.24"
+        ]
+      },
+      {
+        "nom": "Anticorps anti-DNA",
+        "unite": "UI/mL",
+        "valeurs": [
+          ">300",
+          "184",
+          "46"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "encadre-minuscule",
+    "fichier": "encadre-minuscule.png",
+    "dates": [
+      "2024-01-15",
+      "2024-03-04",
+      "2024-06-18",
+      "2024-09-02"
+    ],
+    "lignes": [
+      {
+        "nom": "Sodium",
+        "unite": "mmol/L",
+        "valeurs": [
+          "138",
+          "141",
+          "136",
+          "140"
+        ]
+      },
+      {
+        "nom": "Potassium",
+        "unite": "mmol/L",
+        "valeurs": [
+          "4.1",
+          "3.8",
+          "4.6",
+          "4.0"
+        ]
+      },
+      {
+        "nom": "Uree",
+        "unite": "mmol/L",
+        "valeurs": [
+          "8.2",
+          "6.4",
+          "12.1",
+          "7.3"
+        ]
+      },
+      {
+        "nom": "Creatinine",
+        "unite": "umol/L",
+        "valeurs": [
+          "142",
+          "118",
+          "205",
+          "131"
+        ]
+      },
+      {
+        "nom": "Calcium",
+        "unite": "mmol/L",
+        "valeurs": [
+          "2.31",
+          "2.44",
+          "2.18",
+          "2.39"
+        ]
+      },
+      {
+        "nom": "Phosphore",
+        "unite": "mmol/L",
+        "valeurs": [
+          "1.12",
+          "0.94",
+          "1.48",
+          "1.05"
+        ]
+      },
+      {
+        "nom": "Albumine",
+        "unite": "g/L",
+        "valeurs": [
+          "34",
+          "38",
+          "29",
+          "36"
+        ]
+      },
+      {
+        "nom": "CRP",
+        "unite": "mg/L",
+        "valeurs": [
+          "12",
+          "<5",
+          "48",
+          "6"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "medecin",
+    "fichier": "medecin.png",
+    "dates": [
+      "2024-03-12",
+      "2024-06-15",
+      "2024-09-20"
+    ],
+    "lignes": [
+      {
+        "nom": "Creatinine",
+        "unite": "umol/L",
+        "valeurs": [
+          "85",
+          "92",
+          "110"
+        ]
+      },
+      {
+        "nom": "CRP",
+        "unite": "mg/L",
+        "valeurs": [
+          "3",
+          "12",
+          "45"
+        ]
+      },
+      {
+        "nom": "Hemoglobine",
+        "unite": "g/dL",
+        "valeurs": [
+          "13.2",
+          "12.8",
+          "11.9"
+        ]
+      },
+      {
+        "nom": "Leucocytes",
+        "unite": "G/L",
+        "valeurs": [
+          "7.4",
+          "9.1",
+          "12.2"
+        ]
+      },
+      {
+        "nom": "Plaquettes",
+        "unite": "G/L",
+        "valeurs": [
+          "245",
+          "198",
+          "312"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "medecin-petit",
+    "fichier": "medecin-petit.png",
+    "dates": [
+      "2024-03-12",
+      "2024-06-15",
+      "2024-09-20"
+    ],
+    "lignes": [
+      {
+        "nom": "Creatinine",
+        "unite": "umol/L",
+        "valeurs": [
+          "85",
+          "92",
+          "110"
+        ]
+      },
+      {
+        "nom": "CRP",
+        "unite": "mg/L",
+        "valeurs": [
+          "3",
+          "12",
+          "45"
+        ]
+      },
+      {
+        "nom": "Hemoglobine",
+        "unite": "g/dL",
+        "valeurs": [
+          "13.2",
+          "12.8",
+          "11.9"
+        ]
+      },
+      {
+        "nom": "Leucocytes",
+        "unite": "G/L",
+        "valeurs": [
+          "7.4",
+          "9.1",
+          "12.2"
+        ]
+      },
+      {
+        "nom": "Plaquettes",
+        "unite": "G/L",
+        "valeurs": [
+          "245",
+          "198",
+          "312"
+        ]
+      }
+    ]
+  }
+]
