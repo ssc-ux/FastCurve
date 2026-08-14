@@ -176,6 +176,62 @@ export function parseDate(input: string): string | null {
   return null;
 }
 
+/**
+ * Lecture « tolérante » d'une date tapée à la main dans la grille.
+ *
+ * Dans un tableur on tape une date comme on la dit : « 5/12 », « 05122026 »,
+ * « 5.12.26 ». Exiger un format unique oblige à réfléchir au clavier au lieu de
+ * réfléchir au patient ; on accepte donc tout ce qui est lisible sans ambiguïté :
+ *  - tous les formats de `parseDate` (ISO, JJ/MM/AAAA, JJ-MM-AA…) ;
+ *  - JJ/MM sans année → année de référence (aujourd'hui par défaut) ;
+ *  - 8 chiffres collés : JJMMAAAA, sinon AAAAMMJJ ;
+ *  - 6 chiffres collés : JJMMAA ;
+ *  - 4 chiffres collés : JJMM (année de référence).
+ *
+ * Retourne une date ISO, ou null si la saisie n'est pas interprétable — dans ce
+ * cas l'appelant DOIT conserver l'ancienne date : deviner à la place du médecin
+ * déplacerait des valeurs cliniques sur une date qu'il n'a pas choisie.
+ */
+export function parseDateSouple(input: string, reference?: string): string | null {
+  if (!input) return null;
+  const s = input.trim();
+  if (!s) return null;
+
+  const direct = parseDate(s);
+  if (direct) return direct;
+
+  const anneeRef = +(reference ?? todayISO()).slice(0, 4);
+
+  // JJ/MM (ou JJ-MM, JJ.MM) sans année
+  const sansAnnee = s.match(/^(\d{1,2})[\/\-.](\d{1,2})$/);
+  if (sansAnnee) {
+    const d = +sansAnnee[1], m = +sansAnnee[2];
+    return validYMD(anneeRef, m, d) ? `${anneeRef}-${pad(m)}-${pad(d)}` : null;
+  }
+
+  // Suites de chiffres collées (frappe rapide au pavé numérique)
+  const chiffres = s.match(/^(\d{4,8})$/);
+  if (!chiffres) return null;
+  const n = chiffres[1];
+
+  if (n.length === 8) {
+    // JJMMAAAA d'abord (c'est ce qu'on tape en français), AAAAMMJJ en repli.
+    const jma = tenter(+n.slice(4, 8), +n.slice(2, 4), +n.slice(0, 2));
+    if (jma) return jma;
+    return tenter(+n.slice(0, 4), +n.slice(4, 6), +n.slice(6, 8));
+  }
+  if (n.length === 6) {
+    const aa = +n.slice(4, 6);
+    return tenter(aa >= 70 ? 1900 + aa : 2000 + aa, +n.slice(2, 4), +n.slice(0, 2));
+  }
+  if (n.length === 4) return tenter(anneeRef, +n.slice(2, 4), +n.slice(0, 2));
+  return null;
+}
+
+function tenter(y: number, m: number, d: number): string | null {
+  return validYMD(y, m, d) ? `${y}-${pad(m)}-${pad(d)}` : null;
+}
+
 function validYMD(y: number, m: number, d: number): boolean {
   if (m < 1 || m > 12) return false;
   if (d < 1 || d > 31) return false;
