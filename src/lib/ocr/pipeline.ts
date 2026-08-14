@@ -354,7 +354,11 @@ export async function reconnaitreTableau(
   }
 
   const cellule = (bi: number, ci: number) => celluleDe(carte, polarite, bandes[bi], colonnes[ci], hL);
-  const rendre = (c: Cellule) => rendreCellule(source, c.boite, { inverse: c.inverse });
+  // Une case de résultat est agrandie plus fort que les autres : c'est là que
+  // se joue la virgule décimale, et une virgule de deux pixels ne survit pas à
+  // un agrandissement timide.
+  const rendre = (c: Cellule, mode: ModeCellule) =>
+    rendreCellule(source, c.boite, { inverse: c.inverse, hauteurCible: mode === 'valeur' ? 68 : 46 });
 
   const bornesTable = {
     gauche: colonnes[0].x0,
@@ -393,7 +397,7 @@ export async function reconnaitreTableau(
     const utiles: number[] = [];
     const canvases: HTMLCanvasElement[] = [];
     cases.forEach((c, i) => {
-      if (c.encre >= 3) { utiles.push(i); canvases.push(rendre(c)); }
+      if (c.encre >= 3) { utiles.push(i); canvases.push(rendre(c, mode)); }
     });
     const out = cases.map(() => ({ texte: '', confiance: 0 }));
     if (!canvases.length) return out;

@@ -4,12 +4,12 @@
     {
       "id": "encadre-normal",
       "cellules": 18,
-      "cellulesJustes": 17,
-      "cellulesFausses": 1,
+      "cellulesJustes": 18,
+      "cellulesFausses": 0,
       "cellulesManquantes": 0,
       "fauxSilencieux": 0,
-      "jaunes": 3,
-      "jaunesInutiles": 2,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
       "dates": 3,
       "datesJustes": 3,
       "lignes": 6,
@@ -18,12 +18,12 @@
     {
       "id": "encadre-petit",
       "cellules": 18,
-      "cellulesJustes": 17,
-      "cellulesFausses": 1,
+      "cellulesJustes": 18,
+      "cellulesFausses": 0,
       "cellulesManquantes": 0,
       "fauxSilencieux": 0,
-      "jaunes": 3,
-      "jaunesInutiles": 2,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
       "dates": 3,
       "datesJustes": 3,
       "lignes": 6,
@@ -32,11 +32,11 @@
     {
       "id": "zebre-normal",
       "cellules": 32,
-      "cellulesJustes": 29,
-      "cellulesFausses": 2,
-      "cellulesManquantes": 1,
+      "cellulesJustes": 31,
+      "cellulesFausses": 1,
+      "cellulesManquantes": 0,
       "fauxSilencieux": 0,
-      "jaunes": 4,
+      "jaunes": 2,
       "jaunesInutiles": 1,
       "dates": 4,
       "datesJustes": 4,
@@ -46,12 +46,12 @@
     {
       "id": "zebre-petit",
       "cellules": 32,
-      "cellulesJustes": 29,
-      "cellulesFausses": 2,
-      "cellulesManquantes": 1,
+      "cellulesJustes": 31,
+      "cellulesFausses": 1,
+      "cellulesManquantes": 0,
       "fauxSilencieux": 0,
-      "jaunes": 4,
-      "jaunesInutiles": 1,
+      "jaunes": 3,
+      "jaunesInutiles": 2,
       "dates": 4,
       "datesJustes": 4,
       "lignes": 8,
@@ -60,12 +60,12 @@
     {
       "id": "serif-palecontraste",
       "cellules": 20,
-      "cellulesJustes": 18,
-      "cellulesFausses": 2,
+      "cellulesJustes": 16,
+      "cellulesFausses": 4,
       "cellulesManquantes": 0,
-      "fauxSilencieux": 2,
-      "jaunes": 0,
-      "jaunesInutiles": 0,
+      "fauxSilencieux": 3,
+      "jaunes": 3,
+      "jaunesInutiles": 2,
       "dates": 2,
       "datesJustes": 2,
       "lignes": 10,
@@ -74,12 +74,12 @@
     {
       "id": "serif-petit",
       "cellules": 20,
-      "cellulesJustes": 18,
-      "cellulesFausses": 2,
+      "cellulesJustes": 16,
+      "cellulesFausses": 4,
       "cellulesManquantes": 0,
-      "fauxSilencieux": 2,
-      "jaunes": 0,
-      "jaunesInutiles": 0,
+      "fauxSilencieux": 3,
+      "jaunes": 3,
+      "jaunesInutiles": 2,
       "dates": 2,
       "datesJustes": 2,
       "lignes": 10,
@@ -88,11 +88,11 @@
     {
       "id": "fleches-anormales",
       "cellules": 27,
-      "cellulesJustes": 22,
-      "cellulesFausses": 2,
+      "cellulesJustes": 24,
+      "cellulesFausses": 0,
       "cellulesManquantes": 3,
-      "fauxSilencieux": 1,
-      "jaunes": 1,
+      "fauxSilencieux": 0,
+      "jaunes": 0,
       "jaunesInutiles": 0,
       "dates": 3,
       "datesJustes": 3,
@@ -102,24 +102,24 @@
     {
       "id": "encadre-gris",
       "cellules": 20,
-      "cellulesJustes": 16,
-      "cellulesFausses": 2,
-      "cellulesManquantes": 2,
-      "fauxSilencieux": 2,
+      "cellulesJustes": 17,
+      "cellulesFausses": 3,
+      "cellulesManquantes": 0,
+      "fauxSilencieux": 3,
       "jaunes": 1,
       "jaunesInutiles": 1,
       "dates": 2,
       "datesJustes": 2,
       "lignes": 10,
-      "lignesTrouvees": 9
+      "lignesTrouvees": 10
     },
     {
       "id": "zebre-hd",
       "cellules": 27,
-      "cellulesJustes": 25,
-      "cellulesFausses": 2,
+      "cellulesJustes": 26,
+      "cellulesFausses": 1,
       "cellulesManquantes": 0,
-      "fauxSilencieux": 1,
+      "fauxSilencieux": 0,
       "jaunes": 1,
       "jaunesInutiles": 0,
       "dates": 3,
@@ -145,21 +145,21 @@
   "total": {
     "id": "TOTAL",
     "cellules": 246,
-    "cellulesJustes": 222,
-    "cellulesFausses": 16,
-    "cellulesManquantes": 8,
-    "fauxSilencieux": 8,
-    "jaunes": 19,
-    "jaunesInutiles": 8,
+    "cellulesJustes": 228,
+    "cellulesFausses": 14,
+    "cellulesManquantes": 4,
+    "fauxSilencieux": 9,
+    "jaunes": 15,
+    "jaunesInutiles": 9,
     "dates": 30,
     "datesJustes": 30,
     "lignes": 84,
-    "lignesTrouvees": 82
+    "lignesTrouvees": 83
   },
   "details": [
     {
       "id": "encadre-normal",
-      "ms": 714,
+      "ms": 794,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -172,12 +172,12 @@
           "valeurs": [
             "9.8",
             "10.9",
-            "1.17"
+            "11.7"
           ],
           "douteux": [
             false,
             false,
-            true
+            false
           ]
         },
         {
@@ -189,9 +189,9 @@
             "7.4"
           ],
           "douteux": [
-            true,
             false,
-            true
+            false,
+            false
           ]
         },
         {
@@ -254,7 +254,7 @@
     },
     {
       "id": "encadre-petit",
-      "ms": 319,
+      "ms": 359,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -267,12 +267,12 @@
           "valeurs": [
             "9.8",
             "10.9",
-            "1.17"
+            "11.7"
           ],
           "douteux": [
             false,
             false,
-            true
+            false
           ]
         },
         {
@@ -284,9 +284,9 @@
             "7.4"
           ],
           "douteux": [
-            true,
             false,
-            true
+            false,
+            false
           ]
         },
         {
@@ -349,7 +349,7 @@
     },
     {
       "id": "zebre-normal",
-      "ms": 442,
+      "ms": 522,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -395,14 +395,14 @@
           "valeurs": [
             "8.2",
             "6.4",
-            "27.1",
-            ""
+            "12.1",
+            "7.3"
           ],
           "douteux": [
             false,
             false,
-            true,
-            true
+            false,
+            false
           ]
         },
         {
@@ -425,7 +425,7 @@
           "nom": "Calcium",
           "unite": "mmol/L",
           "valeurs": [
-            "2.531",
+            "1.1",
             "2.44",
             "2.18",
             "2.39"
@@ -489,7 +489,7 @@
     },
     {
       "id": "zebre-petit",
-      "ms": 457,
+      "ms": 564,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -535,13 +535,13 @@
           "valeurs": [
             "8.2",
             "6.4",
-            "12.71",
-            ""
+            "12.1",
+            "7.3"
           ],
           "douteux": [
             false,
             false,
-            true,
+            false,
             true
           ]
         },
@@ -565,7 +565,7 @@
           "nom": "Calcium",
           "unite": "mmol/L",
           "valeurs": [
-            "2.531",
+            "1.1",
             "2.44",
             "2.18",
             "2.39"
@@ -629,7 +629,7 @@
     },
     {
       "id": "serif-palecontraste",
-      "ms": 333,
+      "ms": 364,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -684,7 +684,7 @@
           ]
         },
         {
-          "nom": "Bilirubine t&",
+          "nom": "Bilirubine t",
           "unite": "µmol/L",
           "valeurs": [
             "24",
@@ -700,18 +700,18 @@
           "unite": "%",
           "valeurs": [
             "68",
-            "84"
+            "24"
           ],
           "douteux": [
             false,
-            false
+            true
           ]
         },
         {
           "nom": "Fibrinogene",
           "unite": "g/L",
           "valeurs": [
-            "5.2",
+            "9.2",
             "3.7"
           ],
           "douteux": [
@@ -727,7 +727,7 @@
             "860"
           ],
           "douteux": [
-            false,
+            true,
             false
           ]
         },
@@ -740,7 +740,7 @@
           ],
           "douteux": [
             false,
-            false
+            true
           ]
         },
         {
@@ -759,7 +759,7 @@
     },
     {
       "id": "serif-petit",
-      "ms": 307,
+      "ms": 336,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -814,7 +814,7 @@
           ]
         },
         {
-          "nom": "Bilirubine t&",
+          "nom": "Bilirubine t",
           "unite": "µmol/L",
           "valeurs": [
             "24",
@@ -830,18 +830,18 @@
           "unite": "%",
           "valeurs": [
             "68",
-            "84"
+            "24"
           ],
           "douteux": [
             false,
-            false
+            true
           ]
         },
         {
           "nom": "Fibrinogene",
           "unite": "g/L",
           "valeurs": [
-            "5.2",
+            "9.2",
             "3.7"
           ],
           "douteux": [
@@ -857,7 +857,7 @@
             "860"
           ],
           "douteux": [
-            false,
+            true,
             false
           ]
         },
@@ -870,7 +870,7 @@
           ],
           "douteux": [
             false,
-            false
+            true
           ]
         },
         {
@@ -889,7 +889,7 @@
     },
     {
       "id": "fleches-anormales",
-      "ms": 378,
+      "ms": 480,
       "dates": [
         "2026-02-03",
         "2026-02-17",
@@ -999,12 +999,12 @@
           "unite": "g/L",
           "valeurs": [
             "0.72",
-            "1.95",
+            "0.95",
             "1.24"
           ],
           "douteux": [
             false,
-            true,
+            false,
             false
           ]
         },
@@ -1012,7 +1012,7 @@
           "nom": "Anticorps ant",
           "unite": "UI/mL",
           "valeurs": [
-            "300",
+            ">300",
             "184",
             "46"
           ],
@@ -1026,7 +1026,7 @@
     },
     {
       "id": "encadre-gris",
-      "ms": 335,
+      "ms": 375,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -1093,8 +1093,8 @@
           ]
         },
         {
-          "nom": "D",
-          "unite": "mm/h",
+          "nom": "TP",
+          "unite": "%",
           "valeurs": [
             "68",
             "84"
@@ -1120,11 +1120,11 @@
           "nom": "Ferritine",
           "unite": "µg/L",
           "valeurs": [
-            "1240",
+            "240",
             "860"
           ],
           "douteux": [
-            true,
+            false,
             false
           ]
         },
@@ -1137,7 +1137,7 @@
           ],
           "douteux": [
             false,
-            false
+            true
           ]
         },
         {
@@ -1156,7 +1156,7 @@
     },
     {
       "id": "zebre-hd",
-      "ms": 478,
+      "ms": 538,
       "dates": [
         "2026-02-03",
         "2026-02-17",
@@ -1266,7 +1266,7 @@
           "unite": "g/L",
           "valeurs": [
             "0.72",
-            "1.95",
+            "0.95",
             "1.24"
           ],
           "douteux": [
@@ -1293,7 +1293,7 @@
     },
     {
       "id": "encadre-minuscule",
-      "ms": 446,
+      "ms": 587,
       "dates": [
         "2024-01-15",
         "2024-03-04",
