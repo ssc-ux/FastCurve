@@ -74,8 +74,10 @@ export function reparerNombre(brut: string, separateur?: { chiffresAvant: number
 
   const valeur = parseFloat(t);
   if (isNaN(valeur)) return VIDE;
-  // Forme canonique : pas de zéro superflu.
-  const texte = prefixe + String(valeur);
+  // On garde les décimales telles qu'elles sont écrites sur l'image : « 4,0 »
+  // reste « 4.0 ». Le réduire à « 4 » ferait disparaître une virgule que l'encre
+  // montre, et la case passerait en jaune pour rien.
+  const texte = prefixe + t.replace(/^0+(?=\d)/, '');
   return { texte, valeur, separateurRetabli };
 }
 
