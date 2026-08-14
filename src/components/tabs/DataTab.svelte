@@ -1,15 +1,14 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import { store } from '../../lib/models/store.svelte';
-  import { formatDate, parseDateSouple, todayISO } from '../../lib/models/types';
+  import { CATALOG, type CatalogEntry, normalize } from '../../lib/models/catalog';
+  import { formatDate, lireDateSouple, todayISO, type DateLue } from '../../lib/models/types';
   import { uiBus } from '../../lib/models/ui.svelte';
   import { parseGridPaste } from '../../lib/text/gridPaste';
-  import AddParameter from './AddParameter.svelte';
   import ParamEditor from './ParamEditor.svelte';
   import ImportTab from './ImportTab.svelte';
 
   let selectedId = $state<string | null>(null);
-  let showAdd = $state(false);
 
   // Vue « Saisir » (grille) ou « Importer » (capture / compte-rendu)
   let mode = $state<'saisir' | 'importer'>('saisir');
@@ -40,7 +39,16 @@
   });
   const pasteHasMissing = $derived(pasteMissingCols.size > 0);
 
-  // Collage d'un tableau (Excel / texte) → écran de vérification (pas d'écriture directe)
+  /**
+   * Collage d'un tableau (Excel / texte).
+   *
+   * Si TOUTES les dates de l'en-tête ont été comprises, on écrit directement
+   * dans la grille : l'écran de vérification n'apporte rien et coûte un geste
+   * de plus à chaque collage (grief n°2, point 5). Un « Annuler » dans le
+   * bandeau rattrape le collage du mauvais bloc. L'écran de vérification n'est
+   * conservé que pour le cas où une date manque — c'est la seule chose que le
+   * médecin doit alors corriger.
+   */
   $effect(() => {
     if (!uiBus.pendingTableText) return;
     const text = uiBus.consumeTable();
@@ -48,6 +56,11 @@
     const grid = parseGridPaste(text);
     if (!grid) { uiBus.toast("Collage non reconnu comme tableau. Copiez les cellules avec une ligne d'en-tête de dates.", 'error'); return; }
     mode = 'saisir';
+    const toutesDates = grid.dates.length > 0 && grid.dates.every(d => !!d);
+    if (toutesDates) {
+      ecrireCollage(grid.rows.map(r => ({ ...r, include: true })), grid.dates, true);
+      return;
+    }
     pasteReview = {
       dates: [...grid.dates],
       rows: grid.rows.map(r => ({ include: true, name: r.name, values: r.values, qualifiers: r.qualifiers })),
@@ -75,19 +88,34 @@
     }
   }
 
+  type LigneCollee = { include: boolean; name: string; values: (number | null)[]; qualifiers: ('<' | '>' | null)[] };
+
+  /** Écrit un tableau collé sous UN seul point d'annulation (voir store.groupe). */
+  function ecrireCollage(rows: LigneCollee[], dates: string[], direct: boolean) {
+    let added = 0;
+    store.groupe(() => {
+      for (const r of rows) {
+        if (!r.include || !r.name.trim()) continue;
+        const param = store.resolveParameter(r.name.trim());
+        r.values.forEach((v, i) => {
+          const d = dates[i];
+          if (d && v !== null) { store.setMeasurement(param.id, d, v, r.qualifiers[i] ?? null); added++; }
+        });
+      }
+    });
+    uiBus.toastAction(
+      direct
+        ? `${added} valeur(s) ajoutée(s) depuis le tableau collé.`
+        : `${added} valeur(s) ajoutée(s).`,
+      'Annuler', () => store.undo(), 'success', 8000,
+    );
+  }
+
   function commitPaste() {
     if (!pasteReview || pasteHasMissing) return;
-    let added = 0;
-    for (const r of pasteReview.rows) {
-      if (!r.include || !r.name.trim()) continue;
-      const param = store.resolveParameter(r.name.trim());
-      r.values.forEach((v, i) => {
-        const d = pasteReview!.dates[i];
-        if (d && v !== null) { store.setMeasurement(param.id, d, v, r.qualifiers[i] ?? null); added++; }
-      });
-    }
+    const { rows, dates } = pasteReview;
     pasteReview = null;
-    uiBus.toast(`${added} valeur(s) ajoutée(s) depuis le tableau collé.`);
+    ecrireCollage(rows, dates, false);
   }
 
   const params = $derived([...store.study.parameters].sort((a, b) => a.order - b.order));
@@ -146,19 +174,36 @@
     store.setMeasurement(pId, date, isNaN(v) ? null : v, qualifier);
   }
 
+  // ── Cliquer dans une case = remplacer, comme dans un tableur ──
+  // Sans cela, cliquer une cellule qui contient « 110 » et taper « 85 » donne
+  // « 11850 » : le clic pose un curseur au milieu du nombre et la valeur est
+  // corrompue sans qu'on le voie. Sélectionner au `focus` ne suffit pas — le
+  // `mouseup` qui suit défait la sélection et repose le curseur. On retient
+  // donc l'intention au `mousedown` (le champ était-il déjà actif ?) et on
+  // resélectionne après le `mouseup`.
+  let selectionAuClic = false;
+  function champMouseDown(e: MouseEvent) {
+    selectionAuClic = document.activeElement !== e.currentTarget;
+  }
+  function champMouseUp(e: MouseEvent) {
+    if (!selectionAuClic) return;
+    selectionAuClic = false;
+    e.preventDefault();
+    (e.currentTarget as HTMLInputElement).select();
+  }
+
   // Valeur présente à la prise de focus : sert à savoir si l'utilisateur vient
   // d'effacer quelque chose, l'écriture au fil de la frappe ayant déjà eu lieu.
   let avantEdition: { pId: string; date: string; texte: string } | null = null;
   function cellFocus(e: FocusEvent, pId: string, date: string) {
     avantEdition = { pId, date, texte: cellValue(pId, date) };
-    // Sélectionner à la prise de focus : sans cela, cliquer une cellule qui
-    // contient « 10 » et taper « 77 » donne « 1770 » — le clic pose un curseur
-    // au lieu de sélectionner, et la valeur est corrompue sans qu'on le voie.
-    (e.currentTarget as HTMLInputElement).select();
+    (e.currentTarget as HTMLInputElement).select(); // arrivée au clavier (Tab, flèches)
   }
   function cellInput(pId: string, date: string, raw: string) {
     // Enregistrer au fil de la frappe : sans cela, la dernière valeur tapée est
-    // perdue si l'onglet est fermé sans avoir quitté le champ.
+    // perdue si l'onglet est fermé sans avoir quitté le champ. C'est aussi ce
+    // qui fait suivre la courbe en direct — le seul bon point relevé par le
+    // médecin, à ne surtout pas casser.
     ecrireCellule(pId, date, raw);
   }
   function setCell(pId: string, date: string, raw: string) {
@@ -178,25 +223,10 @@
   function isoOf(d: Date): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
-  function nextFreeDate(): string {
-    const set = new Set(columns);
-    const d = new Date(todayISO());
-    while (set.has(isoOf(d))) d.setDate(d.getDate() + 1);
-    return isoOf(d);
-  }
-  async function addDate() {
-    const iso = nextFreeDate();
-    store.addDateColumn(iso);
-    // On enchaîne sur la saisie de la date : ajouter une colonne, c'est vouloir
-    // taper sa date tout de suite, pas la chercher à la souris.
-    await tick();
-    const cle = cleParDate.get(iso);
-    if (cle) focusEntete(cle);
-  }
 
   // ── Série de dates ──
-  // Créer douze colonnes une par une demandait douze clics puis douze saisies :
-  // c'est le seul poste de friction qui grandit avec la durée du suivi.
+  // Créer douze colonnes une par une demandait douze saisies : c'est le seul
+  // poste de friction qui grandit avec la durée du suivi.
   let serieOuverte = $state(false);
   let serieDepart = $state(todayISO());
   let seriePas = $state<'1m' | '3m' | '6m' | '12m' | '7j'>('3m');
@@ -210,26 +240,40 @@
     '12m': { libelle: 'an', mois: 12, jours: 0 },
   };
 
+  function ouvrirSerie() {
+    // Une série prolonge le suivi : on part de la dernière colonne, pas
+    // d'aujourd'hui — sinon un suivi rétrospectif repart systématiquement à
+    // la mauvaise extrémité de l'axe.
+    const dernieres = store.columnDates;
+    serieDepart = dernieres.length ? dernieres[dernieres.length - 1] : todayISO();
+    serieOuverte = !serieOuverte;
+  }
+
   function ajouterSerie() {
     const n = Math.max(1, Math.min(40, Math.round(serieNb)));
     const pas = PAS[seriePas];
     const d = new Date(serieDepart);
-    if (isNaN(d.getTime())) return;
+    if (isNaN(d.getTime())) { uiBus.toast('Date de départ non comprise (JJ/MM/AAAA).', 'error'); return; }
     let ajoutees = 0;
-    for (let i = 0; i < n; i++) {
-      const iso = isoOf(d);
-      const avant = store.columnDates.length;
-      store.addDateColumn(iso);
-      if (store.columnDates.length > avant) ajoutees++;
-      if (pas.mois) d.setMonth(d.getMonth() + pas.mois);
-      else d.setDate(d.getDate() + pas.jours);
-    }
+    // Un seul point d'annulation pour toute la série (sinon « Annuler » ne
+    // retire qu'une des douze colonnes).
+    store.groupe(() => {
+      for (let i = 0; i < n; i++) {
+        const iso = isoOf(d);
+        const avant = store.columnDates.length;
+        store.addDateColumn(iso);
+        if (store.columnDates.length > avant) ajoutees++;
+        if (pas.mois) d.setMonth(d.getMonth() + pas.mois);
+        else d.setDate(d.getDate() + pas.jours);
+      }
+    });
     serieOuverte = false;
     uiBus.toastAction(
       `${ajoutees} date(s) ajoutée(s), une tous les ${pas.libelle}.`,
       'Annuler', () => store.undo(),
     );
   }
+
   // ── Saisie des dates ──────────────────────────────────────────
   // Règle : on N'ENREGISTRE RIEN pendant la frappe. Le déplacement de la colonne
   // n'a lieu qu'à la validation (Entrée, Tab, ou sortie du champ). C'est
@@ -255,10 +299,17 @@
     }
   }
 
+  /** Le médecin qui tape « 03/2024 » doit savoir où sa colonne a été rangée. */
+  function annoncerPrecision(lu: DateLue) {
+    if (lu.precision === 'mois') uiBus.toast(`Mois seul : colonne rangée au ${formatDate(lu.iso)}.`, 'info', 4000);
+    else if (lu.precision === 'annee') uiBus.toast(`Année seule : colonne rangée au ${formatDate(lu.iso)}.`, 'info', 4000);
+  }
+
   /**
    * Valide le texte tapé dans l'en-tête. Une saisie illisible NE déplace rien :
    * on remet la date précédente et on le dit. Deviner à la place du médecin
-   * poserait des valeurs cliniques sur une date qu'il n'a pas choisie.
+   * poserait des valeurs cliniques sur une date qu'il n'a pas choisie — c'est
+   * ainsi que naissaient les dates de l'an 1.
    */
   function validerDate(cle: string, input: HTMLInputElement) {
     if (validationEnCours) return;
@@ -271,13 +322,14 @@
       const colDate = colonnes.find(c => c.cle === cle)?.date;
       if (colDate === undefined) return;
       const brut = input.value.trim();
-      const iso = brut === '' ? null : parseDateSouple(brut);
-      if (iso === colDate || (brut !== '' && !iso) || brut === '') {
+      const lu = brut === '' ? null : lireDateSouple(brut);
+      if (!lu || lu.iso === colDate) {
         input.value = formatDate(colDate); // on rétablit l'affichage normalisé
-        if (brut !== '' && !iso) uiBus.toast(`Date « ${brut} » non comprise : format attendu JJ/MM/AAAA.`, 'error');
+        if (brut !== '' && !lu) uiBus.toast(`Date « ${brut} » non comprise : tapez par exemple 12/03/2024, 12032024 ou mars 2024.`, 'error', 6000);
         return;
       }
-      changeDate(colDate, iso!);
+      annoncerPrecision(lu);
+      changeDate(colDate, lu.iso);
     } finally {
       validationEnCours = false;
     }
@@ -287,54 +339,249 @@
     (e.currentTarget as HTMLInputElement).select();
   }
 
+  // ── Colonne vide permanente à droite ──────────────────────────
+  // « Il y a toujours une colonne vide à l'extrême droite ; dès que j'y saisis
+  // une date, une nouvelle colonne vide apparaît à sa droite. » Elle remplace
+  // le bouton « + Date » (perdu à droite du tableau, et qui ajoutait toujours
+  // la date du jour même pour un suivi rétrospectif).
+  let compteurNeuve = 0;
+  let cleNeuve = $state('neuve0');
+
+  /** Valide la colonne vide. Retourne la clé de la colonne créée, ou null. */
+  function validerNeuve(input: HTMLInputElement): string | null {
+    const brut = input.value.trim();
+    if (brut === '') return null;
+    const lu = lireDateSouple(brut);
+    if (!lu) {
+      uiBus.toast(`Date « ${brut} » non comprise : tapez par exemple 12/03/2024, 12032024 ou mars 2024.`, 'error', 6000);
+      return null;
+    }
+    input.value = '';
+    if (store.columnDates.includes(lu.iso)) {
+      uiBus.toast(`La colonne du ${formatDate(lu.iso)} existe déjà.`, 'info');
+      return cleParDate.get(lu.iso) ?? null;
+    }
+    const cle = cleNeuve;
+    cleParDate.set(lu.iso, cle);   // la colonne créée hérite de l'identité du champ
+    cleNeuve = `neuve${++compteurNeuve}`; // ...et une nouvelle colonne vide naît à droite
+    store.addDateColumn(lu.iso);
+    annoncerPrecision(lu);
+    return cle;
+  }
+
+  // ── Ligne vide permanente en bas ──────────────────────────────
+  // « Je tape "Créatinine" dedans → la ligne se crée, une suggestion me propose
+  // le paramètre du catalogue avec son unité. » Remplace le panneau « Ajouter
+  // un paramètre » (quatre gestes, et il restait ouvert).
+  let nomNeuf = $state('');
+  let iSugg = $state(0);
+  let suggMasquees = $state(false);
+
+  const suggestions = $derived.by<CatalogEntry[]>(() => {
+    const q = normalize(nomNeuf);
+    if (!q || suggMasquees) return [];
+    const deja = new Set(store.study.parameters.map(p => normalize(p.name)));
+    return CATALOG
+      .filter(e => !deja.has(normalize(e.name)))
+      .filter(e => normalize(e.name).includes(q) || e.aliases.some(a => normalize(a).includes(q)))
+      .slice(0, 6);
+  });
+
   /**
-   * Valide puis rend le focus, APRÈS le rendu.
+   * Crée la ligne. Un libellé absent du catalogue est accepté TEL QUEL : c'est
+   * une exigence explicite (« IgG4 sérique » ne doit pas devenir « IgG »), donc
+   * on n'utilise pas ici la reconnaissance approximative de l'import.
+   */
+  function creerLigne(choix?: CatalogEntry): string | null {
+    const nom = nomNeuf.trim();
+    const entree = choix ?? (suggestions.length ? suggestions[Math.min(iSugg, suggestions.length - 1)] : null);
+    if (!entree && !nom) return null;
+    const p = entree
+      ? store.addFromCatalog(entree)
+      : (store.findParameterByName(nom) ?? store.addParameter({ name: nom, unit: '', category: 'libre' }));
+    nomNeuf = ''; iSugg = 0; suggMasquees = false;
+    return p.id;
+  }
+
+  async function creerPuisFocus(choix?: CatalogEntry) {
+    const id = creerLigne(choix);
+    if (!id) return;
+    await tick();
+    const r = params.findIndex(p => p.id === id);
+    if (r >= 0 && colonnes.length) focusCellule(colonnes[0].cle, r);
+    else focusCible({ t: 'neuveDate' });
+  }
+
+  function nouvelleLigneKey(e: KeyboardEvent) {
+    const t = e.currentTarget as HTMLInputElement;
+    if (e.key === 'ArrowDown' && suggestions.length) { e.preventDefault(); iSugg = Math.min(iSugg + 1, suggestions.length - 1); }
+    else if (e.key === 'ArrowUp' && suggestions.length) { e.preventDefault(); iSugg = Math.max(iSugg - 1, 0); }
+    else if (e.key === 'Escape') {
+      e.preventDefault();
+      if (suggestions.length) suggMasquees = true; // 1er Échap : garder mon libellé
+      else { nomNeuf = ''; t.value = ''; }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      creerPuisFocus();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      const suite = () => deplacer({ t: 'neuveLigne' }, e.shiftKey);
+      if (nomNeuf.trim()) { creerLigne(); tick().then(suite); } else suite();
+    }
+  }
+
+  function nouvelleLigneBlur() {
+    // Sortir du champ vaut validation, comme pour une date : sinon le nom tapé
+    // disparaît au premier clic ailleurs.
+    if (nomNeuf.trim()) creerLigne();
+  }
+
+  // ── Parcours clavier : le Tab ne sort jamais du tableau ────────
+  // « Tab déplace le curseur à la cellule de droite ; en fin de ligne, il passe
+  // à la première cellule de la ligne suivante, sans jamais sortir du tableau. »
+  type Cible =
+    | { t: 'entete'; cle: string }
+    | { t: 'neuveDate' }
+    | { t: 'cellule'; cle: string; r: number }
+    | { t: 'neuveLigne' };
+
+  const parcours = $derived.by<Cible[]>(() => {
+    const l: Cible[] = colonnes.map(c => ({ t: 'entete', cle: c.cle } as Cible));
+    l.push({ t: 'neuveDate' });
+    for (let r = 0; r < params.length; r++) {
+      for (const c of colonnes) l.push({ t: 'cellule', cle: c.cle, r });
+    }
+    l.push({ t: 'neuveLigne' });
+    return l;
+  });
+
+  function memeCible(a: Cible, b: Cible): boolean {
+    if (a.t !== b.t) return false;
+    if (a.t === 'entete' && b.t === 'entete') return a.cle === b.cle;
+    if (a.t === 'cellule' && b.t === 'cellule') return a.cle === b.cle && a.r === b.r;
+    return true;
+  }
+
+  function selecteur(c: Cible): string {
+    if (c.t === 'entete') return `.dateinput[data-cle="${c.cle}"]`;
+    if (c.t === 'neuveDate') return '.dateinput.neuve';
+    if (c.t === 'cellule') return `.cell[data-cle="${c.cle}"][data-r="${c.r}"]`;
+    return '.newrow-inp';
+  }
+
+  function focusCible(c: Cible): boolean {
+    const el = document.querySelector<HTMLInputElement>(selecteur(c));
+    if (!el) return false;
+    el.focus(); el.select();
+    return true;
+  }
+
+  /** Voisin dans le parcours (bouclé) : on ne quitte jamais la grille. */
+  function voisin(depart: Cible, arriere: boolean): Cible | null {
+    const l = parcours;
+    const i = l.findIndex(c => memeCible(c, depart));
+    if (i < 0) return null;
+    return l[(i + (arriere ? -1 : 1) + l.length) % l.length];
+  }
+
+  async function deplacer(depart: Cible, arriere: boolean) {
+    const cible = voisin(depart, arriere);
+    if (!cible) return;
+    await tick();
+    if (!focusCible(cible)) focusCible({ t: 'neuveDate' }); // filet : jamais de focus perdu
+  }
+
+  function focusEntete(cle: string) { focusCible({ t: 'entete', cle }); }
+  function focusCellule(cle: string, r: number) { focusCible({ t: 'cellule', cle, r }); }
+
+  /**
+   * Valide puis pose le focus, APRÈS le rendu.
    * Déplacer un nœud dans le DOM le fait perdre le focus (le navigateur n'a pas
    * de « déplacer » : il retire puis réinsère). Comme valider une date réordonne
    * la grille, il faut attendre le rendu avant de reposer le curseur — sinon on
    * se retrouve sur `<body>` et les caractères suivants tombent dans le vide.
    */
-  async function validerPuisFocus(cle: string, input: HTMLInputElement, cible: () => void) {
+  async function validerPuisFocus(cle: string, input: HTMLInputElement, cible: Cible | (() => void)) {
     validerDate(cle, input);
     await tick();
-    cible();
+    if (typeof cible === 'function') cible();
+    else if (!focusCible(cible)) focusEntete(cle);
   }
 
   function dateKey(e: KeyboardEvent, cle: string, colDate: string) {
     const t = e.currentTarget as HTMLInputElement;
-    const i = colonnes.findIndex(c => c.cle === cle);
     const auBout = t.selectionStart === t.value.length && t.selectionStart === t.selectionEnd;
     const auDebut = t.selectionStart === 0 && t.selectionEnd === 0;
+    const toutSel = t.selectionStart === 0 && t.selectionEnd === t.value.length;
     if (e.key === 'Escape') {
       e.preventDefault();
       t.value = formatDate(colDate); // annule la frappe en cours, sans rien déplacer
       t.select();
     } else if (e.key === 'Enter' || e.key === 'ArrowDown') {
       e.preventDefault();
-      validerPuisFocus(cle, t, () => (params.length ? focusCellule(cle, 0) : focusEntete(cle)));
+      validerPuisFocus(cle, t, params.length ? { t: 'cellule', cle, r: 0 } : { t: 'neuveLigne' });
     } else if (e.key === 'Tab') {
-      // Tab enchaîne d'en-tête en en-tête : remplir une ligne de dates ne doit
-      // pas traverser les boutons « calendrier » et « ✕ » à chaque colonne.
-      const cible = colonnes[i + (e.shiftKey ? -1 : 1)];
-      if (!cible) return; // bord de grille : on laisse le Tab naturel sortir
+      // On calcule la destination AVANT la validation : le médecin qui remplit
+      // une ligne de dates veut la colonne suivante de l'affichage qu'il a sous
+      // les yeux, pas celle qui suivra le reclassement chronologique.
       e.preventDefault();
-      validerPuisFocus(cle, t, () => focusEntete(cible.cle));
-    } else if (e.key === 'ArrowRight' && auBout && colonnes[i + 1]) {
-      const cible = colonnes[i + 1];
+      const cible = voisin({ t: 'entete', cle }, e.shiftKey);
+      if (cible) validerPuisFocus(cle, t, cible);
+    } else if (e.key === 'ArrowRight' && (auBout || toutSel)) {
       e.preventDefault();
-      validerPuisFocus(cle, t, () => focusEntete(cible.cle));
-    } else if (e.key === 'ArrowLeft' && auDebut && colonnes[i - 1]) {
-      const cible = colonnes[i - 1];
+      const cible = voisin({ t: 'entete', cle }, false);
+      if (cible) validerPuisFocus(cle, t, cible);
+    } else if (e.key === 'ArrowLeft' && (auDebut || toutSel)) {
       e.preventDefault();
-      validerPuisFocus(cle, t, () => focusEntete(cible.cle));
+      const cible = voisin({ t: 'entete', cle }, true);
+      if (cible) validerPuisFocus(cle, t, cible);
     } else if ((e.key === 'Delete' || e.key === 'Backspace') && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       removeDate(colDate);
     }
   }
 
+  /** Même clavier sur la colonne vide de droite, à ceci près qu'elle CRÉE la colonne. */
+  async function neuveKey(e: KeyboardEvent) {
+    const t = e.currentTarget as HTMLInputElement;
+    if (e.key === 'Escape') { e.preventDefault(); t.value = ''; return; }
+    if (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'Tab' || (e.key === 'ArrowRight' && t.value === '')) {
+      e.preventDefault();
+      const arriere = e.key === 'Tab' && e.shiftKey;
+      if (arriere && t.value.trim() === '') { deplacer({ t: 'neuveDate' }, true); return; }
+      const cle = validerNeuve(t);
+      await tick();
+      if (cle && (e.key === 'Enter' || e.key === 'ArrowDown')) {
+        if (params.length) focusCellule(cle, 0); else focusCible({ t: 'neuveLigne' });
+      } else if (cle && e.key === 'Tab' && !arriere) {
+        focusCible({ t: 'neuveDate' }); // on enchaîne sur la colonne vide suivante
+      } else {
+        deplacer({ t: 'neuveDate' }, arriere);
+      }
+    } else if (e.key === 'ArrowLeft' && t.selectionStart === 0 && t.selectionEnd === 0) {
+      e.preventDefault();
+      deplacer({ t: 'neuveDate' }, true);
+    }
+  }
+
+  // ── Suppression d'une colonne ─────────────────────────────────
+  // « La suppression demande une action délibérée et non un survol. » La croix
+  // n'est plus collée au champ de date, et une colonne qui porte des valeurs
+  // demande une confirmation explicite avant de disparaître.
+  let confirmSuppr = $state<string | null>(null); // clé de colonne
+
+  function valeursDe(iso: string): number {
+    return store.study.measurements.filter(m => m.date === iso).length;
+  }
+
+  function demanderSuppr(cle: string, iso: string) {
+    if (valeursDe(iso) === 0) { removeDate(iso); return; }
+    confirmSuppr = cle;
+  }
+
   function removeDate(iso: string) {
-    const valeurs = store.study.measurements.filter(m => m.date === iso).length;
+    const valeurs = valeursDe(iso);
+    confirmSuppr = null;
     store.removeDateColumn(iso);
     uiBus.toastAction(
       valeurs > 0
@@ -352,37 +599,15 @@
     uiBus.toast('Le calendrier n’est pas disponible ici : tapez la date (JJ/MM/AAAA).', 'info');
   }
 
-  // ── Navigation clavier (en-têtes ↔ cellules) ──────────────────
-  // On cible par clé de colonne, jamais par index : au moment où l'on demande le
-  // focus, le DOM n'a pas encore été réordonné par Svelte, et un index viserait
-  // la colonne voisine.
-  function focusEntete(cle: string) {
-    const el = document.querySelector<HTMLInputElement>(`.dateinput[data-cle="${cle}"]`);
-    if (el) { el.focus(); el.select(); }
-  }
-  function focusCellule(cle: string, r: number) {
-    const el = document.querySelector<HTMLInputElement>(`.cell[data-cle="${cle}"][data-r="${r}"]`);
-    if (el) { el.focus(); el.select(); }
-  }
-
   function selectParam(id: string) {
     selectedId = selectedId === id ? null : id;
-  }
-
-  /** Déplacement d'une cellule vers une autre, en colonnes (0 = à gauche/droite). */
-  function versCellule(cle: string, dc: number, r: number) {
-    const i = colonnes.findIndex(c => c.cle === cle);
-    const cible = colonnes[i + dc];
-    if (!cible) return false;
-    if (r < 0 || r >= params.length) return false;
-    focusCellule(cible.cle, r);
-    return true;
   }
 
   function cellKey(e: KeyboardEvent, pId: string, cle: string, colDate: string, r: number) {
     const t = e.currentTarget as HTMLInputElement;
     const auBout = t.selectionStart === t.value.length && t.selectionEnd === t.value.length;
     const auDebut = t.selectionStart === 0 && t.selectionEnd === 0;
+    const toutSel = t.selectionStart === 0 && t.selectionEnd === t.value.length;
     if (e.key === 'Escape') {
       // Échap rend la cellule telle qu'elle était à la prise de focus : la
       // valeur a déjà été écrite au fil de la frappe (courbe en direct), il faut
@@ -395,23 +620,22 @@
     } else if (e.key === 'Enter' || e.key === 'ArrowDown') {
       e.preventDefault();
       if (r + 1 < params.length) focusCellule(cle, r + 1);
+      else focusCible({ t: 'neuveLigne' }); // sous la dernière ligne : la ligne vide
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (r > 0) focusCellule(cle, r - 1);
       else focusEntete(cle); // depuis la 1re ligne on remonte dans l'en-tête de date
     } else if (e.key === 'Tab') {
-      // Tab suit la ligne, puis passe au début de la suivante (comme un tableur).
-      const i = colonnes.findIndex(c => c.cle === cle);
-      if (e.shiftKey) {
-        if (i > 0) { e.preventDefault(); versCellule(cle, -1, r); }
-        else if (r > 0) { e.preventDefault(); focusCellule(colonnes[colonnes.length - 1].cle, r - 1); }
-      } else if (i < colonnes.length - 1) { e.preventDefault(); versCellule(cle, 1, r); }
-      else if (r + 1 < params.length) { e.preventDefault(); focusCellule(colonnes[0].cle, r + 1); }
-    } else if (e.key === 'ArrowRight' && auBout) {
-      // Navigation seulement si le curseur est en fin de champ (sinon on déplace le caret)
-      e.preventDefault(); versCellule(cle, 1, r);
-    } else if (e.key === 'ArrowLeft' && auDebut) {
-      e.preventDefault(); versCellule(cle, -1, r);
+      e.preventDefault();
+      deplacer({ t: 'cellule', cle, r }, e.shiftKey);
+    } else if (e.key === 'ArrowRight' && (auBout || toutSel)) {
+      // Navigation seulement si le curseur est en fin de champ ou tout
+      // sélectionné (sinon on empêcherait de déplacer le caret dans « 12,5 »).
+      e.preventDefault();
+      deplacer({ t: 'cellule', cle, r }, false);
+    } else if (e.key === 'ArrowLeft' && (auDebut || toutSel)) {
+      e.preventDefault();
+      deplacer({ t: 'cellule', cle, r }, true);
     }
   }
 
@@ -425,17 +649,30 @@
     e.preventDefault();
     const r0 = Number(t.dataset.r), c0 = Number(t.dataset.c);
     let count = 0, ignored = 0;
-    grid.forEach((line, ri) => line.forEach((val, ci) => {
-      if (val.trim() === '') return;
-      const p = params[r0 + ri];
-      const date = columns[c0 + ci];
-      if (p && date) { setCell(p.id, date, val.trim()); count++; }
-      else ignored++;
-    }));
+    store.groupe(() => {
+      grid.forEach((line, ri) => line.forEach((val, ci) => {
+        if (val.trim() === '') return;
+        const p = params[r0 + ri];
+        const date = columns[c0 + ci];
+        if (p && date) { setCell(p.id, date, val.trim()); count++; }
+        else ignored++;
+      }));
+    });
     if (count || ignored) {
       const extra = ignored ? ` · ${ignored} ignorée(s) (hors grille — ajoutez des lignes/dates)` : '';
-      uiBus.toast(`${count} valeur(s) collée(s)${extra}.`, ignored ? 'info' : 'success');
+      uiBus.toastAction(`${count} valeur(s) collée(s)${extra}.`, 'Annuler', () => store.undo(), ignored ? 'info' : 'success');
     }
+  }
+
+  // Date affichée dans l'écran de vérification (toujours JJ/MM/AAAA)
+  function majDateCollee(i: number, brut: string, input: HTMLInputElement) {
+    const t = brut.trim();
+    if (!pasteReview) return;
+    if (t === '') { pasteReview.dates[i] = ''; return; }
+    const lu = lireDateSouple(t);
+    if (!lu) { uiBus.toast(`Date « ${t} » non comprise : tapez par exemple 12/03/2024.`, 'error'); input.value = pasteReview.dates[i] ? formatDate(pasteReview.dates[i]) : ''; return; }
+    pasteReview.dates[i] = lu.iso;
+    input.value = formatDate(lu.iso);
   }
 </script>
 
@@ -455,19 +692,22 @@
     <div class="tablecard aux" style="padding:12px;">
       <div class="row" style="margin-bottom:8px; gap:6px; align-items:baseline;">
         <strong>Vérifier le tableau collé</strong>
-        <span class="faint" style="font-size:12px;">— corrigez les dates puis ajoutez.</span>
+        <span class="faint" style="font-size:12px;">— une date n'a pas été reconnue : complétez-la puis ajoutez.</span>
       </div>
       {#if pasteHasMissing}
-        <div class="pastewarn">⚠️ Aucune date n'est devinée. Renseignez la (les) date(s) surlignée(s) avant d'ajouter.</div>
+        <div class="pastewarn">⚠️ Date manquante. Renseignez la (les) date(s) surlignée(s) avant d'ajouter.</div>
       {/if}
       <div class="tablescroll">
         <table class="dgrid">
           <thead>
             <tr>
               <th class="corner"></th>
-              {#each pasteReview.dates as _d, i (i)}
+              {#each pasteReview.dates as d, i (i)}
                 <th class="datecol">
-                  <input class="dateinput" class:datemissing={pasteMissingCols.has(i)} type="date" bind:value={pasteReview.dates[i]} />
+                  <input class="dateinput" class:datemissing={pasteMissingCols.has(i)} type="text"
+                    aria-label="Date de la colonne collée {i + 1}" placeholder="JJ/MM/AAAA"
+                    value={d ? formatDate(d) : ''}
+                    onchange={(e) => majDateCollee(i, e.currentTarget.value, e.currentTarget)} />
                 </th>
               {/each}
             </tr>
@@ -495,24 +735,15 @@
     </div>
   {/if}
 
-  {#if params.length === 0 && !showAdd && !pasteReview}
-    <div class="empty">
-      <div class="empty-emoji">📈</div>
-      <p class="empty-title">Commencez votre courbe</p>
-      <p class="empty-sub">Choisissez comment ajouter des données :</p>
-      <div class="quickstarts">
-        <button class="qs" onclick={() => openImport('photo')}>
-          <span class="qs-emoji">📷</span><span class="qs-t">Coller une capture</span>
-          <span class="qs-d">Ctrl+V d'une capture d'écran de résultats</span>
-        </button>
-        <button class="qs" onclick={() => (showAdd = true)}>
-          <span class="qs-emoji">⌨️</span><span class="qs-t">Saisir à la main</span>
-          <span class="qs-d">Créer un paramètre et taper les valeurs</span>
-        </button>
-        <button class="qs" onclick={() => openImport('text')}>
-          <span class="qs-emoji">📄</span><span class="qs-t">Coller un compte-rendu</span>
-          <span class="qs-d">Extraire les traitements du « carré bleu »</span>
-        </button>
+  {#if params.length === 0 && columns.length === 0 && !pasteReview}
+    <!-- Écran de départ tenu en trois lignes : la grille doit rester visible et
+         utilisable tout de suite, pas être poussée hors de l'écran. -->
+    <div class="depart">
+      <p class="depart-t">Tapez directement dans le tableau : le nom de l'analyte à gauche, la date en haut.</p>
+      <div class="depart-b">
+        <button class="qs" onclick={() => openImport('photo')}>📷 Coller une capture</button>
+        <button class="qs" onclick={() => openImport('text')}>📄 Coller un compte-rendu</button>
+        <span class="astuce"><kbd>Ctrl</kbd>+<kbd>V</kbd> fonctionne aussi depuis n'importe où.</span>
       </div>
     </div>
   {/if}
@@ -520,7 +751,8 @@
   {#if serieOuverte}
     <div class="card aux serie">
       <div class="row wrap">
-        <label class="fld">1<sup>re</sup> date<input type="date" bind:value={serieDepart} /></label>
+        <label class="fld">1<sup>re</sup> date<input class="serie-date" type="text" value={formatDate(serieDepart)}
+          onchange={(e) => { const lu = lireDateSouple(e.currentTarget.value); if (lu) { serieDepart = lu.iso; } e.currentTarget.value = formatDate(serieDepart); }} /></label>
         <label class="fld">une tous les
           <select bind:value={seriePas}>
             <option value="7j">7 jours</option>
@@ -538,87 +770,119 @@
     </div>
   {/if}
 
-  {#if params.length > 0}
-    <div class="tablecard">
-      <div class="tablescroll">
-        <table class="dgrid">
-          <thead>
-            <tr>
-              <th class="corner"></th>
-              {#each colonnes as c (c.cle)}
-                <th class="datecol">
-                  <!-- Champ texte (et non `type="date"`) : le champ date natif
-                       enregistre dès que ses trois segments sont remplis, donc
-                       au milieu de la frappe. Ici rien n'est enregistré avant
-                       Entrée / Tab / sortie du champ. -->
-                  <input class="dateinput" type="text" inputmode="numeric"
-                    data-cle={c.cle} aria-label="Date de la colonne {formatDate(c.date)}"
-                    value={formatDate(c.date)}
-                    onfocus={dateFocus}
-                    onkeydown={(e) => dateKey(e, c.cle, c.date)}
-                    onblur={(e) => validerDate(c.date, e.currentTarget)} />
-                  <input class="datepick" type="date" tabindex="-1" aria-hidden="true" data-cle={c.cle}
-                    value={c.date} onchange={(e) => { const v = e.currentTarget.value; if (v) changeDate(c.date, v); }} />
+  <div class="tablecard">
+    <div class="tablescroll">
+      <table class="dgrid">
+        <thead>
+          <tr>
+            <th class="corner"></th>
+            {#each colonnes as c (c.cle)}
+              <th class="datecol">
+                <div class="colbar">
                   <button class="colicon" tabindex="-1" title="Choisir dans un calendrier"
                     onclick={() => ouvrirCalendrier(c.cle)} aria-label="Calendrier">📅</button>
-                  <button class="colx" tabindex="-1" title="Supprimer cette date (Ctrl+Suppr depuis le champ)"
-                    onclick={() => removeDate(c.date)}>✕</button>
-                </th>
-              {/each}
-              <th class="addcol">
-                <button class="add-date" onclick={addDate} title="Ajouter une date">+ Date</button>
-                <button class="add-serie" onclick={() => (serieOuverte = !serieOuverte)}
-                        title="Ajouter plusieurs dates d’un coup (suivi régulier)">+ Série</button>
+                  <button class="colx" tabindex="-1" title="Supprimer cette colonne"
+                    onclick={() => demanderSuppr(c.cle, c.date)} aria-label="Supprimer la colonne du {formatDate(c.date)}">✕</button>
+                </div>
+                <!-- Champ texte (et non `type="date"`) : le champ date natif
+                     enregistre dès que ses trois segments sont remplis, donc
+                     au milieu de la frappe, et il s'affiche au format de la
+                     langue du navigateur (08/14/0001 en anglais). Ici rien
+                     n'est enregistré avant Entrée / Tab / sortie du champ, et
+                     l'affichage est toujours JJ/MM/AAAA. -->
+                <input class="dateinput" type="text" inputmode="numeric"
+                  data-cle={c.cle} aria-label="Date de la colonne {formatDate(c.date)}"
+                  value={formatDate(c.date)}
+                  onfocus={dateFocus}
+                  onkeydown={(e) => dateKey(e, c.cle, c.date)}
+                  onblur={(e) => validerDate(c.cle, e.currentTarget)} />
+                <input class="datepick" type="date" tabindex="-1" aria-hidden="true" data-cle={c.cle}
+                  value={c.date} onchange={(e) => { const v = e.currentTarget.value; if (v) changeDate(c.date, v); }} />
+                {#if confirmSuppr === c.cle}
+                  <div class="confirm">
+                    <span>Supprimer {valeursDe(c.date)} valeur(s) ?</span>
+                    <button class="danger-btn" onclick={() => removeDate(c.date)}>Supprimer</button>
+                    <button onclick={() => (confirmSuppr = null)}>Annuler</button>
+                  </div>
+                {/if}
               </th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each params as p, ri (p.id)}
-              <tr class:sel={selectedId === p.id}>
-                <th class="rowname">
-                  <button class="namebtn" onclick={() => selectParam(p.id)}>
-                    <span class="dot" style="background:{p.color}"></span>
-                    <span class="pname">{p.name}</span>
-                    <span class="punit">{unitOf(p)}</span>
-                  </button>
-                </th>
-                {#each colonnes as c, ci (c.cle)}
-                  <td>
-                    <input class="cell" type="text" inputmode="decimal"
-                      data-r={ri} data-c={ci} data-cle={c.cle}
-                      aria-label="{p.name} au {formatDate(c.date)}"
-                      value={cellValue(p.id, c.date)}
-                      onkeydown={(e) => cellKey(e, p.id, c.cle, c.date, ri)}
-                      onpaste={cellPaste}
-                      onfocus={(e) => cellFocus(e, p.id, c.date)}
-                      oninput={(e) => cellInput(p.id, c.date, e.currentTarget.value)}
-                      onchange={(e) => setCell(p.id, c.date, e.currentTarget.value)} />
-                  </td>
-                {/each}
-                <td class="pad"></td>
-              </tr>
             {/each}
-          </tbody>
-        </table>
-      </div>
+            <th class="datecol neuvecol">
+              <div class="colbar"></div>
+              <input class="dateinput neuve" type="text" inputmode="numeric"
+                placeholder="+ date" title="Tapez une date (JJ/MM/AAAA) pour ajouter une colonne"
+                aria-label="Nouvelle colonne de date"
+                onkeydown={neuveKey}
+                onblur={(e) => validerNeuve(e.currentTarget)} />
+            </th>
+            <th class="pad"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each params as p, ri (p.id)}
+            <tr class:sel={selectedId === p.id}>
+              <th class="rowname">
+                <button class="namebtn" tabindex="-1" onclick={() => selectParam(p.id)}>
+                  <span class="dot" style="background:{p.color}"></span>
+                  <span class="pname">{p.name}</span>
+                  <span class="punit">{unitOf(p)}</span>
+                </button>
+              </th>
+              {#each colonnes as c, ci (c.cle)}
+                <td>
+                  <input class="cell" type="text" inputmode="decimal"
+                    data-r={ri} data-c={ci} data-cle={c.cle}
+                    aria-label="{p.name} au {formatDate(c.date)}"
+                    value={cellValue(p.id, c.date)}
+                    onkeydown={(e) => cellKey(e, p.id, c.cle, c.date, ri)}
+                    onpaste={cellPaste}
+                    onfocus={(e) => cellFocus(e, p.id, c.date)}
+                    oninput={(e) => cellInput(p.id, c.date, e.currentTarget.value)}
+                    onchange={(e) => setCell(p.id, c.date, e.currentTarget.value)} />
+                </td>
+              {/each}
+              <td class="ghostcell"></td>
+              <td class="pad"></td>
+            </tr>
+          {/each}
+          <tr class="newrow">
+            <th class="rowname">
+              <input class="newrow-inp" placeholder="+ analyte" aria-label="Nouvel analyte"
+                bind:value={nomNeuf} oninput={() => { iSugg = 0; suggMasquees = false; }}
+                onkeydown={nouvelleLigneKey} onblur={nouvelleLigneBlur} />
+              {#if suggestions.length}
+                <div class="suggest">
+                  {#each suggestions as s, i (s.name)}
+                    <button class="sg" class:on={i === iSugg}
+                      onmousedown={(e) => { e.preventDefault(); creerPuisFocus(s); }}>
+                      <span class="sg-n">{s.name}</span><span class="sg-u">{s.unit}</span>
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            </th>
+            {#each colonnes as c (c.cle)}
+              <td class="ghostcell"></td>
+            {/each}
+            <td class="ghostcell"></td>
+            <td class="pad"></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+  </div>
 
-    {#if selected}
-      <div class="aux"><ParamEditor param={selected} onClose={() => (selectedId = null)} /></div>
-    {/if}
+  {#if selected}
+    <div class="aux"><ParamEditor param={selected} onClose={() => (selectedId = null)} /></div>
   {/if}
 
-  {#if showAdd}
-    <div class="aux"><AddParameter /></div>
-    <button class="link" onclick={() => (showAdd = false)}>Fermer</button>
-  {:else if params.length > 0}
-    <div class="pied">
-      <button class="add-param" onclick={() => (showAdd = true)}>+ Ajouter un paramètre</button>
-      <!-- Le raccourci n'est annoncé que sur l'écran d'accueil : une fois le
-           tableau rempli, plus personne ne sait qu'il existe. -->
+  <div class="pied">
+    <button class="add-serie" onclick={ouvrirSerie}
+            title="Ajouter plusieurs dates d’un coup (suivi régulier)">+ Série de dates</button>
+    {#if params.length > 0}
       <span class="astuce">Astuce : <kbd>Ctrl</kbd>+<kbd>V</kbd> colle une capture d'écran ou un tableau de résultats.</span>
-    </div>
-  {/if}
+    {/if}
+  </div>
 
   {/if}
 </div>
@@ -631,24 +895,15 @@
   .modeseg button.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(16,24,32,.12); }
 
   /* En bandes, la grille prend toute la largeur — mais pas les blocs qui n'en
-     sont pas un : un formulaire ou un écran d'accueil étiré sur 1600 px est
-     illisible. On les garde dans une colonne de largeur confortable. */
+     sont pas un : un formulaire étiré sur 1600 px est illisible. */
   .aux { max-width: 880px; }
-  .empty { text-align: center; padding: 22px 4px 6px; color: var(--muted); max-width: 620px; margin-inline: auto; }
-  .empty-emoji { font-size: 32px; }
-  .empty-title { font-size: 17px; font-weight: 650; color: var(--ink); margin: 8px 0 2px; }
-  .empty-sub { font-size: 13px; }
-  .quickstarts { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; text-align: left; }
-  .qs {
-    display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto;
-    column-gap: 12px; align-items: center; padding: 14px 16px; border-radius: 12px;
-    border: 1px solid var(--border); background: var(--panel); box-shadow: var(--shadow-sm);
-    transition: border-color .15s, box-shadow .15s, transform .06s;
-  }
-  .qs:hover { border-color: var(--accent); box-shadow: var(--shadow); }
-  .qs-emoji { grid-row: 1 / 3; font-size: 24px; }
-  .qs-t { font-size: 14.5px; font-weight: 600; color: var(--ink); }
-  .qs-d { font-size: 12px; color: var(--muted); }
+
+  /* Écran de départ : trois lignes, au-dessus d'une grille déjà utilisable. */
+  .depart { display: flex; flex-direction: column; gap: 8px; }
+  .depart-t { font-size: 13.5px; color: var(--muted); margin: 0; }
+  .depart-b { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .qs { border: 1px solid var(--border); background: var(--panel); border-radius: 9px; padding: 7px 12px; font-size: 13px; }
+  .qs:hover { border-color: var(--accent); color: var(--accent); }
 
   .tablecard { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
   /* Grille de saisie : défile dans les deux sens, en-tête de dates et colonne
@@ -667,49 +922,69 @@
   table.dgrid { border-collapse: separate; border-spacing: 0; width: 100%; }
   .dgrid th, .dgrid td { padding: 0; background: var(--panel); }
 
-  /* Cellules figées : en-tête (haut), noms de paramètres (gauche), « + Date » (droite). */
+  /* Cellules figées : en-tête (haut) et noms de paramètres (gauche). */
   .dgrid thead th { position: sticky; top: 0; z-index: 2; }
   .dgrid .corner, .dgrid .rowname { position: sticky; left: 0; z-index: 3; }
   .dgrid .rowname { box-shadow: 5px 0 7px -6px rgba(16, 24, 32, .35); }
   .dgrid thead .corner { z-index: 4; box-shadow: 5px 0 7px -6px rgba(16, 24, 32, .35); }
-  .dgrid thead .addcol { position: sticky; right: 0; z-index: 4; box-shadow: -5px 0 7px -6px rgba(16, 24, 32, .35); }
 
   .corner { width: 1%; }
-  .datecol { padding: 6px 4px 6px 8px; position: relative; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  .datecol { padding: 2px 4px 6px 8px; position: relative; white-space: nowrap; border-bottom: 1px solid var(--border); vertical-align: top; }
+  /* Les commandes de colonne sont sur leur propre ligne, à l'écart du champ de
+     date : viser la date ne doit jamais pouvoir supprimer la colonne. */
+  .colbar { display: flex; justify-content: flex-end; gap: 2px; height: 16px; }
   .dateinput { border: none; background: transparent; font-size: 12px; color: var(--muted); width: 84px; padding: 2px 3px; text-align: center; font-variant-numeric: tabular-nums; }
   .dateinput:focus { background: #fff; border-radius: 5px; box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); color: var(--ink); }
+  .dateinput.neuve { color: var(--faint); }
+  .dateinput.neuve:focus { color: var(--ink); }
+  .neuvecol { border-left: 1px dashed var(--border); }
   /* Le champ date natif ne sert qu'à ouvrir le calendrier du système : il reste
      dans la page (sinon `showPicker()` est refusé) mais hors du flux visuel. */
   .datepick { position: absolute; left: 8px; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: none; padding: 0; }
-  .colx, .colicon { opacity: 0; border: none; background: transparent; color: var(--faint); font-size: 10px; padding: 2px 3px; cursor: pointer; }
+  .colx, .colicon { border: none; background: transparent; color: var(--faint); font-size: 10px; padding: 0 3px; cursor: pointer; line-height: 1; }
   .colicon { font-size: 11px; filter: grayscale(1); }
-  .datecol:hover .colx, .datecol:hover .colicon,
-  .datecol:focus-within .colx, .datecol:focus-within .colicon { opacity: 1; }
-  /* Sans survol possible (tablette, écran tactile) la suppression d'une colonne
-     serait inatteignable : on l'affiche en permanence. */
-  @media (hover: none) { .colx, .colicon { opacity: .7; } }
   .colx:hover { color: var(--danger); }
   .colicon:hover { filter: none; }
+  .confirm {
+    position: absolute; top: 100%; left: 4px; z-index: 6; display: flex; align-items: center; gap: 6px;
+    background: var(--panel); border: 1px solid var(--border-strong); border-radius: 8px;
+    box-shadow: var(--shadow); padding: 6px 8px; font-size: 12px; white-space: nowrap;
+  }
+  .confirm button { font-size: 12px; padding: 3px 8px; }
+  .danger-btn { color: var(--danger); font-weight: 600; }
 
-  .addcol { padding: 6px 10px; border-bottom: 1px solid var(--border); }
-  .add-date, .add-serie { border: 1px dashed var(--border-strong); background: transparent; color: var(--muted); font-size: 12px; padding: 5px 10px; border-radius: 7px; white-space: nowrap; }
-  .add-date:hover, .add-serie:hover { color: var(--accent); border-color: var(--accent); }
-  .add-serie { margin-left: 4px; }
   .serie { padding: 10px 12px; }
   .serie .fld { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); }
   .serie .nb { width: 62px; }
+  .serie-date { width: 100px; text-align: center; font-variant-numeric: tabular-nums; }
 
-  .rowname { text-align: left; border-bottom: 1px solid var(--panel-2); border-right: 1px solid var(--border); }
+  .rowname { text-align: left; border-bottom: 1px solid var(--panel-2); border-right: 1px solid var(--border); position: relative; }
   tr.sel .rowname { background: #eef4fb; }
-  .namebtn { display: flex; align-items: center; gap: 7px; border: none; background: transparent; padding: 7px 12px 7px 12px; width: 100%; cursor: pointer; }
+  .namebtn { display: flex; align-items: center; gap: 7px; border: none; background: transparent; padding: 7px 12px; width: 100%; cursor: pointer; }
   .namebtn:hover { background: var(--panel-2); }
   .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .pname { font-weight: 600; font-size: 13px; white-space: nowrap; }
   .punit { font-size: 12px; color: var(--faint); white-space: nowrap; }
 
+  /* Ligne vide permanente : elle doit se voir comme une invitation, pas comme
+     une ligne de données. */
+  .newrow .rowname { border-bottom: none; }
+  .newrow-inp { border: none; background: transparent; font-size: 13px; color: var(--faint); padding: 7px 12px; width: 150px; }
+  .newrow-inp:focus { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); border-radius: 4px; }
+  .suggest {
+    position: absolute; top: 100%; left: 6px; z-index: 8; min-width: 210px;
+    background: var(--panel); border: 1px solid var(--border-strong); border-radius: 9px;
+    box-shadow: var(--shadow); padding: 4px; display: flex; flex-direction: column;
+  }
+  .sg { display: flex; align-items: baseline; gap: 8px; border: none; background: transparent; text-align: left; padding: 5px 8px; border-radius: 6px; }
+  .sg.on, .sg:hover { background: #eef4fb; }
+  .sg-n { font-size: 13px; font-weight: 500; }
+  .sg-u { font-size: 11.5px; color: var(--faint); }
+
   .dgrid td { border-bottom: 1px solid var(--panel-2); }
   .cell { width: 74px; text-align: center; border: none; background: transparent; padding: 7px 4px; font-size: 13px; }
   .cell:focus { background: #fff; box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); border-radius: 4px; }
+  .ghostcell { min-width: 84px; }
   .pad { width: 100%; }
 
   /* Panneau en bas d'écran (mobile) : la grille ne doit pas manger toute la hauteur. */
@@ -717,13 +992,12 @@
     .tablescroll { max-height: var(--grille-max-h, 34vh); }
   }
 
-  .add-param { align-self: flex-start; border: none; background: transparent; color: var(--accent); font-weight: 500; padding: 6px 4px; }
-  .add-param:hover { text-decoration: underline; background: transparent; }
   .pied { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .add-serie { border: 1px dashed var(--border-strong); background: transparent; color: var(--muted); font-size: 12px; padding: 5px 10px; border-radius: 7px; }
+  .add-serie:hover { color: var(--accent); border-color: var(--accent); }
   .astuce { font-size: 11.5px; color: var(--faint); }
   .astuce kbd {
     font-family: inherit; font-size: 10.5px; background: var(--panel-2);
     border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px;
   }
-  .link { align-self: flex-start; border: none; background: transparent; color: var(--muted); font-size: 12.5px; }
 </style>
