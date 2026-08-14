@@ -72,7 +72,12 @@ export function mediane(valeurs: number[]): number {
  */
 export function detecterBandes(carte: CarteEncre, opts: { bruit?: number } = {}): Bande[] {
   const prof = profilHorizontal(carte);
-  const bruit = opts.bruit ?? Math.max(1, Math.round(carte.largeur * 0.002));
+  // Seuil de bruit RELATIF à l'encre réellement présente. Un seuil absolu de
+  // deux pixels laisse un jambage, une bordure de cellule ou le bord d'une
+  // zébrure gris clair relier deux lignes voisines : sur un tableau dense, les
+  // cinq lignes de résultats fusionnaient alors en une seule bande et toute la
+  // capture était perdue.
+  const bruit = opts.bruit ?? seuilDeBruit(prof, carte.largeur);
   const brutes: Bande[] = [];
   let debut = -1;
   for (let y = 0; y < carte.hauteur; y++) {
@@ -100,6 +105,18 @@ export function detecterBandes(carte: CarteEncre, opts: { bruit?: number } = {})
   const hRef = mediane(hFus.filter(h => h >= 4)) || mediane(hFus);
   const minH = Math.max(3, Math.round(hRef * 0.45));
   return fusion.filter(b => b.y1 - b.y0 + 1 >= minH);
+}
+
+/**
+ * Seuil séparant une ligne de texte d'une ligne de fond, calé sur le haut du
+ * profil : une ligne de texte encre 10 à 30 % de la largeur du tableau, un
+ * interligne quelques pixels épars.
+ */
+export function seuilDeBruit(profil: Int32Array, largeur: number): number {
+  const tri = Array.from(profil).filter(v => v > 0).sort((a, b) => a - b);
+  if (!tri.length) return 1;
+  const haut = tri[Math.floor(tri.length * 0.9)];
+  return Math.max(2, Math.min(Math.round(largeur * 0.02), Math.round(haut * 0.12)));
 }
 
 /** Hauteur médiane des bandes (hauteur d'une ligne de texte, en pixels). */

@@ -140,26 +140,54 @@
       "datesJustes": 4,
       "lignes": 8,
       "lignesTrouvees": 8
+    },
+    {
+      "id": "medecin",
+      "cellules": 15,
+      "cellulesJustes": 0,
+      "cellulesFausses": 0,
+      "cellulesManquantes": 15,
+      "fauxSilencieux": 0,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
+      "dates": 3,
+      "datesJustes": 0,
+      "lignes": 5,
+      "lignesTrouvees": 5
+    },
+    {
+      "id": "medecin-petit",
+      "cellules": 15,
+      "cellulesJustes": 3,
+      "cellulesFausses": 2,
+      "cellulesManquantes": 10,
+      "fauxSilencieux": 2,
+      "jaunes": 1,
+      "jaunesInutiles": 1,
+      "dates": 3,
+      "datesJustes": 1,
+      "lignes": 5,
+      "lignesTrouvees": 5
     }
   ],
   "total": {
     "id": "TOTAL",
-    "cellules": 246,
-    "cellulesJustes": 169,
-    "cellulesFausses": 9,
-    "cellulesManquantes": 68,
-    "fauxSilencieux": 8,
-    "jaunes": 4,
-    "jaunesInutiles": 3,
-    "dates": 30,
-    "datesJustes": 23,
-    "lignes": 84,
-    "lignesTrouvees": 64
+    "cellules": 276,
+    "cellulesJustes": 172,
+    "cellulesFausses": 11,
+    "cellulesManquantes": 93,
+    "fauxSilencieux": 10,
+    "jaunes": 5,
+    "jaunesInutiles": 4,
+    "dates": 36,
+    "datesJustes": 24,
+    "lignes": 94,
+    "lignesTrouvees": 74
   },
   "details": [
     {
       "id": "encadre-normal",
-      "ms": 823,
+      "ms": 879,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -254,7 +282,7 @@
     },
     {
       "id": "encadre-petit",
-      "ms": 417,
+      "ms": 429,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -349,7 +377,7 @@
     },
     {
       "id": "zebre-normal",
-      "ms": 459,
+      "ms": 598,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -489,7 +517,7 @@
     },
     {
       "id": "zebre-petit",
-      "ms": 498,
+      "ms": 532,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -629,7 +657,7 @@
     },
     {
       "id": "serif-palecontraste",
-      "ms": 370,
+      "ms": 427,
       "dates": [
         "2023-01-01",
         "2026-12-31"
@@ -638,7 +666,7 @@
     },
     {
       "id": "serif-petit",
-      "ms": 385,
+      "ms": 438,
       "dates": [
         "2023-01-01",
         "2026-12-31"
@@ -647,7 +675,7 @@
     },
     {
       "id": "fleches-anormales",
-      "ms": 386,
+      "ms": 446,
       "dates": [
         ""
       ],
@@ -746,7 +774,7 @@
     },
     {
       "id": "encadre-gris",
-      "ms": 502,
+      "ms": 544,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -876,7 +904,7 @@
     },
     {
       "id": "zebre-hd",
-      "ms": 535,
+      "ms": 455,
       "dates": [
         "2026-02-03",
         "2026-02-17",
@@ -1013,7 +1041,7 @@
     },
     {
       "id": "encadre-minuscule",
-      "ms": 551,
+      "ms": 585,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -1149,6 +1177,161 @@
             false
           ]
         }
+      ]
+    },
+    {
+      "id": "medecin",
+      "ms": 426,
+      "dates": [
+        "2024-09-21"
+      ],
+      "lignes": [
+        {
+          "nom": "Creatinine",
+          "unite": "",
+          "valeurs": [
+            "7"
+          ],
+          "douteux": [
+            true
+          ]
+        },
+        {
+          "nom": "CRP",
+          "unite": "",
+          "valeurs": [
+            "451"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Hemoglobine",
+          "unite": "",
+          "valeurs": [
+            "119"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Leucocytes",
+          "unite": "",
+          "valeurs": [
+            "122"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Plaquettes",
+          "unite": "",
+          "valeurs": [
+            "400"
+          ],
+          "douteux": [
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "medecin-petit",
+      "ms": 393,
+      "dates": [
+        "2024-09-20"
+      ],
+      "lignes": [
+        {
+          "nom": "Creatinine",
+          "unite": "",
+          "valeurs": [
+            "110"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "CRP",
+          "unite": "",
+          "valeurs": [
+            "451"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Hemoglobine",
+          "unite": "",
+          "valeurs": [
+            "11.9"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Leucocytes",
+          "unite": "",
+          "valeurs": [
+            "12.2"
+          ],
+          "douteux": [
+            true
+          ]
+        },
+        {
+          "nom": "Plaquettes",
+          "unite": "",
+          "valeurs": [
+            "400"
+          ],
+          "douteux": [
+            false
+          ]
+        }
+      ]
+    }
+  ],
+  "medecin": [
+    {
+      "numero": 1,
+      "fautes": 0,
+      "details": []
+    },
+    {
+      "numero": 2,
+      "fautes": 2,
+      "details": [
+        "medecin : Plaquettes : « 400 » est une borne de la norme « 150 - 400 »",
+        "medecin-petit : Plaquettes : « 400 » est une borne de la norme « 150 - 400 »"
+      ]
+    },
+    {
+      "numero": 3,
+      "fautes": 2,
+      "details": [
+        "encadre-normal : Leucocytes : « 7.4 » rendu « 74 »",
+        "encadre-petit : Leucocytes : « 7.4 » rendu « 74 »"
+      ]
+    },
+    {
+      "numero": 4,
+      "fautes": 0,
+      "details": []
+    },
+    {
+      "numero": 5,
+      "fautes": 3,
+      "details": [
+        "fleches-anormales : 3 colonnes de dates sur l'image, 0 datée(s) en sortie",
+        "medecin : 3 colonnes de dates sur l'image, 1 datée(s) en sortie",
+        "medecin-petit : 3 colonnes de dates sur l'image, 1 datée(s) en sortie"
       ]
     }
   ]

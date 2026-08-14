@@ -58,6 +58,19 @@ console.log('\nTOTAL              ', String(t.cellules).padStart(6), pc(t.cellul
   '· faux silencieux', t.fauxSilencieux, '· jaunes', t.jaunes, '(dont inutiles', t.jaunesInutiles + ')',
   '· dates', `${t.datesJustes}/${t.dates}`, '· lignes', `${t.lignesTrouvees}/${t.lignes}`);
 
+console.log('\nLes cinq erreurs relevées par le médecin :');
+const LIBELLE = {
+  1: 'Créatinine 104 — borne de « Normes » prise pour un résultat',
+  2: 'Plaquettes 400 — même cause, autre ligne',
+  3: 'Leucocytes 12,2 rendu 122 — virgule décimale perdue',
+  4: '« Créatinine umolL » — unité agglutinée au nom',
+  5: '3 colonnes de dates fondues en 1 seule, sans date',
+};
+for (const c of res.medecin ?? []) {
+  console.log(`  ${c.fautes === 0 ? '✓' : '✗'} n°${c.numero} ${LIBELLE[c.numero]} — ${c.fautes} faute(s)`);
+  for (const d of c.details.slice(0, 4)) console.log('        ·', d);
+}
+
 if (reseauExterne.length) {
   console.log('\n⚠ requêtes hors localhost :', [...new Set(reseauExterne)].slice(0, 10));
 } else {

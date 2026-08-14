@@ -4,6 +4,7 @@
 //   window.lancerBanc('ancien' | 'nouveau') → { scores, total, details }
 
 import { noter, cumuler, type CasVerite, type Score, type TableauMesure } from './notation';
+import { casMedecin, cumulerCas, type CasMedecin } from './medecin';
 
 const sortie = document.getElementById('sortie')!;
 
@@ -56,6 +57,7 @@ async function lancerBanc(moteur: 'ancien' | 'nouveau', filtre?: string) {
   const cas = filtre ? verite.filter(c => c.id.includes(filtre)) : verite;
   const scores: Score[] = [];
   const details: any[] = [];
+  const cinq: CasMedecin[][] = [];
   for (const c of cas) {
     const t0 = performance.now();
     const img = await charger('./shots/' + c.fichier);
@@ -69,10 +71,11 @@ async function lancerBanc(moteur: 'ancien' | 'nouveau', filtre?: string) {
     const ms = Math.round(performance.now() - t0);
     const s = noter(c, res);
     scores.push(s);
+    cinq.push(casMedecin(c, res));
     details.push({ id: c.id, ms, dates: res.dates, lignes: res.lignes });
     sortie.textContent += `\n${c.id} : ${s.cellulesJustes}/${s.cellules} cellules, ${s.datesJustes}/${s.dates} dates (${ms} ms)`;
   }
-  return { moteur, scores, total: cumuler(scores), details };
+  return { moteur, scores, total: cumuler(scores), details, medecin: cumulerCas(cinq) };
 }
 
 (window as any).lancerBanc = lancerBanc;

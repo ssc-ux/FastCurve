@@ -16,67 +16,7 @@ const ICI = dirname(fileURLToPath(import.meta.url));
 const SORTIE = join(ICI, 'shots');
 mkdirSync(SORTIE, { recursive: true });
 
-// ── Données sources (vérité terrain) ────────────────────────────────
-const BILAN_A = {
-  dates: ['2025-03-12', '2025-04-09', '2025-05-14'],
-  entetes: ['12/03/2025', '09/04/2025', '14/05/2025'],
-  lignes: [
-    { nom: 'Hemoglobine', unite: 'g/dL', valeurs: ['9.8', '10.9', '11.7'], normes: '12.0 - 16.0' },
-    { nom: 'Leucocytes', unite: 'G/L', valeurs: ['14.2', '9.1', '7.4'], normes: '4.0 - 10.0' },
-    { nom: 'Plaquettes', unite: 'G/L', valeurs: ['480', '365', '288'], normes: '150 - 400' },
-    { nom: 'Creatinine', unite: 'umol/L', valeurs: ['168', '132', '115'], normes: '60 - 110' },
-    { nom: 'CRP', unite: 'mg/L', valeurs: ['96', '28', '7'], normes: '< 5' },
-    { nom: 'Albumine', unite: 'g/L', valeurs: ['28', '33', '37'], normes: '35 - 50' },
-  ],
-};
-
-const BILAN_B = {
-  dates: ['2024-01-15', '2024-03-04', '2024-06-18', '2024-09-02'],
-  entetes: ['15/01/2024', '04/03/2024', '18/06/2024', '02/09/2024'],
-  lignes: [
-    { nom: 'Sodium', unite: 'mmol/L', valeurs: ['138', '141', '136', '140'], normes: '135 - 145' },
-    { nom: 'Potassium', unite: 'mmol/L', valeurs: ['4,1', '3,8', '4,6', '4,0'], normes: '3,5 - 5,0' },
-    { nom: 'Uree', unite: 'mmol/L', valeurs: ['8,2', '6,4', '12,1', '7,3'], normes: '2,5 - 7,5' },
-    { nom: 'Creatinine', unite: 'umol/L', valeurs: ['142', '118', '205', '131'], normes: '60 - 110' },
-    { nom: 'Calcium', unite: 'mmol/L', valeurs: ['2,31', '2,44', '2,18', '2,39'], normes: '2,20 - 2,60' },
-    { nom: 'Phosphore', unite: 'mmol/L', valeurs: ['1,12', '0,94', '1,48', '1,05'], normes: '0,80 - 1,45' },
-    { nom: 'Albumine', unite: 'g/L', valeurs: ['34', '38', '29', '36'], normes: '35 - 50' },
-    { nom: 'CRP', unite: 'mg/L', valeurs: ['12', '<5', '48', '6'], normes: '< 5' },
-  ],
-};
-
-const BILAN_C = {
-  dates: ['2023-11-08', '2023-12-06'],
-  entetes: ['08/11/2023', '06/12/2023'],
-  lignes: [
-    { nom: 'ASAT', unite: 'UI/L', valeurs: ['62', '38'], normes: '< 40' },
-    { nom: 'ALAT', unite: 'UI/L', valeurs: ['81', '45'], normes: '< 40' },
-    { nom: 'GGT', unite: 'UI/L', valeurs: ['155', '98'], normes: '< 55' },
-    { nom: 'PAL', unite: 'UI/L', valeurs: ['210', '176'], normes: '40 - 130' },
-    { nom: 'Bilirubine totale', unite: 'umol/L', valeurs: ['24', '15'], normes: '< 17' },
-    { nom: 'TP', unite: '%', valeurs: ['68', '84'], normes: '70 - 100' },
-    { nom: 'Fibrinogene', unite: 'g/L', valeurs: ['5,2', '3,7'], normes: '2,0 - 4,0' },
-    { nom: 'Ferritine', unite: 'ug/L', valeurs: ['1240', '860'], normes: '30 - 300' },
-    { nom: 'TSH', unite: 'mUI/L', valeurs: ['0,42', '1,85'], normes: '0,40 - 4,00' },
-    { nom: 'Vitamine D', unite: 'nmol/L', valeurs: ['38', '62'], normes: '> 75' },
-  ],
-};
-
-const BILAN_D = {
-  dates: ['2026-02-03', '2026-02-17', '2026-03-10'],
-  entetes: ['03/02/2026', '17/02/2026', '10/03/2026'],
-  lignes: [
-    { nom: 'Leucocytes', unite: 'G/L', valeurs: ['3,8', '5,1', '6,9'], normes: '4,0 - 10,0' },
-    { nom: 'PNN', unite: 'G/L', valeurs: ['1,4', '2,7', '4,1'], normes: '1,5 - 7,0' },
-    { nom: 'Lymphocytes', unite: 'G/L', valeurs: ['1,9', '1,7', '2,2'], normes: '1,0 - 4,0' },
-    { nom: 'Plaquettes', unite: 'G/L', valeurs: ['96', '145', '232'], normes: '150 - 400' },
-    { nom: 'Hemoglobine', unite: 'g/dL', valeurs: ['8,4', '9,6', '11,2'], normes: '12,0 - 16,0' },
-    { nom: 'VGM', unite: 'fL', valeurs: ['104', '98', '92'], normes: '80 - 100' },
-    { nom: 'IgG', unite: 'g/L', valeurs: ['4,8', '6,2', '8,1'], normes: '7,0 - 16,0' },
-    { nom: 'C3', unite: 'g/L', valeurs: ['0,72', '0,95', '1,24'], normes: '0,90 - 1,80' },
-    { nom: 'Anticorps anti-DNA', unite: 'UI/mL', valeurs: ['>300', '184', '46'], normes: '< 20' },
-  ],
-};
+import { BILAN_A, BILAN_B, BILAN_C, BILAN_D, BILAN_MEDECIN } from './bilans.mjs';
 
 // ── Gabarits HTML (styles de « serveur de résultats » variés) ────────
 function styleCommun(police, taille) {
@@ -177,6 +117,39 @@ function gabaritFleches(bilan, o = {}) {
   </table>`;
 }
 
+
+// Gabarit 5 : la capture du médecin — zébrures, colonne Unité, colonne Normes,
+// valeurs pathologiques en orange avec une flèche. Le pire cas réel.
+function gabaritMedecin(bilan, o = {}) {
+  const taille = o.taille ?? 12;
+  const anormal = (nom, v) => {
+    const x = parseFloat(String(v).replace(',', '.'));
+    if (nom === 'Creatinine') return x > 104;
+    if (nom === 'CRP') return x > 5;
+    if (nom === 'Hemoglobine') return x < 13;
+    if (nom === 'Leucocytes') return x > 10 || x < 4;
+    if (nom === 'Plaquettes') return x > 400 || x < 150;
+    return false;
+  };
+  return `<style>${styleCommun("'Liberation Sans', Arial, sans-serif", taille)}
+    table { border: 1px solid #cfd6dc; }
+    th, td { border: none; padding: ${o.dense ? '3px 10px' : '6px 14px'}; }
+    thead th { background: #e9eef3; border-bottom: 1px solid #cfd6dc; }
+    tbody tr:nth-child(even) { background: #f4f6f8; }
+    td.v { text-align: right; }
+    td.v.ano { color: #c8641e; font-weight: 600; }
+    td.u, td.r { color: #666; }
+  </style>
+  <h1>LABORATOIRE — RESULTATS CUMULES</h1>
+  <div class="meta">Patient 00-XYZ · edite le 21/09/2024</div>
+  <table>
+    <thead><tr><th style="text-align:left">Analyse</th>${bilan.entetes.map(d => `<th>${d}</th>`).join('')}<th>Unite</th><th>Normes</th></tr></thead>
+    <tbody>
+      ${bilan.lignes.map(l => `<tr><td>${l.nom}</td>${l.valeurs.map(v => `<td class="v${anormal(l.nom, v) ? ' ano' : ''}">${v}${anormal(l.nom, v) ? ' \u2191' : ''}</td>`).join('')}<td class="u">${l.unite}</td><td class="r">${l.normes}</td></tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
 // ── Liste des captures à produire ───────────────────────────────────
 const CAS = [
   { id: 'encadre-normal', bilan: BILAN_A, html: gabaritEncadre, opts: {}, dsf: 1, largeur: 900 },
@@ -189,6 +162,8 @@ const CAS = [
   { id: 'encadre-gris', bilan: BILAN_C, html: gabaritEncadre, opts: { encre: '#5a5a5a', fond: '#f7f7f7', taille: 12 }, dsf: 1, largeur: 880 },
   { id: 'zebre-hd', bilan: BILAN_D, html: gabaritZebre, opts: { taille: 13 }, dsf: 2, largeur: 900 },
   { id: 'encadre-minuscule', bilan: BILAN_B, html: gabaritEncadre, opts: { taille: 9, dense: true }, dsf: 1, largeur: 640 },
+  { id: 'medecin', bilan: BILAN_MEDECIN, html: gabaritMedecin, opts: {}, dsf: 1, largeur: 820 },
+  { id: 'medecin-petit', bilan: BILAN_MEDECIN, html: gabaritMedecin, opts: { taille: 10, dense: true }, dsf: 1, largeur: 660 },
 ];
 
 const navigateur = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });

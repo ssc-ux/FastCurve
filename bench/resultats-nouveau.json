@@ -60,10 +60,10 @@
     {
       "id": "serif-palecontraste",
       "cellules": 20,
-      "cellulesJustes": 17,
-      "cellulesFausses": 3,
+      "cellulesJustes": 16,
+      "cellulesFausses": 4,
       "cellulesManquantes": 0,
-      "fauxSilencieux": 2,
+      "fauxSilencieux": 3,
       "jaunes": 1,
       "jaunesInutiles": 0,
       "dates": 2,
@@ -74,10 +74,10 @@
     {
       "id": "serif-petit",
       "cellules": 20,
-      "cellulesJustes": 17,
-      "cellulesFausses": 3,
+      "cellulesJustes": 16,
+      "cellulesFausses": 4,
       "cellulesManquantes": 0,
-      "fauxSilencieux": 2,
+      "fauxSilencieux": 3,
       "jaunes": 1,
       "jaunesInutiles": 0,
       "dates": 2,
@@ -88,16 +88,16 @@
     {
       "id": "fleches-anormales",
       "cellules": 27,
-      "cellulesJustes": 27,
+      "cellulesJustes": 24,
       "cellulesFausses": 0,
-      "cellulesManquantes": 0,
+      "cellulesManquantes": 3,
       "fauxSilencieux": 0,
       "jaunes": 0,
       "jaunesInutiles": 0,
       "dates": 3,
       "datesJustes": 3,
       "lignes": 9,
-      "lignesTrouvees": 9
+      "lignesTrouvees": 8
     },
     {
       "id": "encadre-gris",
@@ -116,16 +116,16 @@
     {
       "id": "zebre-hd",
       "cellules": 27,
-      "cellulesJustes": 24,
+      "cellulesJustes": 27,
       "cellulesFausses": 0,
-      "cellulesManquantes": 3,
+      "cellulesManquantes": 0,
       "fauxSilencieux": 0,
-      "jaunes": 0,
-      "jaunesInutiles": 0,
+      "jaunes": 1,
+      "jaunesInutiles": 1,
       "dates": 3,
       "datesJustes": 3,
       "lignes": 9,
-      "lignesTrouvees": 8
+      "lignesTrouvees": 9
     },
     {
       "id": "encadre-minuscule",
@@ -140,26 +140,54 @@
       "datesJustes": 4,
       "lignes": 8,
       "lignesTrouvees": 8
+    },
+    {
+      "id": "medecin",
+      "cellules": 15,
+      "cellulesJustes": 15,
+      "cellulesFausses": 0,
+      "cellulesManquantes": 0,
+      "fauxSilencieux": 0,
+      "jaunes": 1,
+      "jaunesInutiles": 1,
+      "dates": 3,
+      "datesJustes": 3,
+      "lignes": 5,
+      "lignesTrouvees": 5
+    },
+    {
+      "id": "medecin-petit",
+      "cellules": 15,
+      "cellulesJustes": 15,
+      "cellulesFausses": 0,
+      "cellulesManquantes": 0,
+      "fauxSilencieux": 0,
+      "jaunes": 1,
+      "jaunesInutiles": 1,
+      "dates": 3,
+      "datesJustes": 3,
+      "lignes": 5,
+      "lignesTrouvees": 5
     }
   ],
   "total": {
     "id": "TOTAL",
-    "cellules": 246,
-    "cellulesJustes": 234,
-    "cellulesFausses": 8,
+    "cellules": 276,
+    "cellulesJustes": 262,
+    "cellulesFausses": 10,
     "cellulesManquantes": 4,
-    "fauxSilencieux": 6,
-    "jaunes": 8,
-    "jaunesInutiles": 5,
-    "dates": 30,
-    "datesJustes": 30,
-    "lignes": 84,
-    "lignesTrouvees": 83
+    "fauxSilencieux": 8,
+    "jaunes": 11,
+    "jaunesInutiles": 8,
+    "dates": 36,
+    "datesJustes": 36,
+    "lignes": 94,
+    "lignesTrouvees": 93
   },
   "details": [
     {
       "id": "encadre-normal",
-      "ms": 743,
+      "ms": 776,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -254,7 +282,7 @@
     },
     {
       "id": "encadre-petit",
-      "ms": 357,
+      "ms": 322,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -349,7 +377,7 @@
     },
     {
       "id": "zebre-normal",
-      "ms": 479,
+      "ms": 451,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -489,7 +517,7 @@
     },
     {
       "id": "zebre-petit",
-      "ms": 446,
+      "ms": 468,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -629,7 +657,7 @@
     },
     {
       "id": "serif-palecontraste",
-      "ms": 328,
+      "ms": 327,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -711,7 +739,7 @@
           "nom": "Fibrinogene",
           "unite": "g/L",
           "valeurs": [
-            "5.2",
+            "9.2",
             "3.7"
           ],
           "douteux": [
@@ -759,7 +787,7 @@
     },
     {
       "id": "serif-petit",
-      "ms": 303,
+      "ms": 351,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -841,7 +869,7 @@
           "nom": "Fibrinogene",
           "unite": "g/L",
           "valeurs": [
-            "5.2",
+            "9.2",
             "3.7"
           ],
           "douteux": [
@@ -889,274 +917,7 @@
     },
     {
       "id": "fleches-anormales",
-      "ms": 435,
-      "dates": [
-        "2026-02-03",
-        "2026-02-17",
-        "2026-03-10"
-      ],
-      "lignes": [
-        {
-          "nom": "Leucocytes",
-          "unite": "G/L",
-          "valeurs": [
-            "3.8",
-            "5.1",
-            "6.9"
-          ],
-          "douteux": [
-            false,
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "PNN",
-          "unite": "G/L",
-          "valeurs": [
-            "1.4",
-            "2.7",
-            "4.1"
-          ],
-          "douteux": [
-            false,
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "Lymphocytes",
-          "unite": "G/L",
-          "valeurs": [
-            "1.9",
-            "1.7",
-            "2.2"
-          ],
-          "douteux": [
-            false,
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "Plaquettes",
-          "unite": "G/L",
-          "valeurs": [
-            "96",
-            "145",
-            "232"
-          ],
-          "douteux": [
-            false,
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "Hemoglobine",
-          "unite": "g/dL",
-          "valeurs": [
-            "8.4",
-            "9.6",
-            "11.2"
-          ],
-          "douteux": [
-            false,
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "VGM",
-          "unite": "fL",
-          "valeurs": [
-            "104",
-            "98",
-            "92"
-          ],
-          "douteux": [
-            false,
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "1gG",
-          "unite": "g/L",
-          "valeurs": [
-            "4.8",
-            "6.2",
-            "8.1"
-          ],
-          "douteux": [
-            false,
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "C3",
-          "unite": "g/L",
-          "valeurs": [
-            "0.72",
-            "0.95",
-            "1.24"
-          ],
-          "douteux": [
-            false,
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "Anticorps anti",
-          "unite": "UI/mL",
-          "valeurs": [
-            ">300",
-            "184",
-            "46"
-          ],
-          "douteux": [
-            false,
-            false,
-            false
-          ]
-        }
-      ]
-    },
-    {
-      "id": "encadre-gris",
-      "ms": 344,
-      "dates": [
-        "2023-11-08",
-        "2023-12-06"
-      ],
-      "lignes": [
-        {
-          "nom": "ASAT",
-          "unite": "UI/L",
-          "valeurs": [
-            "62",
-            "38"
-          ],
-          "douteux": [
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "ALAT",
-          "unite": "UI/L",
-          "valeurs": [
-            "81",
-            "45"
-          ],
-          "douteux": [
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "GGT",
-          "unite": "UI/L",
-          "valeurs": [
-            "155",
-            "98"
-          ],
-          "douteux": [
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "PAL",
-          "unite": "UI/L",
-          "valeurs": [
-            "210",
-            "176"
-          ],
-          "douteux": [
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "Bilirubine tot",
-          "unite": "µmol/L",
-          "valeurs": [
-            "24",
-            "15"
-          ],
-          "douteux": [
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "TP",
-          "unite": "%",
-          "valeurs": [
-            "68",
-            "84"
-          ],
-          "douteux": [
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "Fibrinogene",
-          "unite": "g/L",
-          "valeurs": [
-            "5.2",
-            "3.7"
-          ],
-          "douteux": [
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "Ferritine",
-          "unite": "µg/L",
-          "valeurs": [
-            "1240",
-            "860"
-          ],
-          "douteux": [
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "TSH",
-          "unite": "mUI/L",
-          "valeurs": [
-            "0.42",
-            "1.85"
-          ],
-          "douteux": [
-            false,
-            false
-          ]
-        },
-        {
-          "nom": "Vitamine D",
-          "unite": "nmol/L",
-          "valeurs": [
-            "38",
-            "62"
-          ],
-          "douteux": [
-            false,
-            false
-          ]
-        }
-      ]
-    },
-    {
-      "id": "zebre-hd",
-      "ms": 476,
+      "ms": 414,
       "dates": [
         "2026-02-03",
         "2026-02-17",
@@ -1292,8 +1053,275 @@
       ]
     },
     {
+      "id": "encadre-gris",
+      "ms": 397,
+      "dates": [
+        "2023-11-08",
+        "2023-12-06"
+      ],
+      "lignes": [
+        {
+          "nom": "ASAT",
+          "unite": "UI/L",
+          "valeurs": [
+            "62",
+            "38"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "ALAT",
+          "unite": "UI/L",
+          "valeurs": [
+            "81",
+            "45"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "GGT",
+          "unite": "UI/L",
+          "valeurs": [
+            "155",
+            "98"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "PAL",
+          "unite": "UI/L",
+          "valeurs": [
+            "210",
+            "176"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Bilirubine tot",
+          "unite": "µmol/L",
+          "valeurs": [
+            "24",
+            "15"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "TP",
+          "unite": "%",
+          "valeurs": [
+            "68",
+            "84"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Fibrinogene",
+          "unite": "g/L",
+          "valeurs": [
+            "5.2",
+            "3.7"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Ferritine",
+          "unite": "µg/L",
+          "valeurs": [
+            "1240",
+            "860"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "TSH",
+          "unite": "mUI/L",
+          "valeurs": [
+            "0.42",
+            "1.85"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Vitamine D",
+          "unite": "nmol/L",
+          "valeurs": [
+            "38",
+            "62"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "zebre-hd",
+      "ms": 482,
+      "dates": [
+        "2026-02-03",
+        "2026-02-17",
+        "2026-03-10"
+      ],
+      "lignes": [
+        {
+          "nom": "Leucocytes",
+          "unite": "G/L",
+          "valeurs": [
+            "3.8",
+            "5.1",
+            "6.9"
+          ],
+          "douteux": [
+            false,
+            true,
+            false
+          ]
+        },
+        {
+          "nom": "PNN",
+          "unite": "G/L",
+          "valeurs": [
+            "1.4",
+            "2.7",
+            "4.1"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Lymphocytes",
+          "unite": "G/L",
+          "valeurs": [
+            "1.9",
+            "1.7",
+            "2.2"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Plaquettes",
+          "unite": "G/L",
+          "valeurs": [
+            "96",
+            "145",
+            "232"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Hemoglobine",
+          "unite": "g/dL",
+          "valeurs": [
+            "8.4",
+            "9.6",
+            "11.2"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "VGM",
+          "unite": "fL",
+          "valeurs": [
+            "104",
+            "98",
+            "92"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "1gG",
+          "unite": "g/L",
+          "valeurs": [
+            "4.8",
+            "6.2",
+            "8.1"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "C3",
+          "unite": "g/L",
+          "valeurs": [
+            "0.72",
+            "0.95",
+            "1.24"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Anticorps anti",
+          "unite": "UI/mL",
+          "valeurs": [
+            ">300",
+            "184",
+            "46"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        }
+      ]
+    },
+    {
       "id": "encadre-minuscule",
-      "ms": 487,
+      "ms": 454,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -1430,6 +1458,195 @@
           ]
         }
       ]
+    },
+    {
+      "id": "medecin",
+      "ms": 251,
+      "dates": [
+        "2024-03-12",
+        "2024-06-15",
+        "2024-09-20"
+      ],
+      "lignes": [
+        {
+          "nom": "Creatinine",
+          "unite": "µmol/L",
+          "valeurs": [
+            "85",
+            "92",
+            "110"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "CRP",
+          "unite": "mg/L",
+          "valeurs": [
+            "3",
+            "12",
+            "45"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Hemoglobine",
+          "unite": "g/dL",
+          "valeurs": [
+            "13.2",
+            "12.8",
+            "11.9"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Leucocytes",
+          "unite": "G/L",
+          "valeurs": [
+            "7.4",
+            "9.1",
+            "12.2"
+          ],
+          "douteux": [
+            false,
+            false,
+            true
+          ]
+        },
+        {
+          "nom": "Plaquettes",
+          "unite": "G/L",
+          "valeurs": [
+            "245",
+            "198",
+            "312"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "medecin-petit",
+      "ms": 280,
+      "dates": [
+        "2024-03-12",
+        "2024-06-15",
+        "2024-09-20"
+      ],
+      "lignes": [
+        {
+          "nom": "Creatinine",
+          "unite": "µmol/L",
+          "valeurs": [
+            "85",
+            "92",
+            "110"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "CRP",
+          "unite": "mg/L",
+          "valeurs": [
+            "3",
+            "12",
+            "45"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Hemoglobine",
+          "unite": "g/dL",
+          "valeurs": [
+            "13.2",
+            "12.8",
+            "11.9"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Leucocytes",
+          "unite": "G/L",
+          "valeurs": [
+            "7.4",
+            "9.1",
+            "12.2"
+          ],
+          "douteux": [
+            false,
+            false,
+            true
+          ]
+        },
+        {
+          "nom": "Plaquettes",
+          "unite": "G/L",
+          "valeurs": [
+            "245",
+            "198",
+            "312"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        }
+      ]
+    }
+  ],
+  "medecin": [
+    {
+      "numero": 1,
+      "fautes": 0,
+      "details": []
+    },
+    {
+      "numero": 2,
+      "fautes": 0,
+      "details": []
+    },
+    {
+      "numero": 3,
+      "fautes": 0,
+      "details": []
+    },
+    {
+      "numero": 4,
+      "fautes": 0,
+      "details": []
+    },
+    {
+      "numero": 5,
+      "fautes": 0,
+      "details": []
     }
   ]
 }

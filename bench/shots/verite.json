@@ -858,5 +858,117 @@
         ]
       }
     ]
+  },
+  {
+    "id": "medecin",
+    "fichier": "medecin.png",
+    "dates": [
+      "2024-03-12",
+      "2024-06-15",
+      "2024-09-20"
+    ],
+    "lignes": [
+      {
+        "nom": "Creatinine",
+        "unite": "umol/L",
+        "valeurs": [
+          "85",
+          "92",
+          "110"
+        ]
+      },
+      {
+        "nom": "CRP",
+        "unite": "mg/L",
+        "valeurs": [
+          "3",
+          "12",
+          "45"
+        ]
+      },
+      {
+        "nom": "Hemoglobine",
+        "unite": "g/dL",
+        "valeurs": [
+          "13.2",
+          "12.8",
+          "11.9"
+        ]
+      },
+      {
+        "nom": "Leucocytes",
+        "unite": "G/L",
+        "valeurs": [
+          "7.4",
+          "9.1",
+          "12.2"
+        ]
+      },
+      {
+        "nom": "Plaquettes",
+        "unite": "G/L",
+        "valeurs": [
+          "245",
+          "198",
+          "312"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "medecin-petit",
+    "fichier": "medecin-petit.png",
+    "dates": [
+      "2024-03-12",
+      "2024-06-15",
+      "2024-09-20"
+    ],
+    "lignes": [
+      {
+        "nom": "Creatinine",
+        "unite": "umol/L",
+        "valeurs": [
+          "85",
+          "92",
+          "110"
+        ]
+      },
+      {
+        "nom": "CRP",
+        "unite": "mg/L",
+        "valeurs": [
+          "3",
+          "12",
+          "45"
+        ]
+      },
+      {
+        "nom": "Hemoglobine",
+        "unite": "g/dL",
+        "valeurs": [
+          "13.2",
+          "12.8",
+          "11.9"
+        ]
+      },
+      {
+        "nom": "Leucocytes",
+        "unite": "G/L",
+        "valeurs": [
+          "7.4",
+          "9.1",
+          "12.2"
+        ]
+      },
+      {
+        "nom": "Plaquettes",
+        "unite": "G/L",
+        "valeurs": [
+          "245",
+          "198",
+          "312"
+        ]
+      }
+    ]
   }
 ]

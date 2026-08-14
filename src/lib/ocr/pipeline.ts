@@ -596,7 +596,9 @@ export async function reconnaitreTableau(
     unitesALire.forEach((u, k) => { lignes[u.ligne].unite = lus[k].texte.replace(/\s+/g, ''); });
   }
 
-  if (!lignes.length) {
+  // Un « tableau » d'une seule ligne n'est pas un bilan : c'est une découpe qui
+  // a échoué. Mieux vaut le dire franchement que proposer une ligne inventée.
+  if (lignes.length < 2) {
     return echec('Je n’ai su lire aucune ligne de résultats dans cette capture.');
   }
 

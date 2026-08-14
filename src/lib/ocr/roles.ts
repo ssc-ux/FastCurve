@@ -119,7 +119,45 @@ export function lireDate(texte: string, anneeParDefaut?: number): DateLue | null
       return { iso: null, brut, anneeDevinee: true };
     }
   }
+
+  // Séparateurs perdus par la reconnaissance : la barre oblique d'un « 12/03 »
+  // écrit petit est très régulièrement rendue « 1 » — l'en-tête devient
+  // « 12103 » et la colonne perd sa date. On ne recolle que ce qui donne un
+  // jour et un mois VALIDES : « 12345 » ou « 2024 » restent refusés.
+  const chiffres = t.replace(/\D/g, '');
+  const valide = (j: number, m: number) => j >= 1 && j <= 31 && m >= 1 && m <= 12;
+  if (t.length === 5 && /^\d{5}$/.test(t)) {
+    const j = +t.slice(0, 2), m = +t.slice(3, 5);
+    if (valide(j, m)) return dateCourte(j, m, anneeParDefaut);
+  }
+  if (chiffres.length === 8) {
+    const j = +chiffres.slice(0, 2), m = +chiffres.slice(2, 4), a = +chiffres.slice(4);
+    if (valide(j, m) && a >= 1900 && a <= 2200) {
+      const brut = `${chiffres.slice(0, 2)}/${chiffres.slice(2, 4)}/${chiffres.slice(4)}`;
+      return { iso: parseDate(brut), brut, anneeDevinee: false };
+    }
+  }
+  if (chiffres.length === 6) {
+    const j = +chiffres.slice(0, 2), m = +chiffres.slice(2, 4);
+    if (valide(j, m)) {
+      const brut = `${chiffres.slice(0, 2)}/${chiffres.slice(2, 4)}/${chiffres.slice(4)}`;
+      return { iso: parseDate(brut), brut, anneeDevinee: false };
+    }
+  }
+  if (chiffres.length === 4 && chiffres === t) {
+    const j = +chiffres.slice(0, 2), m = +chiffres.slice(2, 4);
+    if (valide(j, m)) return dateCourte(j, m, anneeParDefaut);
+  }
   return null;
+}
+
+/** Jour/mois sans année : l'année n'est jamais inventée sans contexte. */
+function dateCourte(j: number, m: number, anneeParDefaut?: number): DateLue {
+  const brut = `${String(j).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
+  if (anneeParDefaut) {
+    return { iso: parseDate(`${brut}/${anneeParDefaut}`), brut, anneeDevinee: true };
+  }
+  return { iso: null, brut, anneeDevinee: true };
 }
 
 /** L'en-tête ressemble-t-il à une date (même si elle n'est pas lisible) ? */
