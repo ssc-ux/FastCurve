@@ -135,8 +135,14 @@ export function detecterGouttieres(profil: Int32Array, largeurMin: number, seuil
  * d'encre entre deux gouttières. Les colonnes vides ou minuscules (filets
  * verticaux d'un tableau encadré) sont écartées.
  */
-export function colonnesDepuisGouttieres(profil: Int32Array, largeurMinGouttiere: number, largeurMinColonne = 4): Colonne[] {
-  const g = detecterGouttieres(profil, largeurMinGouttiere);
+export function colonnesDepuisGouttieres(
+  profil: Int32Array,
+  largeurMinGouttiere: number,
+  largeurMinColonne = 4,
+  /** Encre tolérée dans une gouttière : un titre débordant ne doit pas la boucher. */
+  seuil = 0,
+): Colonne[] {
+  const g = detecterGouttieres(profil, largeurMinGouttiere, seuil);
   const bornes: Colonne[] = [];
   let x = 0;
   for (const gg of g) {
@@ -259,9 +265,7 @@ export function decouperColonnes(carte: CarteEncre, bandes: Bande[]): Colonne[] 
   // Une gouttière tolère quelques bandes débordantes (titre, pied de page).
   const seuil = Math.max(0, Math.floor(bandes.length * 0.15));
   const largeurMinColonne = Math.max(4, Math.round(hLigne * 0.35));
-  return colonnesDepuisGouttieres(profil, min, seuil).filter(
-    c => c.x1 - c.x0 + 1 >= largeurMinColonne,
-  );
+  return colonnesDepuisGouttieres(profil, min, largeurMinColonne, seuil);
 }
 
 // ──────────────────────────────────────────────────────────────

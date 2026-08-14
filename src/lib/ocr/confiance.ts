@@ -86,7 +86,12 @@ export function jugerValeur(ctx: ContexteValeur): Verdict {
   if (ctx.confiance > 0 && ctx.confiance < SEUIL_CONFIANCE_VALEUR) motifs.push('lecture peu sûre');
   if (ctx.desaccordRelecture) motifs.push('deux lectures ont donné des résultats différents');
   if (ctx.separateurRetabli) motifs.push('virgule décimale rétablie d’après l’image');
-  else if (ctx.separateurGeometrique !== /[.,]/.test(ctx.texte)) motifs.push('virgule décimale incertaine');
+  // L'encre montre une virgule que le texte n'a pas, et la réparation n'a pas
+  // pu la replacer : c'est le cas « 12,2 lu 122 », toujours signalé.
+  // L'inverse (texte ponctué, encre muette) n'est PAS signalé : une virgule
+  // collée à un chiffre échappe souvent à l'analyse de composantes, et le
+  // signaler noierait le médecin sous des jaunes inutiles.
+  else if (ctx.separateurGeometrique && !/[.,]/.test(ctx.texte)) motifs.push('virgule décimale incertaine');
 
   if (decimalePerdue(ctx.texte, ctx.autresDeLaLigne)) {
     motifs.push('valeur décalée d’un facteur 10 par rapport à la ligne');
