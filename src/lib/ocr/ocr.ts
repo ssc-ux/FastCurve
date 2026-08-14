@@ -113,6 +113,72 @@ export async function runOcrCell(canvas: HTMLCanvasElement): Promise<OcrWord[]> 
   }
 }
 
+// ──────────────────────────────────────────────────────────────
+// Lecture CELLULE PAR CELLULE, avec liste blanche de caractères.
+//
+// C'est le levier le plus puissant contre les valeurs ubuesques : une case de
+// résultat ne peut contenir que des chiffres, une virgule, un point, « < » ou
+// « > ». Tesseract ne peut alors plus proposer « umolL » ni transformer une
+// flèche en chiffre. Le mode « ligne unique » (PSM 7) l'empêche par ailleurs
+// de re-segmenter la case et d'y voir plusieurs colonnes.
+// ──────────────────────────────────────────────────────────────
+
+export type ModeCellule = 'valeur' | 'date' | 'texte';
+
+/** Liste blanche et mode de segmentation par type de cellule. */
+const PROFILS: Record<ModeCellule, { liste: string; psm: string }> = {
+  valeur: { liste: '0123456789.,<>', psm: '7' },
+  date: { liste: '0123456789/.-', psm: '7' },
+  texte: { liste: '', psm: '7' },
+};
+
+export interface LectureCellule {
+  texte: string;
+  /** Confiance Tesseract 0..100 (0 = aucune lecture). */
+  confiance: number;
+}
+
+/**
+ * Lit un lot de cellules d'un même type. Les paramètres ne sont posés qu'une
+ * fois pour tout le lot : changer de liste blanche à chaque cellule coûterait
+ * plus cher que la reconnaissance elle-même.
+ */
+export async function lireCellules(
+  canvases: HTMLCanvasElement[],
+  mode: ModeCellule,
+  onProgress?: (fait: number, total: number) => void,
+): Promise<LectureCellule[]> {
+  if (!canvases.length) return [];
+  const worker = await initOcr();
+  const p = PROFILS[mode];
+  await worker.setParameters({
+    tessedit_char_whitelist: p.liste,
+    tessedit_pageseg_mode: p.psm as any,
+    user_defined_dpi: '300',
+    preserve_interword_spaces: '0',
+  });
+  const out: LectureCellule[] = [];
+  for (let i = 0; i < canvases.length; i++) {
+    const { data } = await worker.recognize(canvases[i], {}, { text: true, blocks: false });
+    out.push({
+      texte: (data.text || '').replace(/\s+/g, ' ').trim(),
+      confiance: typeof data.confidence === 'number' && isFinite(data.confidence) ? data.confidence : 0,
+    });
+    onProgress?.(i + 1, canvases.length);
+  }
+  return out;
+}
+
+/** Remet le worker dans l'état « page entière » (utilisé par la lecture de secours). */
+export async function reinitialiserParametres() {
+  const worker = await initOcr();
+  await worker.setParameters({
+    tessedit_char_whitelist: '',
+    tessedit_pageseg_mode: '6' as any,
+    preserve_interword_spaces: '1',
+  });
+}
+
 /** Préchauffe le worker OCR en tâche de fond (le 1er import paraît instantané). */
 export function preheatOcr() {
   try { initOcr(); } catch { /* silencieux : le préchauffage est best-effort */ }

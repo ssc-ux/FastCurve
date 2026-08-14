@@ -197,6 +197,176 @@ export function encreDansCellule(carte: CarteEncre, bande: Bande, col: Colonne):
   return n;
 }
 
+/**
+ * Profil « nombre de BANDES » : pour chaque abscisse, combien de lignes de
+ * texte contiennent de l'encre à cet endroit.
+ *
+ * C'est bien plus robuste que la somme des pixels pour trouver les gouttières :
+ * un titre large (« Résultats du 01/01/2023 au 31/12/2026 ») ou une ligne de
+ * pied de page ne pèsent qu'une bande sur douze et ne peuvent donc plus
+ * boucher une gouttière que tout le reste du tableau laisse libre. C'est
+ * précisément ce qui faisait perdre deux captures entières à l'ancienne chaîne.
+ */
+export function profilBandes(carte: CarteEncre, bandes: Bande[]): Int32Array {
+  const p = new Int32Array(carte.largeur);
+  for (const b of bandes) {
+    const vu = new Uint8Array(carte.largeur);
+    for (let y = Math.max(0, b.y0); y <= Math.min(carte.hauteur - 1, b.y1); y++) {
+      const base = y * carte.largeur;
+      for (let x = 0; x < carte.largeur; x++) if (carte.encre[base + x]) vu[x] = 1;
+    }
+    for (let x = 0; x < carte.largeur; x++) p[x] += vu[x];
+  }
+  return p;
+}
+
+/**
+ * Colonnes de pixels qui sont en réalité un FILET vertical du tableau : de
+ * l'encre à presque toutes les hauteurs de texte. Sans ce traitement, un
+ * tableau encadré n'a plus de gouttière (le filet coupe le blanc en deux) et
+ * la découpe en colonnes échoue.
+ */
+export function filetsVerticaux(profil: Int32Array, hauteurTexte: number): Set<number> {
+  const out = new Set<number>();
+  if (hauteurTexte <= 0) return out;
+  for (let x = 0; x < profil.length; x++) {
+    if (profil[x] >= hauteurTexte * 0.75) out.add(x);
+  }
+  return out;
+}
+
+/** Copie du profil avec les filets verticaux mis à zéro. */
+export function sansFilets(profil: Int32Array, hauteurTexte: number): Int32Array {
+  const filets = filetsVerticaux(profil, hauteurTexte);
+  if (!filets.size) return profil;
+  const p = profil.slice();
+  for (const x of filets) p[x] = 0;
+  return p;
+}
+
+/**
+ * Découpe complète en colonnes à partir des bandes de texte.
+ *
+ * `largeurMinGouttiere` est calée sur la hauteur de ligne : une gouttière de
+ * tableau vaut au moins ~0,55 hauteur de ligne, alors qu'une espace entre deux
+ * mots d'un même libellé (« Bilirubine totale ») en vaut trois fois moins.
+ */
+export function decouperColonnes(carte: CarteEncre, bandes: Bande[]): Colonne[] {
+  if (!bandes.length) return [];
+  const profil = profilBandes(carte, bandes);
+  const hLigne = hauteurLigne(bandes) || 12;
+  const min = Math.max(5, Math.round(hLigne * 0.5));
+  // Une gouttière tolère quelques bandes débordantes (titre, pied de page).
+  const seuil = Math.max(0, Math.floor(bandes.length * 0.15));
+  const largeurMinColonne = Math.max(4, Math.round(hLigne * 0.35));
+  return colonnesDepuisGouttieres(profil, min, seuil).filter(
+    c => c.x1 - c.x0 + 1 >= largeurMinColonne,
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Analyse fine d'une cellule : composantes connexes.
+//
+// Sert à deux contrôles que Tesseract ne sait pas faire tout seul :
+//  · retrouver une VIRGULE DÉCIMALE perdue (une petite tache basse entre deux
+//    chiffres) — c'est l'erreur « 12,2 lu 122 », fausse d'un facteur 10 ;
+//  · compter les caractères réellement présents, pour détecter une lecture
+//    manifestement incomplète.
+// ──────────────────────────────────────────────────────────────
+
+export interface Composante { x0: number; y0: number; x1: number; y1: number; pixels: number; }
+
+/** Composantes connexes (8-connexité) de l'encre à l'intérieur d'une boîte. */
+export function composantes(carte: CarteEncre, bande: Bande, col: Colonne): Composante[] {
+  const x0 = Math.max(0, col.x0), x1 = Math.min(carte.largeur - 1, col.x1);
+  const y0 = Math.max(0, bande.y0), y1 = Math.min(carte.hauteur - 1, bande.y1);
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  if (w <= 0 || h <= 0) return [];
+  const vu = new Uint8Array(w * h);
+  const out: Composante[] = [];
+  const pile = new Int32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (vu[i] || !carte.encre[(y0 + y) * carte.largeur + (x0 + x)]) continue;
+      let sommet = 0;
+      pile[sommet++] = i;
+      vu[i] = 1;
+      const c: Composante = { x0: x, y0: y, x1: x, y1: y, pixels: 0 };
+      while (sommet > 0) {
+        const j = pile[--sommet];
+        const jx = j % w, jy = (j - jx) / w;
+        c.pixels++;
+        if (jx < c.x0) c.x0 = jx;
+        if (jx > c.x1) c.x1 = jx;
+        if (jy < c.y0) c.y0 = jy;
+        if (jy > c.y1) c.y1 = jy;
+        for (let dy = -1; dy <= 1; dy++) {
+          const ny = jy + dy;
+          if (ny < 0 || ny >= h) continue;
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = jx + dx;
+            if (nx < 0 || nx >= w) continue;
+            const k = ny * w + nx;
+            if (vu[k] || !carte.encre[(y0 + ny) * carte.largeur + (x0 + nx)]) continue;
+            vu[k] = 1;
+            pile[sommet++] = k;
+          }
+        }
+      }
+      // Poussière : une composante d'un ou deux pixels n'est pas un caractère.
+      if (c.pixels >= 2) out.push(c);
+    }
+  }
+  return out.sort((a, b) => a.x0 - b.x0);
+}
+
+export interface GeometrieCellule {
+  /** Nombre de composantes de taille « caractère ». */
+  glyphes: number;
+  /** Pixels d'encre dans la cellule. */
+  encre: number;
+  /**
+   * Séparateur décimal repéré dans l'encre : petite tache basse entre deux
+   * chiffres. `chiffresAvant` = nombre de glyphes à sa gauche.
+   */
+  separateur: { chiffresAvant: number } | null;
+}
+
+/** Analyse géométrique d'une cellule numérique. */
+export function analyserCellule(carte: CarteEncre, bande: Bande, col: Colonne): GeometrieCellule {
+  const comps = composantes(carte, bande, col);
+  const encre = comps.reduce((s, c) => s + c.pixels, 0);
+  if (!comps.length) return { glyphes: 0, encre: 0, separateur: null };
+
+  const hauteurs = comps.map(c => c.y1 - c.y0 + 1);
+  const hMax = Math.max(...hauteurs);
+  // Les « chiffres » sont les composantes de hauteur proche du maximum.
+  const chiffres = comps.filter(c => c.y1 - c.y0 + 1 >= hMax * 0.6);
+  if (!chiffres.length) return { glyphes: comps.length, encre, separateur: null };
+  const basChiffres = Math.max(...chiffres.map(c => c.y1));
+  const hautChiffres = Math.min(...chiffres.map(c => c.y0));
+  const hChiffre = Math.max(1, basChiffres - hautChiffres + 1);
+
+  let separateur: { chiffresAvant: number } | null = null;
+  for (const c of comps) {
+    const h = c.y1 - c.y0 + 1;
+    const w = c.x1 - c.x0 + 1;
+    if (h > hChiffre * 0.45) continue;              // trop haut pour une virgule
+    if (w > hChiffre * 0.55) continue;              // trop large (un tiret, un « - »)
+    const centre = (c.y0 + c.y1) / 2;
+    if (centre < hautChiffres + hChiffre * 0.55) continue; // trop haut placé
+    const xc = (c.x0 + c.x1) / 2;
+    const avant = chiffres.filter(d => (d.x0 + d.x1) / 2 < xc).length;
+    // Une virgule décimale est ENTRE deux chiffres, jamais en bout.
+    if (avant === 0 || avant === chiffres.length) continue;
+    separateur = { chiffresAvant: avant };
+    break;
+  }
+
+  return { glyphes: chiffres.length + (separateur ? 1 : 0), encre, separateur };
+}
+
 /** Boîte englobante de l'encre d'une cellule (null si la cellule est vide). */
 export function boiteEncre(carte: CarteEncre, bande: Bande, col: Colonne): { x0: number; y0: number; x1: number; y1: number } | null {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
