@@ -88,6 +88,7 @@ class Store {
 
   private dernierSnapCle = '';
   private dernierSnapAt = 0;
+  private enGroupe = false;
 
   /**
    * `cle` regroupe les instantanés d'une même édition : taper « 4242 » dans une
@@ -95,6 +96,7 @@ class Store {
    * point d'annulation, sinon Ctrl+Z revient caractère par caractère.
    */
   private snap(cle?: string) {
+    if (this.enGroupe) return; // le point d'annulation du groupe a déjà été pris
     const maintenant = Date.now();
     if (cle && cle === this.dernierSnapCle && maintenant - this.dernierSnapAt < 2000) {
       this.dernierSnapAt = maintenant;
@@ -102,11 +104,36 @@ class Store {
     }
     this.dernierSnapCle = cle ?? '';
     this.dernierSnapAt = maintenant;
+    this.snapImmediat();
+  }
+
+  private snapImmediat() {
     try {
       this.history.push(JSON.stringify(this.study));
       if (this.history.length > 100) this.history.shift();
       this.future = []; // toute nouvelle action invalide le « rétablir »
     } catch { /* ignore */ }
+  }
+
+  /**
+   * Exécute plusieurs écritures sous UN SEUL point d'annulation.
+   *
+   * Sans cela, coller douze valeurs ou créer douze colonnes empile douze
+   * instantanés : le bouton « Annuler » du bandeau ne défait que la dernière
+   * écriture et laisse les onze autres en place — le médecin croit avoir tout
+   * annulé alors que la grille reste à moitié modifiée.
+   */
+  groupe<T>(fn: () => T): T {
+    if (this.enGroupe) return fn();
+    this.snapImmediat();
+    this.dernierSnapCle = '';
+    this.enGroupe = true;
+    try {
+      return fn();
+    } finally {
+      this.enGroupe = false;
+      this.save();
+    }
   }
 
   get canUndo(): boolean {
