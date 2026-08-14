@@ -12,7 +12,7 @@
 // 5. plusieurs colonnes de dates fondues en une seule, sans date
 // ──────────────────────────────────────────────────────────────
 
-import type { CasVerite, TableauMesure } from './notation';
+import { apparier, type CasVerite, type TableauMesure } from './notation';
 import { BILAN_A, BILAN_B, BILAN_C, BILAN_D, BILAN_MEDECIN } from './bilans.mjs';
 
 interface LigneBilan { nom: string; unite: string; valeurs: string[]; normes: string }
@@ -67,10 +67,11 @@ export function casMedecin(cas: CasVerite, res: TableauMesure): CasMedecin[] {
   // ── 1 & 2 : une borne de normes proposée comme résultat ──
   // On cherche, ligne par ligne, une valeur produite qui est une borne de la
   // colonne « Normes » de cette ligne SANS être une vraie valeur du patient.
-  for (const lv of cas.lignes) {
+  const appariees = apparier(cas.lignes, res.lignes);
+  cas.lignes.forEach((lv, li) => {
     const lb = bilan?.lignes.find(l => memeNom(l.nom, lv.nom));
-    const lm = res.lignes.find(l => memeNom(l.nom, lv.nom));
-    if (!lb || !lm) continue;
+    const lm = appariees[li];
+    if (!lb || !lm) return;
     const bornes = bornesDeNormes(lb.normes);
     const vraies = new Set(lv.valeurs.map(v => nombre(v)).filter(v => v !== null));
     for (const brut of lm.valeurs) {
@@ -82,12 +83,12 @@ export function casMedecin(cas: CasVerite, res: TableauMesure): CasMedecin[] {
         faute(numero, `${lv.nom} : « ${brut} » est une borne de la norme « ${lb.normes} »`);
       }
     }
-  }
+  });
 
   // ── 3 : virgule décimale perdue ──
-  for (const lv of cas.lignes) {
-    const lm = res.lignes.find(l => memeNom(l.nom, lv.nom));
-    if (!lm) continue;
+  cas.lignes.forEach((lv, li) => {
+    const lm = appariees[li];
+    if (!lm) return;
     lv.valeurs.forEach((attendu, k) => {
       const a = nombre(attendu);
       if (a === null || !/[.,]/.test(attendu)) return;
@@ -100,7 +101,7 @@ export function casMedecin(cas: CasVerite, res: TableauMesure): CasMedecin[] {
         faute(3, `${lv.nom} : « ${attendu} » rendu « ${lm.valeurs[ci]} »`);
       }
     });
-  }
+  });
 
   // ── 4 : unité agglutinée au nom ──
   const UNITE_COLLEE = /\b(u?mol\/?l|µmol\/?l|mmol\/?l|nmol\/?l|g\/?dl|g\/?l|mg\/?l|[µu]g\/?l|ui\/?ml|ui\/?l|mui\/?l|fl|%)\s*$/i;

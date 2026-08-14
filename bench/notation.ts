@@ -68,6 +68,43 @@ export function normVal(s: string): string {
   return m[1] + (isNaN(n) ? m[2] : String(n));
 }
 
+/**
+ * Apparie les lignes lues aux lignes attendues, chacune une seule fois.
+ *
+ * Le rapprochement naïf (« la première ligne lue qui ressemble ») trompait la
+ * mesure sur les paires d'analytes proches : « ALAT » à une lettre de « ASAT »
+ * était noté contre la ligne ASAT, et l'on comptait deux valeurs fausses là où
+ * la lecture était juste. On apparie donc par égalité d'abord, puis par
+ * ressemblance décroissante, sans jamais réutiliser une ligne déjà prise.
+ */
+export function apparier(verite: LigneVerite[], mesurees: LigneMesuree[]): (LigneMesuree | undefined)[] {
+  const pris = new Set<number>();
+  const out: (LigneMesuree | undefined)[] = new Array(verite.length);
+
+  verite.forEach((lv, i) => {
+    const j = mesurees.findIndex((lm, k) => !pris.has(k) && norm(lm.nom) === norm(lv.nom));
+    if (j >= 0) { pris.add(j); out[i] = mesurees[j]; }
+  });
+
+  verite.forEach((lv, i) => {
+    if (out[i]) return;
+    const nb = norm(lv.nom);
+    let meilleur = -1, meilleureD = Infinity;
+    mesurees.forEach((lm, k) => {
+      if (pris.has(k)) return;
+      const na = norm(lm.nom);
+      if (!na || !nb) return;
+      const prefixe = na.length >= 4 && nb.length >= 4 && (na.startsWith(nb) || nb.startsWith(na));
+      const d = prefixe ? 0.5 : distance(na, nb);
+      const seuil = Math.max(1, Math.floor(Math.max(na.length, nb.length) * 0.25));
+      if (d <= seuil && d < meilleureD) { meilleureD = d; meilleur = k; }
+    });
+    if (meilleur >= 0) { pris.add(meilleur); out[i] = mesurees[meilleur]; }
+  });
+
+  return out;
+}
+
 export function noter(cas: CasVerite, res: TableauMesure): Score {
   const s: Score = {
     id: cas.id, cellules: 0, cellulesJustes: 0, cellulesFausses: 0, cellulesManquantes: 0,
@@ -82,8 +119,9 @@ export function noter(cas: CasVerite, res: TableauMesure): Score {
     if (i >= 0 && ![...colDe.values()].includes(i)) { colDe.set(d, i); s.datesJustes++; }
   });
 
-  for (const lv of cas.lignes) {
-    const lm = res.lignes.find(l => memeLigne(l.nom, lv.nom));
+  const appariees = apparier(cas.lignes, res.lignes);
+  cas.lignes.forEach((lv, li) => {
+    const lm = appariees[li];
     if (lm) s.lignesTrouvees++;
     lv.valeurs.forEach((attendu, k) => {
       s.cellules++;
@@ -100,7 +138,7 @@ export function noter(cas: CasVerite, res: TableauMesure): Score {
         if (!douteux) s.fauxSilencieux++;
       }
     });
-  }
+  });
   return s;
 }
 

@@ -102,10 +102,10 @@
     {
       "id": "encadre-gris",
       "cellules": 20,
-      "cellulesJustes": 16,
-      "cellulesFausses": 4,
+      "cellulesJustes": 18,
+      "cellulesFausses": 2,
       "cellulesManquantes": 0,
-      "fauxSilencieux": 4,
+      "fauxSilencieux": 2,
       "jaunes": 1,
       "jaunesInutiles": 1,
       "dates": 2,
@@ -173,10 +173,10 @@
   "total": {
     "id": "TOTAL",
     "cellules": 276,
-    "cellulesJustes": 172,
-    "cellulesFausses": 11,
+    "cellulesJustes": 174,
+    "cellulesFausses": 9,
     "cellulesManquantes": 93,
-    "fauxSilencieux": 10,
+    "fauxSilencieux": 8,
     "jaunes": 5,
     "jaunesInutiles": 4,
     "dates": 36,
@@ -187,7 +187,7 @@
   "details": [
     {
       "id": "encadre-normal",
-      "ms": 879,
+      "ms": 948,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -282,7 +282,7 @@
     },
     {
       "id": "encadre-petit",
-      "ms": 429,
+      "ms": 459,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -377,7 +377,7 @@
     },
     {
       "id": "zebre-normal",
-      "ms": 598,
+      "ms": 517,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -517,7 +517,7 @@
     },
     {
       "id": "zebre-petit",
-      "ms": 532,
+      "ms": 546,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -657,7 +657,7 @@
     },
     {
       "id": "serif-palecontraste",
-      "ms": 427,
+      "ms": 422,
       "dates": [
         "2023-01-01",
         "2026-12-31"
@@ -666,7 +666,7 @@
     },
     {
       "id": "serif-petit",
-      "ms": 438,
+      "ms": 434,
       "dates": [
         "2023-01-01",
         "2026-12-31"
@@ -675,7 +675,7 @@
     },
     {
       "id": "fleches-anormales",
-      "ms": 446,
+      "ms": 445,
       "dates": [
         ""
       ],
@@ -774,7 +774,7 @@
     },
     {
       "id": "encadre-gris",
-      "ms": 544,
+      "ms": 537,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -904,7 +904,7 @@
     },
     {
       "id": "zebre-hd",
-      "ms": 455,
+      "ms": 484,
       "dates": [
         "2026-02-03",
         "2026-02-17",
@@ -1041,7 +1041,7 @@
     },
     {
       "id": "encadre-minuscule",
-      "ms": 585,
+      "ms": 576,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -1181,7 +1181,7 @@
     },
     {
       "id": "medecin",
-      "ms": 426,
+      "ms": 429,
       "dates": [
         "2024-09-21"
       ],
@@ -1240,7 +1240,7 @@
     },
     {
       "id": "medecin-petit",
-      "ms": 393,
+      "ms": 419,
       "dates": [
         "2024-09-20"
       ],
