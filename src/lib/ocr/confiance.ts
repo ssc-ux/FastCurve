@@ -58,6 +58,10 @@ export interface ContexteValeur {
   nomAnalyte: string;
   /** Textes des autres cases de résultat de la même ligne. */
   autresDeLaLigne: string[];
+  /** Signes comptés dans l'encre par l'analyse géométrique. */
+  glyphes?: number;
+  /** Signes effectivement rendus par la reconnaissance (texte brut). */
+  caracteresLus?: number;
 }
 
 /**
@@ -92,6 +96,13 @@ export function jugerValeur(ctx: ContexteValeur): Verdict {
   // collée à un chiffre échappe souvent à l'analyse de composantes, et le
   // signaler noierait le médecin sous des jaunes inutiles.
   else if (ctx.separateurGeometrique && !/[.,]/.test(ctx.texte)) motifs.push('virgule décimale incertaine');
+
+  // L'encre porte plus de signes que la reconnaissance n'en a rendu : il manque
+  // quelque chose. C'est ce qui attrape « > 300 » rendu « 300 » — une valeur
+  // fausse et parfaitement crédible, donc la plus dangereuse de toutes.
+  if (ctx.glyphes != null && ctx.caracteresLus != null && ctx.glyphes > ctx.caracteresLus) {
+    motifs.push('un signe de l’image n’a pas été lu (peut-être « < » ou « > »)');
+  }
 
   if (decimalePerdue(ctx.texte, ctx.autresDeLaLigne)) {
     motifs.push('valeur décalée d’un facteur 10 par rapport à la ligne');

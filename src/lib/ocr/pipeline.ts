@@ -293,15 +293,26 @@ interface Cellule {
   inverse: boolean;
 }
 
-/** Boîte d'une cellule, resserrée sur son encre pour que l'agrandissement porte. */
+/**
+ * Boîte d'une cellule, resserrée sur son encre pour que l'agrandissement porte.
+ *
+ * `limites` donne le droit de déborder la colonne jusqu'au milieu des
+ * gouttières voisines, et ce détail vaut plusieurs points : les valeurs étant
+ * alignées à droite, la colonne est calée au pixel près sur le chiffre le plus
+ * à gauche de la plus longue valeur. Découpée à ras, cette valeur-là perd son
+ * premier chiffre — « 1240 » devenait « 240 », faux d'un facteur cinq et
+ * parfaitement crédible.
+ */
 function celluleDe(
   carte: CarteEncre, polarite: Uint8Array, bande: Bande, col: Colonne, hL: number,
+  limites?: Colonne,
 ): Cellule {
-  const marge = Math.max(2, Math.round(hL * 0.3));
+  const marge = Math.max(3, Math.round(hL * 0.45));
+  const bornes = limites ?? col;
   const encre = encreDansCellule(carte, bande, col);
   const b = boiteEncre(carte, bande, col);
-  const x0 = b ? Math.max(col.x0, b.x0 - marge) : col.x0;
-  const x1 = b ? Math.min(col.x1, b.x1 + marge) : col.x1;
+  const x0 = b ? Math.max(bornes.x0, b.x0 - marge) : col.x0;
+  const x1 = b ? Math.min(bornes.x1, b.x1 + marge) : col.x1;
   let sombres = 0;
   for (let y = Math.max(0, bande.y0); y <= Math.min(polarite.length - 1, bande.y1); y++) {
     sombres += polarite[y];
@@ -353,7 +364,8 @@ export async function reconnaitreTableau(
     return echec('Cette image est trop dense pour être lue d’un bloc — recadrez sur le tableau.');
   }
 
-  const cellule = (bi: number, ci: number) => celluleDe(carte, polarite, bandes[bi], colonnes[ci], hL);
+  const cellule = (bi: number, ci: number) =>
+    celluleDe(carte, polarite, bandes[bi], colonnes[ci], hL, plageEntete(colonnes, ci, carte.largeur));
   // Une case de résultat est agrandie plus fort que les autres : c'est là que
   // se joue la virgule décimale, et une virgule de deux pixels ne survit pas à
   // un agrandissement timide.
@@ -484,7 +496,11 @@ export async function reconnaitreTableau(
     x1: colonnes[colNoms[colNoms.length - 1]].x1,
   };
   avancer(0, 1, 'Lecture des analytes…');
-  const casNoms = iDonnees.map(bi => celluleDe(carte, polarite, bandes[bi], colNom, hL));
+  const limitesNom = {
+    x0: plageEntete(colonnes, colNoms[0], carte.largeur).x0,
+    x1: plageEntete(colonnes, colNoms[colNoms.length - 1], carte.largeur).x1,
+  };
+  const casNoms = iDonnees.map(bi => celluleDe(carte, polarite, bandes[bi], colNom, hL, limitesNom));
   const lusNoms = await lire(casNoms, 'texte', 'Analytes');
   if (annule()) return echec('Lecture interrompue.');
 
@@ -493,7 +509,8 @@ export async function reconnaitreTableau(
   const geos: GeometrieCellule[][] = [];
   for (const d of colDates) {
     const col = colonnes[d.index];
-    const cases = iDonnees.map(bi => celluleDe(carte, polarite, bandes[bi], col, hL));
+    const limites = plageEntete(colonnes, d.index, carte.largeur);
+    const cases = iDonnees.map(bi => celluleDe(carte, polarite, bandes[bi], col, hL, limites));
     brutes.push(await lire(cases, 'valeur', 'Valeurs'));
     geos.push(iDonnees.map(bi => analyserCellule(carte, bandes[bi], col)));
     if (annule()) return echec('Lecture interrompue.');
@@ -524,6 +541,7 @@ export async function reconnaitreTableau(
       return {
         texte: rep.texte, retabli: rep.separateurRetabli,
         sepGeo: !!g.separateur, conf: brut.confiance, encre: g.encre,
+        glyphes: g.glyphes, lus: (brut.texte.match(/[0-9.,<>]/g) ?? []).length,
       };
     });
 
@@ -542,6 +560,8 @@ export async function reconnaitreTableau(
         desaccordRelecture: false,
         nomAnalyte: nom,
         autresDeLaLigne: valeurs.filter((_, k) => k !== c).map(o => o.texte),
+        glyphes: v.glyphes,
+        caracteresLus: v.lus,
       });
       return { texte: v.texte, douteux: verdict.douteux, motifs: verdict.motifs };
     });
@@ -569,7 +589,8 @@ export async function reconnaitreTableau(
   //   pas, sinon on paierait dix reconnaissances pour rien. —
   if (unitesALire.length && colUnite >= 0) {
     const lus = await lire(
-      unitesALire.map(u => celluleDe(carte, polarite, bandes[u.bande], colonnes[colUnite], hL)),
+      unitesALire.map(u => celluleDe(carte, polarite, bandes[u.bande], colonnes[colUnite], hL,
+        plageEntete(colonnes, colUnite, carte.largeur))),
       'texte', 'Unités',
     );
     unitesALire.forEach((u, k) => { lignes[u.ligne].unite = lus[k].texte.replace(/\s+/g, ''); });
