@@ -104,13 +104,18 @@ describe('erreur 3 — 12,2 ne devient jamais 122', () => {
     expect(decimalePerdue('96', ['28', '7'])).toBe(false);
   });
 
-  it('signale en jaune une virgule rétablie', () => {
-    const ctx: ContexteValeur = {
+  it('ne signale une virgule rétablie que si elle ne colle pas à la ligne', () => {
+    const base: ContexteValeur = {
       texte: '12.2', confiance: 90, encre: 100, encreTypique: 100,
       separateurGeometrique: true, separateurRetabli: true, desaccordRelecture: false,
       nomAnalyte: 'Leucocytes', autresDeLaLigne: ['7.4', '9.1'],
     };
-    expect(jugerValeur(ctx).douteux).toBe(true);
+    // « 7,4 · 9,1 · 12,2 » : la virgule rétablie est corroborée par la ligne.
+    expect(jugerValeur(base).douteux).toBe(false);
+    // « 9,8 · 10,9 · 1,17 » : elle ne l'est pas — il faut regarder.
+    expect(jugerValeur({
+      ...base, texte: '1.17', nomAnalyte: 'Hémoglobine', autresDeLaLigne: ['9.8', '10.9'],
+    }).douteux).toBe(true);
   });
 });
 

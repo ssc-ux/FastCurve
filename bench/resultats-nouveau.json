@@ -8,8 +8,8 @@
       "cellulesFausses": 0,
       "cellulesManquantes": 0,
       "fauxSilencieux": 0,
-      "jaunes": 1,
-      "jaunesInutiles": 1,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
       "dates": 3,
       "datesJustes": 3,
       "lignes": 6,
@@ -22,8 +22,8 @@
       "cellulesFausses": 0,
       "cellulesManquantes": 0,
       "fauxSilencieux": 0,
-      "jaunes": 1,
-      "jaunesInutiles": 1,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
       "dates": 3,
       "datesJustes": 3,
       "lignes": 6,
@@ -177,8 +177,8 @@
     "cellulesFausses": 10,
     "cellulesManquantes": 4,
     "fauxSilencieux": 8,
-    "jaunes": 11,
-    "jaunesInutiles": 8,
+    "jaunes": 9,
+    "jaunesInutiles": 6,
     "dates": 36,
     "datesJustes": 36,
     "lignes": 94,
@@ -187,7 +187,7 @@
   "details": [
     {
       "id": "encadre-normal",
-      "ms": 776,
+      "ms": 767,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -219,7 +219,7 @@
           "douteux": [
             false,
             false,
-            true
+            false
           ]
         },
         {
@@ -282,7 +282,7 @@
     },
     {
       "id": "encadre-petit",
-      "ms": 322,
+      "ms": 343,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -314,7 +314,7 @@
           "douteux": [
             false,
             false,
-            true
+            false
           ]
         },
         {
@@ -377,7 +377,7 @@
     },
     {
       "id": "zebre-normal",
-      "ms": 451,
+      "ms": 476,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -517,7 +517,7 @@
     },
     {
       "id": "zebre-petit",
-      "ms": 468,
+      "ms": 465,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -657,7 +657,7 @@
     },
     {
       "id": "serif-palecontraste",
-      "ms": 327,
+      "ms": 353,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -787,7 +787,7 @@
     },
     {
       "id": "serif-petit",
-      "ms": 351,
+      "ms": 340,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -917,7 +917,7 @@
     },
     {
       "id": "fleches-anormales",
-      "ms": 414,
+      "ms": 449,
       "dates": [
         "2026-02-03",
         "2026-02-17",
@@ -1054,7 +1054,7 @@
     },
     {
       "id": "encadre-gris",
-      "ms": 397,
+      "ms": 400,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -1184,7 +1184,7 @@
     },
     {
       "id": "zebre-hd",
-      "ms": 482,
+      "ms": 516,
       "dates": [
         "2026-02-03",
         "2026-02-17",
@@ -1321,7 +1321,7 @@
     },
     {
       "id": "encadre-minuscule",
-      "ms": 454,
+      "ms": 526,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -1461,7 +1461,7 @@
     },
     {
       "id": "medecin",
-      "ms": 251,
+      "ms": 265,
       "dates": [
         "2024-03-12",
         "2024-06-15",
@@ -1542,7 +1542,7 @@
     },
     {
       "id": "medecin-petit",
-      "ms": 280,
+      "ms": 285,
       "dates": [
         "2024-03-12",
         "2024-06-15",

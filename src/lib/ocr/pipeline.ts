@@ -541,7 +541,10 @@ export async function reconnaitreTableau(
       return {
         texte: rep.texte, retabli: rep.separateurRetabli,
         sepGeo: !!g.separateur, conf: brut.confiance, encre: g.encre,
-        glyphes: g.glyphes, lus: (brut.texte.match(/[0-9.,<>]/g) ?? []).length,
+        glyphes: g.glyphes,
+        // Une virgule rétablie compte comme lue : sans cela, la réparation
+        // déclencherait elle-même l'alerte « un signe n'a pas été lu ».
+        lus: (brut.texte.match(/[0-9.,<>]/g) ?? []).length + (rep.separateurRetabli ? 1 : 0),
       };
     });
 

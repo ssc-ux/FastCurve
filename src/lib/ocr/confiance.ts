@@ -39,6 +39,28 @@ function verdict(motifs: string[]): Verdict {
   return motifs.length ? { douteux: true, motifs } : SUR;
 }
 
+/**
+ * La valeur est-elle du même ordre de grandeur que le reste de sa ligne ?
+ *
+ * Un suivi biologique varie, parfois beaucoup, mais rarement d'un facteur
+ * quatre d'un prélèvement à l'autre. C'est assez large pour laisser passer
+ * toute la clinique, assez serré pour repérer une virgule mal replacée.
+ */
+function corrobore(texte: string, autresDeLaLigne: string[]): boolean {
+  const v = valeurDe(texte);
+  if (v === null || v === 0) return false;
+  const vals = autresDeLaLigne
+    .map(valeurDe)
+    .filter((x): x is number => x !== null && x !== 0)
+    .map(Math.abs)
+    .sort((a, b) => a - b);
+  if (vals.length < 2) return false;
+  const med = vals[Math.floor(vals.length / 2)];
+  if (med <= 0) return false;
+  const r = Math.abs(v) / med;
+  return r >= 0.25 && r <= 4;
+}
+
 export interface ContexteValeur {
   /** Texte finalement proposé au médecin. */
   texte: string;
@@ -89,7 +111,13 @@ export function jugerValeur(ctx: ContexteValeur): Verdict {
 
   if (ctx.confiance > 0 && ctx.confiance < SEUIL_CONFIANCE_VALEUR) motifs.push('lecture peu sûre');
   if (ctx.desaccordRelecture) motifs.push('deux lectures ont donné des résultats différents');
-  if (ctx.separateurRetabli) motifs.push('virgule décimale rétablie d’après l’image');
+  // Virgule rétablie d'après l'encre : on ne dérange le médecin que si le
+  // résultat ne colle pas avec le reste de sa ligne. « 7,4 · 9,1 · 12,2 » se
+  // corrobore tout seul — le signaler serait un jaune pour rien ; « 9,8 · 10,9
+  // · 1,17 » ne se corrobore pas, et là il faut regarder.
+  if (ctx.separateurRetabli && !corrobore(ctx.texte, ctx.autresDeLaLigne)) {
+    motifs.push('virgule décimale rétablie d’après l’image');
+  }
   // L'encre montre une virgule que le texte n'a pas, et la réparation n'a pas
   // pu la replacer : c'est le cas « 12,2 lu 122 », toujours signalé.
   // L'inverse (texte ponctué, encre muette) n'est PAS signalé : une virgule
