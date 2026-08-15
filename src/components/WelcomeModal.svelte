@@ -6,16 +6,40 @@
     { icon: '💊', t: 'Ajoutez les traitements', d: 'Barres, décroissances de corticoïdes, événements et annotations dans l’onglet « Repères ».' },
     { icon: '📤', t: 'Exportez', d: 'Image haute résolution, PDF / impression A4, ou copie dans le presse-papiers — qualité publication.' },
   ];
+
+  // Sans ça, le premier `Tab` à l'ouverture saute la modale et va tabuler
+  // dans la barre du haut *derrière* elle : au clavier, impossible d'atteindre
+  // « Commencer » et l'application « en dessous » reste utilisable en plein
+  // pendant que la modale prétend la bloquer. Focus initial + piège à Tab +
+  // Échap referment la boucle.
+  let modalEl = $state<HTMLDivElement | undefined>();
+  $effect(() => { modalEl?.querySelector<HTMLElement>('.start')?.focus(); });
+
+  function focusables(): HTMLElement[] {
+    if (!modalEl) return [];
+    return [...modalEl.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter(el => !el.hasAttribute('disabled'));
+  }
+  function onModalKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
+    if (e.key !== 'Tab') return;
+    const items = focusables();
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="overlay" onclick={onClose}>
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="modal" onclick={(e) => e.stopPropagation()}>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="welcome-title" tabindex="-1"
+       bind:this={modalEl} onclick={(e) => e.stopPropagation()} onkeydown={onModalKeydown}>
     <div class="head">
       <span class="logo">📈</span>
       <div class="titles">
-        <div class="name">FastCurve <span class="beta">bêta</span></div>
+        <div class="name" id="welcome-title">FastCurve <span class="beta">bêta</span></div>
         <div class="tag">Courbes de suivi biologique & EFR, qualité publication — en quelques secondes.</div>
       </div>
     </div>
