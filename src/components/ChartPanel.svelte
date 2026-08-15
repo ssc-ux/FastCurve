@@ -167,6 +167,20 @@
       {/if}
     </div>
 
+    <!--
+      Deux axes ne peuvent pas loger des ordres de grandeur trop éloignés : une
+      hémoglobine tracée à côté d'une ferritine devient un trait plat. La courbe
+      reste juste, mais on ne peut rien y lire — et rien ne le signalait. Plutôt
+      que de laisser croire à un paramètre resté stable, on le dit, et un clic
+      bascule vers le mode où chaque série retrouve son échelle.
+    -->
+    {#if result.ecrasees.length}
+      <button class="ecrase-badge" onclick={() => store.updateSettings({ chartMode: 'stacked' })}
+              title="Sur un seul graphe, ces paramètres sont écrasés au ras de leur axe : leurs variations y sont invisibles. Cliquer pour passer en panneaux, où chacun a sa propre échelle.">
+        ⚠ {result.ecrasees.length === 1 ? `« ${result.ecrasees[0]} » est écrasé` : `${result.ecrasees.length} séries écrasées`} — voir en panneaux
+      </button>
+    {/if}
+
     {#if s().fromDate || s().toDate}
       <button class="period-badge" onclick={() => store.updateSettings({ fromDate: null, toDate: null })}
               title="Un filtre de période masque une partie des données. Cliquer pour tout réafficher.">
@@ -264,6 +278,12 @@
   .period-badge:hover { background: #f7e9b8; border-color: #e0c46a; }
   .pb-x { color: #a07b1a; font-weight: 700; }
   .period-badge:hover .pb-x { color: #7a5b00; }
+  .ecrase-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fdeeea; color: #8a3423; border: 1px solid #f3c4b8;
+    border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 600; white-space: nowrap;
+  }
+  .ecrase-badge:hover { background: #f9ded7; border-color: #e8a897; }
   .copy-btn { padding: 5px 14px; }
   .export-main { border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 5px 14px; }
   .export-caret { border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 5px 8px; margin-left: 1px; border-left: 1px solid rgba(255,255,255,.35); }

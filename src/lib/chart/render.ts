@@ -44,6 +44,13 @@ export interface RenderResult {
   height: number;
   /** Zones interactives des points (coord SVG) pour le survol. */
   hotspots: { param: Parameter; date: string; value: number; cx: number; cy: number }[];
+  /**
+   * Séries que le graphe unique écrase au ras de leur axe : deux échelles ne
+   * peuvent pas loger des ordres de grandeur trop éloignés. La figure reste
+   * juste, mais ces courbes n'y sont pas lisibles — autant le dire au médecin
+   * plutôt que de le laisser croire à des paramètres restés plats.
+   */
+  ecrasees: string[];
 }
 
 function esc(s: string): string {
@@ -256,6 +263,7 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
   const xm = buildXMapper(allDates, s.timeAxis, layout);
 
   const hotspots: RenderResult['hotspots'] = [];
+  const ecrasees: string[] = [];
   const parts: string[] = [];
   /** Paramètres tracés sur l'axe de droite (mode graphe unique à 2 axes). */
   const axeDroite = new Set<string>();
@@ -375,6 +383,16 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
       if (titreDroite) {
         panelsSVG += `<text transform="translate(${width - 14},${n((y0 + y1) / 2)}) rotate(90)" text-anchor="middle" font-family="${FONT}" font-size="11" fill="${INK}">${esc(titreDroite)}</text>`;
       }
+    }
+
+    // Une série dont toute l'amplitude tient dans 4 % de la hauteur du graphe
+    // est un trait plat : elle est tracée, mais on ne peut rien y lire.
+    for (const p of params) {
+      const sc = rightParams.includes(p) ? scR! : scL;
+      const vs = mesuresDe(p).map(m => m.value).filter(v => isFinite(v));
+      if (!vs.length) continue;
+      const etendue = sc.max - sc.min;
+      if (etendue > 0 && (Math.max(...vs) - Math.min(...vs)) / etendue < 0.04) ecrasees.push(p.name);
     }
 
     for (const p of rightParams) axeDroite.add(p.id);
@@ -610,7 +628,7 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     + parts.join('')
     + `</svg>`;
 
-  return { svg, width, height, hotspots };
+  return { svg, width, height, hotspots, ecrasees };
 }
 
 // ── Helpers de tracé ──────────────────────────────────────────
