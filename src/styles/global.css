@@ -7,12 +7,21 @@
   --border-strong: #d3d8df;
   --ink: #1a2430;
   --muted: #56616d;
-  --faint: #78818c;
-  --accent: #2f74d0;
+  /* #78818c à l'origine : sous 4.5:1 sur fond blanc (3.95:1), illisible sur un
+     portable en salle mal éclairée. Assombri pour repasser le seuil WCAG AA
+     partout où le texte de l'application l'utilise. */
+  --faint: #666e77;
+  /* #2f74d0 à l'origine : sous 4.5:1 une fois posé sur son propre fond teinté
+     (--accent-soft, ex. l'onglet actif) — 4.08:1 mesuré. Assombri d'environ
+     10 % ; le bleu reste reconnaissable, le contraste passe partout. */
+  --accent: #2a68bb;
   --accent-soft: #eaf1fb;
   --accent-ink: #ffffff;
-  --danger: #d0402f;
-  --ok: #1f9d55;
+  /* #d0402f / #1f9d55 à l'origine : sous 4.5:1 pour du texte (le bouton
+     « Supprimer » et le « ✓ Enregistré » de la barre du haut, entre autres) —
+     assombris pour repasser le seuil WCAG AA en conservant la teinte. */
+  --danger: #bb3a2a;
+  --ok: #197e44;
   --warn-bg: #fff4d6;
   --warn-ink: #7a5b00;
   --radius: 12px;
