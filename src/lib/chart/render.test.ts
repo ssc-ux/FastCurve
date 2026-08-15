@@ -185,6 +185,81 @@ describe('renderChart — flèches de seuil de détection', () => {
   });
 });
 
+describe('renderChart — graphe unique : axes honnêtes', () => {
+  const noms = ['CRP', 'Créatinine', 'Hémoglobine', 'Plaquettes', 'Albumine'];
+  const unites = ['mg/L', 'µmol/L', 'g/dL', 'G/L', 'g/L'];
+  const sommets = [148, 245, 11.8, 400, 34];
+  const etude: StudyState = {
+    ...etudeSimple(
+      noms.map((n, i) => ({ id: 'p' + i, name: n, unit: unites[i], category: 'biologie' as const, color: '#2a78d6', order: i })),
+      noms.flatMap((_, i) => [
+        { id: `a${i}`, parameterId: 'p' + i, date: '2025-01-06', value: sommets[i] },
+        { id: `b${i}`, parameterId: 'p' + i, date: '2025-02-06', value: sommets[i] * 0.6 },
+      ]),
+    ),
+    settings: {
+      chartMode: 'single', title: '', subtitle: '', showReference: false,
+      showLegend: true, showValues: false, timeAxis: true, markOutOfRange: false,
+    },
+  };
+
+  it('n’étiquette jamais un axe avec une liste d’unités', () => {
+    // Régression : l'axe gauche s'intitulait « mg/L · g/dL · G/L · g/L », une
+    // phrase tournée à 90°, plus haute que le graphique, et fausse.
+    const svg = renderChart(etude, 920).svg;
+    expect(svg).not.toContain('·');
+  });
+
+  it('porte l’unité sur chaque entrée de légende', () => {
+    // Sans elle, rien ne dit dans quelle unité se lit une courbe donnée.
+    const svg = renderChart(etude, 920).svg;
+    expect(svg).toContain('Créatinine (µmol/L)');
+    expect(svg).toContain('Hémoglobine (g/dL)');
+  });
+
+  it('sépare les axes par ordre de grandeur, pas par ordre d’apparition', () => {
+    // Régression : la créatinine partait seule à droite parce qu'elle portait
+    // la deuxième unité rencontrée, et l'hémoglobine restait écrasée à gauche
+    // sur une échelle de 0 à 500.
+    const svg = renderChart(etude, 920).svg;
+    const cote = (nom: string) => {
+      const m = new RegExp(`>${nom} \\([^)]*\\) (←|→)<`).exec(svg);
+      return m![1];
+    };
+    expect(cote('Plaquettes')).toBe('←');
+    expect(cote('Créatinine')).toBe('←');
+    expect(cote('Hémoglobine')).toBe('→');
+    expect(cote('Albumine')).toBe('→');
+  });
+
+  it('garde un seul axe quand tout tient dans le même ordre de grandeur', () => {
+    const proches: StudyState = {
+      ...etude,
+      parameters: etude.parameters.slice(0, 2),
+      measurements: etude.measurements.filter(m => m.parameterId === 'p0' || m.parameterId === 'p1'),
+    };
+    // Un deuxième axe est une charge de lecture : on ne l'impose pas pour un
+    // facteur 1,7 entre CRP et créatinine.
+    expect(renderChart(proches, 920).svg).not.toContain('→');
+  });
+
+  it('distingue par le trait au-delà de six séries', () => {
+    // Huit teintes, six formes : à la septième série deux courbes deviennent
+    // jumelles — et en noir et blanc, dès la première.
+    const douze: StudyState = {
+      ...etude,
+      parameters: Array.from({ length: 12 }, (_, i) => ({
+        id: 'q' + i, name: 'P' + i, unit: 'mg/L', category: 'biologie' as const, color: '#2a78d6', order: i,
+      })),
+      measurements: Array.from({ length: 12 }, (_, i) => ({
+        id: 'z' + i, parameterId: 'q' + i, date: '2025-01-06', value: 10 + i,
+      })),
+    };
+    expect(renderChart(douze, 920).svg).toContain('stroke-dasharray');
+    expect(renderChart(etude, 920).svg).not.toContain('stroke-dasharray');
+  });
+});
+
 describe('renderChart — densité des marqueurs', () => {
   it('rétrécit les marqueurs quand les points se serrent', () => {
     const mesure = (n: number) => etudeSimple(

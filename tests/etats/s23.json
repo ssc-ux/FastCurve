@@ -1,0 +1,206 @@
+{
+ "version": 1,
+ "patientLabel": "Test",
+ "parameters": [
+  {
+   "id": "p0",
+   "name": "CRP",
+   "unit": "mg/L",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": 5,
+   "color": "#2a78d6",
+   "order": 0
+  },
+  {
+   "id": "p1",
+   "name": "Créatinine",
+   "unit": "µmol/L",
+   "category": "biologie",
+   "refLow": 45,
+   "refHigh": 90,
+   "color": "#e34948",
+   "order": 1
+  }
+ ],
+ "measurements": [
+  {
+   "id": "m0_0",
+   "parameterId": "p0",
+   "date": "2025-01-06",
+   "value": 148,
+   "qualifier": null
+  },
+  {
+   "id": "m0_1",
+   "parameterId": "p0",
+   "date": "2025-02-06",
+   "value": 111,
+   "qualifier": null
+  },
+  {
+   "id": "m0_2",
+   "parameterId": "p0",
+   "date": "2025-03-06",
+   "value": 71,
+   "qualifier": null
+  },
+  {
+   "id": "m0_3",
+   "parameterId": "p0",
+   "date": "2025-04-06",
+   "value": 56,
+   "qualifier": null
+  },
+  {
+   "id": "m0_4",
+   "parameterId": "p0",
+   "date": "2025-05-06",
+   "value": 40,
+   "qualifier": null
+  },
+  {
+   "id": "m0_5",
+   "parameterId": "p0",
+   "date": "2025-06-06",
+   "value": 26,
+   "qualifier": null
+  },
+  {
+   "id": "m1_0",
+   "parameterId": "p1",
+   "date": "2025-01-06",
+   "value": 245,
+   "qualifier": null
+  },
+  {
+   "id": "m1_1",
+   "parameterId": "p1",
+   "date": "2025-02-06",
+   "value": 217,
+   "qualifier": null
+  },
+  {
+   "id": "m1_2",
+   "parameterId": "p1",
+   "date": "2025-03-06",
+   "value": 165,
+   "qualifier": null
+  },
+  {
+   "id": "m1_3",
+   "parameterId": "p1",
+   "date": "2025-04-06",
+   "value": 154,
+   "qualifier": null
+  },
+  {
+   "id": "m1_4",
+   "parameterId": "p1",
+   "date": "2025-05-06",
+   "value": 127,
+   "qualifier": null
+  },
+  {
+   "id": "m1_5",
+   "parameterId": "p1",
+   "date": "2025-06-06",
+   "value": 101,
+   "qualifier": null
+  }
+ ],
+ "treatments": [
+  {
+   "id": "t0",
+   "name": "Rituximab",
+   "dose": "1 g",
+   "kind": "event",
+   "start": "2025-01-06",
+   "end": null,
+   "color": "#5b6472",
+   "order": 0
+  },
+  {
+   "id": "t1",
+   "name": "Rituximab",
+   "kind": "event",
+   "start": "2025-02-06",
+   "end": null,
+   "color": "#8a6d3b",
+   "order": 1
+  },
+  {
+   "id": "t2",
+   "name": "Rituximab",
+   "kind": "event",
+   "start": "2025-03-06",
+   "end": null,
+   "color": "#3d7a70",
+   "order": 2
+  },
+  {
+   "id": "t3",
+   "name": "Cyclophosphamide",
+   "dose": "750 mg",
+   "kind": "event",
+   "start": "2025-04-06",
+   "end": null,
+   "color": "#7a4f6d",
+   "order": 3
+  },
+  {
+   "id": "t4",
+   "name": "Plasmaphérèses",
+   "kind": "event",
+   "start": "2025-05-06",
+   "end": null,
+   "color": "#6b7a3d",
+   "order": 4
+  },
+  {
+   "id": "t5",
+   "name": "Prednisone",
+   "kind": "continuous",
+   "start": "2025-01-06",
+   "end": "2025-06-06",
+   "dosePoints": [
+    {
+     "date": "2025-01-06",
+     "dose": 60
+    },
+    {
+     "date": "2025-03-06",
+     "dose": 20
+    },
+    {
+     "date": "2025-06-06",
+     "dose": 5
+    }
+   ],
+   "doseUnit": "mg/j",
+   "color": "#4a5a8a",
+   "order": 5
+  }
+ ],
+ "annotations": [
+  {
+   "id": "a0",
+   "date": "2025-03-06",
+   "text": "Biopsie rénale",
+   "order": 0
+  }
+ ],
+ "settings": {
+  "chartMode": "stacked",
+  "title": "Cure répétée et événements rapprochés",
+  "subtitle": "Cas n°23 — regroupement des administrations",
+  "showReference": true,
+  "showLegend": true,
+  "showValues": false,
+  "timeAxis": true,
+  "markOutOfRange": true,
+  "fromDate": null,
+  "toDate": null
+ },
+ "extraDates": []
+}

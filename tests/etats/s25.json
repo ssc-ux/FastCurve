@@ -1,0 +1,137 @@
+{
+ "version": 1,
+ "patientLabel": "Test",
+ "parameters": [
+  {
+   "id": "p0",
+   "name": "Anticorps anti-membrane basale glomérulaire",
+   "unit": "UI/mL",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#2a78d6",
+   "order": 0
+  },
+  {
+   "id": "p1",
+   "name": "Rapport protéinurie/créatininurie",
+   "unit": "g/g",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#e34948",
+   "order": 1
+  }
+ ],
+ "measurements": [
+  {
+   "id": "m0_0",
+   "parameterId": "p0",
+   "date": "2025-01-06",
+   "value": 180,
+   "qualifier": null
+  },
+  {
+   "id": "m0_1",
+   "parameterId": "p0",
+   "date": "2025-02-06",
+   "value": 146,
+   "qualifier": null
+  },
+  {
+   "id": "m0_2",
+   "parameterId": "p0",
+   "date": "2025-03-06",
+   "value": 103,
+   "qualifier": null
+  },
+  {
+   "id": "m0_3",
+   "parameterId": "p0",
+   "date": "2025-04-06",
+   "value": 88,
+   "qualifier": null
+  },
+  {
+   "id": "m0_4",
+   "parameterId": "p0",
+   "date": "2025-05-06",
+   "value": 67,
+   "qualifier": null
+  },
+  {
+   "id": "m0_5",
+   "parameterId": "p0",
+   "date": "2025-06-06",
+   "value": 49,
+   "qualifier": null
+  },
+  {
+   "id": "m1_0",
+   "parameterId": "p1",
+   "date": "2025-01-06",
+   "value": 2.4,
+   "qualifier": null
+  },
+  {
+   "id": "m1_1",
+   "parameterId": "p1",
+   "date": "2025-02-06",
+   "value": 3.38,
+   "qualifier": null
+  },
+  {
+   "id": "m1_2",
+   "parameterId": "p1",
+   "date": "2025-03-06",
+   "value": 3.29,
+   "qualifier": null
+  },
+  {
+   "id": "m1_3",
+   "parameterId": "p1",
+   "date": "2025-04-06",
+   "value": 2.23,
+   "qualifier": null
+  },
+  {
+   "id": "m1_4",
+   "parameterId": "p1",
+   "date": "2025-05-06",
+   "value": 1.35,
+   "qualifier": null
+  },
+  {
+   "id": "m1_5",
+   "parameterId": "p1",
+   "date": "2025-06-06",
+   "value": 1.62,
+   "qualifier": null
+  }
+ ],
+ "treatments": [
+  {
+   "id": "t0",
+   "name": "Immunoglobulines intraveineuses polyvalentes",
+   "kind": "continuous",
+   "start": "2025-01-06",
+   "end": "2025-06-06",
+   "color": "#5b6472",
+   "order": 0
+  }
+ ],
+ "annotations": [],
+ "settings": {
+  "chartMode": "stacked",
+  "title": "Libellés longs",
+  "subtitle": "Cas n°25 — légende sans chevauchement",
+  "showReference": true,
+  "showLegend": true,
+  "showValues": false,
+  "timeAxis": true,
+  "markOutOfRange": true,
+  "fromDate": null,
+  "toDate": null
+ },
+ "extraDates": []
+}

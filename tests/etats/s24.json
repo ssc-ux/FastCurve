@@ -1,0 +1,603 @@
+{
+ "version": 1,
+ "patientLabel": "Test",
+ "parameters": [
+  {
+   "id": "p0",
+   "name": "CRP",
+   "unit": "mg/L",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": 5,
+   "color": "#2a78d6",
+   "order": 0
+  },
+  {
+   "id": "p1",
+   "name": "Créatinine",
+   "unit": "µmol/L",
+   "category": "biologie",
+   "refLow": 45,
+   "refHigh": 90,
+   "color": "#e34948",
+   "order": 1
+  }
+ ],
+ "measurements": [
+  {
+   "id": "m0_0",
+   "parameterId": "p0",
+   "date": "2025-01-06",
+   "value": 148,
+   "qualifier": null
+  },
+  {
+   "id": "m0_1",
+   "parameterId": "p0",
+   "date": "2025-01-13",
+   "value": 127,
+   "qualifier": null
+  },
+  {
+   "id": "m0_2",
+   "parameterId": "p0",
+   "date": "2025-01-20",
+   "value": 93,
+   "qualifier": null
+  },
+  {
+   "id": "m0_3",
+   "parameterId": "p0",
+   "date": "2025-01-27",
+   "value": 84,
+   "qualifier": null
+  },
+  {
+   "id": "m0_4",
+   "parameterId": "p0",
+   "date": "2025-02-03",
+   "value": 67,
+   "qualifier": null
+  },
+  {
+   "id": "m0_5",
+   "parameterId": "p0",
+   "date": "2025-02-10",
+   "value": 52,
+   "qualifier": null
+  },
+  {
+   "id": "m0_6",
+   "parameterId": "p0",
+   "date": "2025-02-17",
+   "value": 47,
+   "qualifier": null
+  },
+  {
+   "id": "m0_7",
+   "parameterId": "p0",
+   "date": "2025-02-24",
+   "value": 36,
+   "qualifier": null
+  },
+  {
+   "id": "m0_8",
+   "parameterId": "p0",
+   "date": "2025-03-03",
+   "value": 29,
+   "qualifier": null
+  },
+  {
+   "id": "m0_9",
+   "parameterId": "p0",
+   "date": "2025-03-10",
+   "value": 26,
+   "qualifier": null
+  },
+  {
+   "id": "m0_10",
+   "parameterId": "p0",
+   "date": "2025-03-17",
+   "value": 19,
+   "qualifier": null
+  },
+  {
+   "id": "m0_11",
+   "parameterId": "p0",
+   "date": "2025-03-24",
+   "value": 17,
+   "qualifier": null
+  },
+  {
+   "id": "m0_12",
+   "parameterId": "p0",
+   "date": "2025-03-31",
+   "value": 14,
+   "qualifier": null
+  },
+  {
+   "id": "m0_13",
+   "parameterId": "p0",
+   "date": "2025-04-07",
+   "value": 10,
+   "qualifier": null
+  },
+  {
+   "id": "m0_14",
+   "parameterId": "p0",
+   "date": "2025-04-14",
+   "value": 9,
+   "qualifier": null
+  },
+  {
+   "id": "m0_15",
+   "parameterId": "p0",
+   "date": "2025-04-21",
+   "value": 7,
+   "qualifier": null
+  },
+  {
+   "id": "m0_16",
+   "parameterId": "p0",
+   "date": "2025-04-28",
+   "value": 6,
+   "qualifier": null
+  },
+  {
+   "id": "m0_17",
+   "parameterId": "p0",
+   "date": "2025-05-05",
+   "value": 5,
+   "qualifier": null
+  },
+  {
+   "id": "m0_18",
+   "parameterId": "p0",
+   "date": "2025-05-12",
+   "value": 4,
+   "qualifier": null
+  },
+  {
+   "id": "m0_19",
+   "parameterId": "p0",
+   "date": "2025-05-19",
+   "value": 3,
+   "qualifier": null
+  },
+  {
+   "id": "m0_20",
+   "parameterId": "p0",
+   "date": "2025-05-26",
+   "value": 3,
+   "qualifier": null
+  },
+  {
+   "id": "m0_21",
+   "parameterId": "p0",
+   "date": "2025-06-02",
+   "value": 2,
+   "qualifier": null
+  },
+  {
+   "id": "m0_22",
+   "parameterId": "p0",
+   "date": "2025-06-09",
+   "value": 2,
+   "qualifier": null
+  },
+  {
+   "id": "m0_23",
+   "parameterId": "p0",
+   "date": "2025-06-16",
+   "value": 2,
+   "qualifier": null
+  },
+  {
+   "id": "m0_24",
+   "parameterId": "p0",
+   "date": "2025-06-23",
+   "value": 1,
+   "qualifier": null
+  },
+  {
+   "id": "m0_25",
+   "parameterId": "p0",
+   "date": "2025-06-30",
+   "value": 1,
+   "qualifier": null
+  },
+  {
+   "id": "m0_26",
+   "parameterId": "p0",
+   "date": "2025-07-07",
+   "value": 1,
+   "qualifier": null
+  },
+  {
+   "id": "m0_27",
+   "parameterId": "p0",
+   "date": "2025-07-14",
+   "value": 1,
+   "qualifier": null
+  },
+  {
+   "id": "m0_28",
+   "parameterId": "p0",
+   "date": "2025-07-21",
+   "value": 1,
+   "qualifier": null
+  },
+  {
+   "id": "m0_29",
+   "parameterId": "p0",
+   "date": "2025-07-28",
+   "value": 0,
+   "qualifier": null
+  },
+  {
+   "id": "m0_30",
+   "parameterId": "p0",
+   "date": "2025-08-04",
+   "value": 0,
+   "qualifier": null
+  },
+  {
+   "id": "m0_31",
+   "parameterId": "p0",
+   "date": "2025-08-11",
+   "value": 0,
+   "qualifier": null
+  },
+  {
+   "id": "m0_32",
+   "parameterId": "p0",
+   "date": "2025-08-18",
+   "value": 0,
+   "qualifier": null
+  },
+  {
+   "id": "m0_33",
+   "parameterId": "p0",
+   "date": "2025-08-25",
+   "value": 0,
+   "qualifier": null
+  },
+  {
+   "id": "m0_34",
+   "parameterId": "p0",
+   "date": "2025-09-01",
+   "value": 0,
+   "qualifier": null
+  },
+  {
+   "id": "m0_35",
+   "parameterId": "p0",
+   "date": "2025-09-08",
+   "value": 0,
+   "qualifier": null
+  },
+  {
+   "id": "m0_36",
+   "parameterId": "p0",
+   "date": "2025-09-15",
+   "value": 0,
+   "qualifier": null
+  },
+  {
+   "id": "m0_37",
+   "parameterId": "p0",
+   "date": "2025-09-22",
+   "value": 0,
+   "qualifier": null
+  },
+  {
+   "id": "m0_38",
+   "parameterId": "p0",
+   "date": "2025-09-29",
+   "value": 0,
+   "qualifier": null
+  },
+  {
+   "id": "m0_39",
+   "parameterId": "p0",
+   "date": "2025-10-06",
+   "value": 0,
+   "qualifier": null
+  },
+  {
+   "id": "m1_0",
+   "parameterId": "p1",
+   "date": "2025-01-06",
+   "value": 245,
+   "qualifier": null
+  },
+  {
+   "id": "m1_1",
+   "parameterId": "p1",
+   "date": "2025-01-13",
+   "value": 229,
+   "qualifier": null
+  },
+  {
+   "id": "m1_2",
+   "parameterId": "p1",
+   "date": "2025-01-20",
+   "value": 184,
+   "qualifier": null
+  },
+  {
+   "id": "m1_3",
+   "parameterId": "p1",
+   "date": "2025-01-27",
+   "value": 182,
+   "qualifier": null
+  },
+  {
+   "id": "m1_4",
+   "parameterId": "p1",
+   "date": "2025-02-03",
+   "value": 159,
+   "qualifier": null
+  },
+  {
+   "id": "m1_5",
+   "parameterId": "p1",
+   "date": "2025-02-10",
+   "value": 133,
+   "qualifier": null
+  },
+  {
+   "id": "m1_6",
+   "parameterId": "p1",
+   "date": "2025-02-17",
+   "value": 133,
+   "qualifier": null
+  },
+  {
+   "id": "m1_7",
+   "parameterId": "p1",
+   "date": "2025-02-24",
+   "value": 110,
+   "qualifier": null
+  },
+  {
+   "id": "m1_8",
+   "parameterId": "p1",
+   "date": "2025-03-03",
+   "value": 98,
+   "qualifier": null
+  },
+  {
+   "id": "m1_9",
+   "parameterId": "p1",
+   "date": "2025-03-10",
+   "value": 95,
+   "qualifier": null
+  },
+  {
+   "id": "m1_10",
+   "parameterId": "p1",
+   "date": "2025-03-17",
+   "value": 77,
+   "qualifier": null
+  },
+  {
+   "id": "m1_11",
+   "parameterId": "p1",
+   "date": "2025-03-24",
+   "value": 73,
+   "qualifier": null
+  },
+  {
+   "id": "m1_12",
+   "parameterId": "p1",
+   "date": "2025-03-31",
+   "value": 67,
+   "qualifier": null
+  },
+  {
+   "id": "m1_13",
+   "parameterId": "p1",
+   "date": "2025-04-07",
+   "value": 54,
+   "qualifier": null
+  },
+  {
+   "id": "m1_14",
+   "parameterId": "p1",
+   "date": "2025-04-14",
+   "value": 54,
+   "qualifier": null
+  },
+  {
+   "id": "m1_15",
+   "parameterId": "p1",
+   "date": "2025-04-21",
+   "value": 46,
+   "qualifier": null
+  },
+  {
+   "id": "m1_16",
+   "parameterId": "p1",
+   "date": "2025-04-28",
+   "value": 39,
+   "qualifier": null
+  },
+  {
+   "id": "m1_17",
+   "parameterId": "p1",
+   "date": "2025-05-05",
+   "value": 39,
+   "qualifier": null
+  },
+  {
+   "id": "m1_18",
+   "parameterId": "p1",
+   "date": "2025-05-12",
+   "value": 32,
+   "qualifier": null
+  },
+  {
+   "id": "m1_19",
+   "parameterId": "p1",
+   "date": "2025-05-19",
+   "value": 29,
+   "qualifier": null
+  },
+  {
+   "id": "m1_20",
+   "parameterId": "p1",
+   "date": "2025-05-26",
+   "value": 28,
+   "qualifier": null
+  },
+  {
+   "id": "m1_21",
+   "parameterId": "p1",
+   "date": "2025-06-02",
+   "value": 22,
+   "qualifier": null
+  },
+  {
+   "id": "m1_22",
+   "parameterId": "p1",
+   "date": "2025-06-09",
+   "value": 22,
+   "qualifier": null
+  },
+  {
+   "id": "m1_23",
+   "parameterId": "p1",
+   "date": "2025-06-16",
+   "value": 20,
+   "qualifier": null
+  },
+  {
+   "id": "m1_24",
+   "parameterId": "p1",
+   "date": "2025-06-23",
+   "value": 16,
+   "qualifier": null
+  },
+  {
+   "id": "m1_25",
+   "parameterId": "p1",
+   "date": "2025-06-30",
+   "value": 16,
+   "qualifier": null
+  },
+  {
+   "id": "m1_26",
+   "parameterId": "p1",
+   "date": "2025-07-07",
+   "value": 14,
+   "qualifier": null
+  },
+  {
+   "id": "m1_27",
+   "parameterId": "p1",
+   "date": "2025-07-14",
+   "value": 12,
+   "qualifier": null
+  },
+  {
+   "id": "m1_28",
+   "parameterId": "p1",
+   "date": "2025-07-21",
+   "value": 12,
+   "qualifier": null
+  },
+  {
+   "id": "m1_29",
+   "parameterId": "p1",
+   "date": "2025-07-28",
+   "value": 9,
+   "qualifier": null
+  },
+  {
+   "id": "m1_30",
+   "parameterId": "p1",
+   "date": "2025-08-04",
+   "value": 9,
+   "qualifier": null
+  },
+  {
+   "id": "m1_31",
+   "parameterId": "p1",
+   "date": "2025-08-11",
+   "value": 8,
+   "qualifier": null
+  },
+  {
+   "id": "m1_32",
+   "parameterId": "p1",
+   "date": "2025-08-18",
+   "value": 7,
+   "qualifier": null
+  },
+  {
+   "id": "m1_33",
+   "parameterId": "p1",
+   "date": "2025-08-25",
+   "value": 6,
+   "qualifier": null
+  },
+  {
+   "id": "m1_34",
+   "parameterId": "p1",
+   "date": "2025-09-01",
+   "value": 6,
+   "qualifier": null
+  },
+  {
+   "id": "m1_35",
+   "parameterId": "p1",
+   "date": "2025-09-08",
+   "value": 5,
+   "qualifier": null
+  },
+  {
+   "id": "m1_36",
+   "parameterId": "p1",
+   "date": "2025-09-15",
+   "value": 5,
+   "qualifier": null
+  },
+  {
+   "id": "m1_37",
+   "parameterId": "p1",
+   "date": "2025-09-22",
+   "value": 4,
+   "qualifier": null
+  },
+  {
+   "id": "m1_38",
+   "parameterId": "p1",
+   "date": "2025-09-29",
+   "value": 3,
+   "qualifier": null
+  },
+  {
+   "id": "m1_39",
+   "parameterId": "p1",
+   "date": "2025-10-06",
+   "value": 3,
+   "qualifier": null
+  }
+ ],
+ "treatments": [],
+ "annotations": [],
+ "settings": {
+  "chartMode": "stacked",
+  "title": "Quarante prélèvements hebdomadaires",
+  "subtitle": "Cas n°24 — densité des marqueurs",
+  "showReference": true,
+  "showLegend": true,
+  "showValues": false,
+  "timeAxis": true,
+  "markOutOfRange": true,
+  "fromDate": null,
+  "toDate": null
+ },
+ "extraDates": []
+}

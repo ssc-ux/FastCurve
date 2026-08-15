@@ -1,0 +1,649 @@
+{
+ "version": 1,
+ "patientLabel": "Test",
+ "parameters": [
+  {
+   "id": "p0",
+   "name": "CRP",
+   "unit": "mg/L",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#2a78d6",
+   "order": 0
+  },
+  {
+   "id": "p1",
+   "name": "Créatinine",
+   "unit": "µmol/L",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#e34948",
+   "order": 1
+  },
+  {
+   "id": "p2",
+   "name": "Hémoglobine",
+   "unit": "g/dL",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#008300",
+   "order": 2
+  },
+  {
+   "id": "p3",
+   "name": "Plaquettes",
+   "unit": "G/L",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#eb6834",
+   "order": 3
+  },
+  {
+   "id": "p4",
+   "name": "Leucocytes",
+   "unit": "G/L",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#4a3aa7",
+   "order": 4
+  },
+  {
+   "id": "p5",
+   "name": "Albumine",
+   "unit": "g/L",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#1baf7a",
+   "order": 5
+  },
+  {
+   "id": "p6",
+   "name": "Anticorps anti-MPO",
+   "unit": "UI/mL",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#eda100",
+   "order": 6
+  },
+  {
+   "id": "p7",
+   "name": "CVF",
+   "unit": "L",
+   "category": "efr",
+   "refLow": null,
+   "refHigh": null,
+   "display": "absolute",
+   "color": "#e87ba4",
+   "order": 7
+  },
+  {
+   "id": "p8",
+   "name": "DLCO",
+   "unit": "mmol/min/kPa",
+   "category": "efr",
+   "refLow": null,
+   "refHigh": null,
+   "display": "absolute",
+   "color": "#2a78d6",
+   "order": 8
+  },
+  {
+   "id": "p9",
+   "name": "Ferritine",
+   "unit": "µg/L",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#e34948",
+   "order": 9
+  },
+  {
+   "id": "p10",
+   "name": "LDH",
+   "unit": "U/L",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#008300",
+   "order": 10
+  },
+  {
+   "id": "p11",
+   "name": "TSH",
+   "unit": "mUI/L",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": null,
+   "color": "#eb6834",
+   "order": 11
+  }
+ ],
+ "measurements": [
+  {
+   "id": "m0_0",
+   "parameterId": "p0",
+   "date": "2025-01-06",
+   "value": 148,
+   "qualifier": null
+  },
+  {
+   "id": "m0_1",
+   "parameterId": "p0",
+   "date": "2025-02-06",
+   "value": 111,
+   "qualifier": null
+  },
+  {
+   "id": "m0_2",
+   "parameterId": "p0",
+   "date": "2025-03-06",
+   "value": 71,
+   "qualifier": null
+  },
+  {
+   "id": "m0_3",
+   "parameterId": "p0",
+   "date": "2025-04-06",
+   "value": 56,
+   "qualifier": null
+  },
+  {
+   "id": "m0_4",
+   "parameterId": "p0",
+   "date": "2025-05-06",
+   "value": 40,
+   "qualifier": null
+  },
+  {
+   "id": "m0_5",
+   "parameterId": "p0",
+   "date": "2025-06-06",
+   "value": 26,
+   "qualifier": null
+  },
+  {
+   "id": "m1_0",
+   "parameterId": "p1",
+   "date": "2025-01-06",
+   "value": 245,
+   "qualifier": null
+  },
+  {
+   "id": "m1_1",
+   "parameterId": "p1",
+   "date": "2025-02-06",
+   "value": 217,
+   "qualifier": null
+  },
+  {
+   "id": "m1_2",
+   "parameterId": "p1",
+   "date": "2025-03-06",
+   "value": 165,
+   "qualifier": null
+  },
+  {
+   "id": "m1_3",
+   "parameterId": "p1",
+   "date": "2025-04-06",
+   "value": 154,
+   "qualifier": null
+  },
+  {
+   "id": "m1_4",
+   "parameterId": "p1",
+   "date": "2025-05-06",
+   "value": 127,
+   "qualifier": null
+  },
+  {
+   "id": "m1_5",
+   "parameterId": "p1",
+   "date": "2025-06-06",
+   "value": 101,
+   "qualifier": null
+  },
+  {
+   "id": "m2_0",
+   "parameterId": "p2",
+   "date": "2025-01-06",
+   "value": 10.4,
+   "qualifier": null
+  },
+  {
+   "id": "m2_1",
+   "parameterId": "p2",
+   "date": "2025-02-06",
+   "value": 11.6,
+   "qualifier": null
+  },
+  {
+   "id": "m2_2",
+   "parameterId": "p2",
+   "date": "2025-03-06",
+   "value": 11.5,
+   "qualifier": null
+  },
+  {
+   "id": "m2_3",
+   "parameterId": "p2",
+   "date": "2025-04-06",
+   "value": 10.2,
+   "qualifier": null
+  },
+  {
+   "id": "m2_4",
+   "parameterId": "p2",
+   "date": "2025-05-06",
+   "value": 9.1,
+   "qualifier": null
+  },
+  {
+   "id": "m2_5",
+   "parameterId": "p2",
+   "date": "2025-06-06",
+   "value": 9.4,
+   "qualifier": null
+  },
+  {
+   "id": "m3_0",
+   "parameterId": "p3",
+   "date": "2025-01-06",
+   "value": 320,
+   "qualifier": null
+  },
+  {
+   "id": "m3_1",
+   "parameterId": "p3",
+   "date": "2025-02-06",
+   "value": 400,
+   "qualifier": null
+  },
+  {
+   "id": "m3_2",
+   "parameterId": "p3",
+   "date": "2025-03-06",
+   "value": 393,
+   "qualifier": null
+  },
+  {
+   "id": "m3_3",
+   "parameterId": "p3",
+   "date": "2025-04-06",
+   "value": 306,
+   "qualifier": null
+  },
+  {
+   "id": "m3_4",
+   "parameterId": "p3",
+   "date": "2025-05-06",
+   "value": 234,
+   "qualifier": null
+  },
+  {
+   "id": "m3_5",
+   "parameterId": "p3",
+   "date": "2025-06-06",
+   "value": 257,
+   "qualifier": null
+  },
+  {
+   "id": "m4_0",
+   "parameterId": "p4",
+   "date": "2025-01-06",
+   "value": 11.2,
+   "qualifier": null
+  },
+  {
+   "id": "m4_1",
+   "parameterId": "p4",
+   "date": "2025-02-06",
+   "value": 14.3,
+   "qualifier": null
+  },
+  {
+   "id": "m4_2",
+   "parameterId": "p4",
+   "date": "2025-03-06",
+   "value": 14,
+   "qualifier": null
+  },
+  {
+   "id": "m4_3",
+   "parameterId": "p4",
+   "date": "2025-04-06",
+   "value": 10.6,
+   "qualifier": null
+  },
+  {
+   "id": "m4_4",
+   "parameterId": "p4",
+   "date": "2025-05-06",
+   "value": 7.9,
+   "qualifier": null
+  },
+  {
+   "id": "m4_5",
+   "parameterId": "p4",
+   "date": "2025-06-06",
+   "value": 8.7,
+   "qualifier": null
+  },
+  {
+   "id": "m5_0",
+   "parameterId": "p5",
+   "date": "2025-01-06",
+   "value": 31,
+   "qualifier": null
+  },
+  {
+   "id": "m5_1",
+   "parameterId": "p5",
+   "date": "2025-02-06",
+   "value": 34.6,
+   "qualifier": null
+  },
+  {
+   "id": "m5_2",
+   "parameterId": "p5",
+   "date": "2025-03-06",
+   "value": 34.2,
+   "qualifier": null
+  },
+  {
+   "id": "m5_3",
+   "parameterId": "p5",
+   "date": "2025-04-06",
+   "value": 30.4,
+   "qualifier": null
+  },
+  {
+   "id": "m5_4",
+   "parameterId": "p5",
+   "date": "2025-05-06",
+   "value": 27.2,
+   "qualifier": null
+  },
+  {
+   "id": "m5_5",
+   "parameterId": "p5",
+   "date": "2025-06-06",
+   "value": 28.2,
+   "qualifier": null
+  },
+  {
+   "id": "m6_0",
+   "parameterId": "p6",
+   "date": "2025-01-06",
+   "value": 180,
+   "qualifier": null
+  },
+  {
+   "id": "m6_1",
+   "parameterId": "p6",
+   "date": "2025-02-06",
+   "value": 146,
+   "qualifier": null
+  },
+  {
+   "id": "m6_2",
+   "parameterId": "p6",
+   "date": "2025-03-06",
+   "value": 103,
+   "qualifier": null
+  },
+  {
+   "id": "m6_3",
+   "parameterId": "p6",
+   "date": "2025-04-06",
+   "value": 88,
+   "qualifier": null
+  },
+  {
+   "id": "m6_4",
+   "parameterId": "p6",
+   "date": "2025-05-06",
+   "value": 67,
+   "qualifier": null
+  },
+  {
+   "id": "m6_5",
+   "parameterId": "p6",
+   "date": "2025-06-06",
+   "value": 49,
+   "qualifier": null
+  },
+  {
+   "id": "m7_0",
+   "parameterId": "p7",
+   "date": "2025-01-06",
+   "value": 2.35,
+   "qualifier": null
+  },
+  {
+   "id": "m7_1",
+   "parameterId": "p7",
+   "date": "2025-02-06",
+   "value": 2.55,
+   "qualifier": null
+  },
+  {
+   "id": "m7_2",
+   "parameterId": "p7",
+   "date": "2025-03-06",
+   "value": 2.53,
+   "qualifier": null
+  },
+  {
+   "id": "m7_3",
+   "parameterId": "p7",
+   "date": "2025-04-06",
+   "value": 2.32,
+   "qualifier": null
+  },
+  {
+   "id": "m7_4",
+   "parameterId": "p7",
+   "date": "2025-05-06",
+   "value": 2.14,
+   "qualifier": null
+  },
+  {
+   "id": "m7_5",
+   "parameterId": "p7",
+   "date": "2025-06-06",
+   "value": 2.19,
+   "qualifier": null
+  },
+  {
+   "id": "m8_0",
+   "parameterId": "p8",
+   "date": "2025-01-06",
+   "value": 4.1,
+   "qualifier": null
+  },
+  {
+   "id": "m8_1",
+   "parameterId": "p8",
+   "date": "2025-02-06",
+   "value": 4.55,
+   "qualifier": null
+  },
+  {
+   "id": "m8_2",
+   "parameterId": "p8",
+   "date": "2025-03-06",
+   "value": 4.5,
+   "qualifier": null
+  },
+  {
+   "id": "m8_3",
+   "parameterId": "p8",
+   "date": "2025-04-06",
+   "value": 4.02,
+   "qualifier": null
+  },
+  {
+   "id": "m8_4",
+   "parameterId": "p8",
+   "date": "2025-05-06",
+   "value": 3.62,
+   "qualifier": null
+  },
+  {
+   "id": "m8_5",
+   "parameterId": "p8",
+   "date": "2025-06-06",
+   "value": 3.75,
+   "qualifier": null
+  },
+  {
+   "id": "m9_0",
+   "parameterId": "p9",
+   "date": "2025-01-06",
+   "value": 4200,
+   "qualifier": null
+  },
+  {
+   "id": "m9_1",
+   "parameterId": "p9",
+   "date": "2025-02-06",
+   "value": 3144,
+   "qualifier": null
+  },
+  {
+   "id": "m9_2",
+   "parameterId": "p9",
+   "date": "2025-03-06",
+   "value": 2028,
+   "qualifier": null
+  },
+  {
+   "id": "m9_3",
+   "parameterId": "p9",
+   "date": "2025-04-06",
+   "value": 1599,
+   "qualifier": null
+  },
+  {
+   "id": "m9_4",
+   "parameterId": "p9",
+   "date": "2025-05-06",
+   "value": 1122,
+   "qualifier": null
+  },
+  {
+   "id": "m9_5",
+   "parameterId": "p9",
+   "date": "2025-06-06",
+   "value": 752,
+   "qualifier": null
+  },
+  {
+   "id": "m10_0",
+   "parameterId": "p10",
+   "date": "2025-01-06",
+   "value": 980,
+   "qualifier": null
+  },
+  {
+   "id": "m10_1",
+   "parameterId": "p10",
+   "date": "2025-02-06",
+   "value": 797,
+   "qualifier": null
+  },
+  {
+   "id": "m10_2",
+   "parameterId": "p10",
+   "date": "2025-03-06",
+   "value": 559,
+   "qualifier": null
+  },
+  {
+   "id": "m10_3",
+   "parameterId": "p10",
+   "date": "2025-04-06",
+   "value": 479,
+   "qualifier": null
+  },
+  {
+   "id": "m10_4",
+   "parameterId": "p10",
+   "date": "2025-05-06",
+   "value": 365,
+   "qualifier": null
+  },
+  {
+   "id": "m10_5",
+   "parameterId": "p10",
+   "date": "2025-06-06",
+   "value": 266,
+   "qualifier": null
+  },
+  {
+   "id": "m11_0",
+   "parameterId": "p11",
+   "date": "2025-01-06",
+   "value": 2.4,
+   "qualifier": null
+  },
+  {
+   "id": "m11_1",
+   "parameterId": "p11",
+   "date": "2025-02-06",
+   "value": 3.47,
+   "qualifier": null
+  },
+  {
+   "id": "m11_2",
+   "parameterId": "p11",
+   "date": "2025-03-06",
+   "value": 3.37,
+   "qualifier": null
+  },
+  {
+   "id": "m11_3",
+   "parameterId": "p11",
+   "date": "2025-04-06",
+   "value": 2.21,
+   "qualifier": null
+  },
+  {
+   "id": "m11_4",
+   "parameterId": "p11",
+   "date": "2025-05-06",
+   "value": 1.26,
+   "qualifier": null
+  },
+  {
+   "id": "m11_5",
+   "parameterId": "p11",
+   "date": "2025-06-06",
+   "value": 1.55,
+   "qualifier": null
+  }
+ ],
+ "treatments": [],
+ "annotations": [],
+ "settings": {
+  "chartMode": "single",
+  "title": "Graphe unique : douze séries",
+  "subtitle": "Cas n°22 — distinction par forme et motif de trait",
+  "showReference": true,
+  "showLegend": true,
+  "showValues": false,
+  "timeAxis": true,
+  "markOutOfRange": true,
+  "fromDate": null,
+  "toDate": null
+ },
+ "extraDates": []
+}
