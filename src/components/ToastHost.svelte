@@ -35,7 +35,11 @@
   .tx { line-height: 1.35; }
   .act { border: 1px solid rgba(255,255,255,.5); background: transparent; color: #fff; font-size: 12.5px; font-weight: 600; padding: 4px 12px; border-radius: 999px; }
   .act:hover { background: rgba(255,255,255,.18); }
-  .x { border: none; background: transparent; color: rgba(255,255,255,.7); font-size: 13px; padding: 2px 4px; border-radius: 6px; }
+  .x {
+    border: none; background: transparent; color: rgba(255,255,255,.7); font-size: 13px;
+    padding: 2px 4px; border-radius: 6px; min-width: 24px; min-height: 24px;
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
   .x:hover { background: rgba(255,255,255,.15); color: #fff; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 </style>
