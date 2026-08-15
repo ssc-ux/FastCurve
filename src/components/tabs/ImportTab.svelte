@@ -186,7 +186,9 @@
   async function lireTout() {
     if (!pending.length || busy) return;
     busy = true; annulee = false; errorMsg = ''; progres = 0;
-    vDates = []; vDatesDoute = []; vDatesMotifs = []; vRows = [];
+    // Le tableau de vérification d'un collage précédent, s'il y en a un, reste
+    // affiché pendant la lecture : `fusionner` s'appuiera dessus pour ajouter
+    // cette capture au lieu de l'effacer (voir son commentaire).
     const tableaux: { t: TableauLu; source: Shot }[] = [];
     const echecs: string[] = [];
     try {
@@ -222,13 +224,26 @@
     }
   }
 
-  /** Consolide plusieurs captures en UN seul tableau de vérification. */
+  /**
+   * Consolide de nouvelles captures dans le tableau de vérification.
+   *
+   * Coller EST la commande, sans écran intermédiaire : la deuxième capture
+   * d'un bilan sur trois écrans doit s'ajouter au tableau déjà affiché, pas
+   * l'effacer. On repart donc de l'état actuel (`vDates`/`vRows`, éventuel
+   * fruit d'un collage précédent) plutôt que de tableaux vides — les captures
+   * lues plus tôt gardent leurs colonnes et leurs éventuelles corrections
+   * manuelles déjà faites par le médecin.
+   */
   function fusionner(tableaux: TableauLu[]) {
-    const colonnes: string[] = [];
-    const douteCol: boolean[] = [];
-    const motifsCol: string[][] = [];
+    const colonnes: string[] = [...vDates];
+    const douteCol: boolean[] = [...vDatesDoute];
+    const motifsCol: string[][] = [...vDatesMotifs];
     const indexCol = new Map<string, number>();
+    colonnes.forEach((iso, i) => { if (iso) indexCol.set('d:' + iso, i); });
     const parNom = new Map<string, VRow>();
+    for (const r of vRows) {
+      parNom.set(normName(r.name), { ...r, values: [...r.values], doutes: [...r.doutes], motifs: r.motifs.map(m => [...m]) });
+    }
     let sansDate = 0;
 
     for (const t of tableaux) {
