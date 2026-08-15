@@ -1,0 +1,1338 @@
+{
+  "moteur": "ancien",
+  "scores": [
+    {
+      "id": "encadre-normal",
+      "cellules": 18,
+      "cellulesJustes": 17,
+      "cellulesFausses": 1,
+      "cellulesManquantes": 0,
+      "fauxSilencieux": 0,
+      "jaunes": 2,
+      "jaunesInutiles": 1,
+      "dates": 3,
+      "datesJustes": 3,
+      "lignes": 6,
+      "lignesTrouvees": 6
+    },
+    {
+      "id": "encadre-petit",
+      "cellules": 18,
+      "cellulesJustes": 17,
+      "cellulesFausses": 1,
+      "cellulesManquantes": 0,
+      "fauxSilencieux": 1,
+      "jaunes": 1,
+      "jaunesInutiles": 1,
+      "dates": 3,
+      "datesJustes": 3,
+      "lignes": 6,
+      "lignesTrouvees": 6
+    },
+    {
+      "id": "zebre-normal",
+      "cellules": 32,
+      "cellulesJustes": 31,
+      "cellulesFausses": 1,
+      "cellulesManquantes": 0,
+      "fauxSilencieux": 1,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
+      "dates": 4,
+      "datesJustes": 4,
+      "lignes": 8,
+      "lignesTrouvees": 8
+    },
+    {
+      "id": "zebre-petit",
+      "cellules": 32,
+      "cellulesJustes": 31,
+      "cellulesFausses": 1,
+      "cellulesManquantes": 0,
+      "fauxSilencieux": 1,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
+      "dates": 4,
+      "datesJustes": 4,
+      "lignes": 8,
+      "lignesTrouvees": 8
+    },
+    {
+      "id": "serif-palecontraste",
+      "cellules": 20,
+      "cellulesJustes": 0,
+      "cellulesFausses": 0,
+      "cellulesManquantes": 20,
+      "fauxSilencieux": 0,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
+      "dates": 2,
+      "datesJustes": 0,
+      "lignes": 10,
+      "lignesTrouvees": 0
+    },
+    {
+      "id": "serif-petit",
+      "cellules": 20,
+      "cellulesJustes": 0,
+      "cellulesFausses": 0,
+      "cellulesManquantes": 20,
+      "fauxSilencieux": 0,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
+      "dates": 2,
+      "datesJustes": 0,
+      "lignes": 10,
+      "lignesTrouvees": 0
+    },
+    {
+      "id": "fleches-anormales",
+      "cellules": 27,
+      "cellulesJustes": 0,
+      "cellulesFausses": 0,
+      "cellulesManquantes": 27,
+      "fauxSilencieux": 0,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
+      "dates": 3,
+      "datesJustes": 0,
+      "lignes": 9,
+      "lignesTrouvees": 9
+    },
+    {
+      "id": "encadre-gris",
+      "cellules": 20,
+      "cellulesJustes": 18,
+      "cellulesFausses": 2,
+      "cellulesManquantes": 0,
+      "fauxSilencieux": 2,
+      "jaunes": 1,
+      "jaunesInutiles": 1,
+      "dates": 2,
+      "datesJustes": 2,
+      "lignes": 10,
+      "lignesTrouvees": 10
+    },
+    {
+      "id": "zebre-hd",
+      "cellules": 27,
+      "cellulesJustes": 26,
+      "cellulesFausses": 1,
+      "cellulesManquantes": 0,
+      "fauxSilencieux": 1,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
+      "dates": 3,
+      "datesJustes": 3,
+      "lignes": 9,
+      "lignesTrouvees": 9
+    },
+    {
+      "id": "encadre-minuscule",
+      "cellules": 32,
+      "cellulesJustes": 31,
+      "cellulesFausses": 0,
+      "cellulesManquantes": 1,
+      "fauxSilencieux": 0,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
+      "dates": 4,
+      "datesJustes": 4,
+      "lignes": 8,
+      "lignesTrouvees": 8
+    },
+    {
+      "id": "medecin",
+      "cellules": 15,
+      "cellulesJustes": 0,
+      "cellulesFausses": 0,
+      "cellulesManquantes": 15,
+      "fauxSilencieux": 0,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
+      "dates": 3,
+      "datesJustes": 0,
+      "lignes": 5,
+      "lignesTrouvees": 5
+    },
+    {
+      "id": "medecin-petit",
+      "cellules": 15,
+      "cellulesJustes": 3,
+      "cellulesFausses": 2,
+      "cellulesManquantes": 10,
+      "fauxSilencieux": 2,
+      "jaunes": 1,
+      "jaunesInutiles": 1,
+      "dates": 3,
+      "datesJustes": 1,
+      "lignes": 5,
+      "lignesTrouvees": 5
+    }
+  ],
+  "total": {
+    "id": "TOTAL",
+    "cellules": 276,
+    "cellulesJustes": 174,
+    "cellulesFausses": 9,
+    "cellulesManquantes": 93,
+    "fauxSilencieux": 8,
+    "jaunes": 5,
+    "jaunesInutiles": 4,
+    "dates": 36,
+    "datesJustes": 24,
+    "lignes": 94,
+    "lignesTrouvees": 74
+  },
+  "details": [
+    {
+      "id": "encadre-normal",
+      "ms": 948,
+      "dates": [
+        "2025-03-12",
+        "2025-04-09",
+        "2025-05-14"
+      ],
+      "lignes": [
+        {
+          "nom": "Hemoglobine",
+          "unite": "",
+          "valeurs": [
+            "9.8",
+            "10.9",
+            "11.7"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Leucocytes",
+          "unite": "",
+          "valeurs": [
+            "14.2",
+            "9.1",
+            "74"
+          ],
+          "douteux": [
+            false,
+            false,
+            true
+          ]
+        },
+        {
+          "nom": "Plaquettes",
+          "unite": "",
+          "valeurs": [
+            "480",
+            "365",
+            "288"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Creatinine",
+          "unite": "",
+          "valeurs": [
+            "168",
+            "132",
+            "115"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "CRP",
+          "unite": "",
+          "valeurs": [
+            "96",
+            "28",
+            "7"
+          ],
+          "douteux": [
+            false,
+            false,
+            true
+          ]
+        },
+        {
+          "nom": "Albumine",
+          "unite": "",
+          "valeurs": [
+            "28",
+            "33",
+            "37"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "encadre-petit",
+      "ms": 459,
+      "dates": [
+        "2025-03-12",
+        "2025-04-09",
+        "2025-05-14"
+      ],
+      "lignes": [
+        {
+          "nom": "Hemoglobine",
+          "unite": "",
+          "valeurs": [
+            "9.8",
+            "10.9",
+            "11.7"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Leucocytes",
+          "unite": "",
+          "valeurs": [
+            "14.2",
+            "9.1",
+            "74"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Plaquettes",
+          "unite": "",
+          "valeurs": [
+            "480",
+            "365",
+            "288"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Creatinine",
+          "unite": "",
+          "valeurs": [
+            "168",
+            "132",
+            "115"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "CRP",
+          "unite": "",
+          "valeurs": [
+            "96",
+            "28",
+            "7"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Albumine",
+          "unite": "",
+          "valeurs": [
+            "28",
+            "33",
+            "37"
+          ],
+          "douteux": [
+            false,
+            false,
+            true
+          ]
+        }
+      ]
+    },
+    {
+      "id": "zebre-normal",
+      "ms": 517,
+      "dates": [
+        "2024-01-15",
+        "2024-03-04",
+        "2024-06-18",
+        "2024-09-02"
+      ],
+      "lignes": [
+        {
+          "nom": "Sodium",
+          "unite": "mmol/L",
+          "valeurs": [
+            "138",
+            "141",
+            "136",
+            "140"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Potassium",
+          "unite": "mmol/L",
+          "valeurs": [
+            "4.1",
+            "3.8",
+            "4.6",
+            "4"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Uree",
+          "unite": "mmol/L",
+          "valeurs": [
+            "8.2",
+            "6.4",
+            "12.1",
+            "7.3"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Creatinine",
+          "unite": "umol/L",
+          "valeurs": [
+            "142",
+            "118",
+            "205",
+            "131"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Calcium",
+          "unite": "mmol/L",
+          "valeurs": [
+            "2.31",
+            "2.44",
+            "2.18",
+            "2.39"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Phosphore",
+          "unite": "mmol/L",
+          "valeurs": [
+            "1.12",
+            "0.94",
+            "1.48",
+            "1.05"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Albumine",
+          "unite": "g/L",
+          "valeurs": [
+            "34",
+            "38",
+            "29",
+            "36"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "CRP",
+          "unite": "mg/L",
+          "valeurs": [
+            "12",
+            "5",
+            "48",
+            "6"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "zebre-petit",
+      "ms": 546,
+      "dates": [
+        "2024-01-15",
+        "2024-03-04",
+        "2024-06-18",
+        "2024-09-02"
+      ],
+      "lignes": [
+        {
+          "nom": "Sodium",
+          "unite": "mmol/L",
+          "valeurs": [
+            "138",
+            "141",
+            "136",
+            "140"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Potassium",
+          "unite": "mmol/L",
+          "valeurs": [
+            "4.1",
+            "3.8",
+            "4.6",
+            "4"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Uree",
+          "unite": "mmol/L",
+          "valeurs": [
+            "8.2",
+            "6.4",
+            "12.1",
+            "7.3"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Creatinine",
+          "unite": "umol/L",
+          "valeurs": [
+            "142",
+            "118",
+            "205",
+            "131"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Calcium",
+          "unite": "mmol/L",
+          "valeurs": [
+            "2.31",
+            "2.44",
+            "2.18",
+            "2.39"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Phosphore",
+          "unite": "mmol/L",
+          "valeurs": [
+            "1.12",
+            "0.94",
+            "1.48",
+            "1.05"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Albumine",
+          "unite": "g/L",
+          "valeurs": [
+            "34",
+            "38",
+            "29",
+            "36"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "CRP",
+          "unite": "mg/L",
+          "valeurs": [
+            "12",
+            "5",
+            "48",
+            "6"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "serif-palecontraste",
+      "ms": 422,
+      "dates": [
+        "2023-01-01",
+        "2026-12-31"
+      ],
+      "lignes": []
+    },
+    {
+      "id": "serif-petit",
+      "ms": 434,
+      "dates": [
+        "2023-01-01",
+        "2026-12-31"
+      ],
+      "lignes": []
+    },
+    {
+      "id": "fleches-anormales",
+      "ms": 445,
+      "dates": [
+        ""
+      ],
+      "lignes": [
+        {
+          "nom": "Leucocytes",
+          "unite": "G/L",
+          "valeurs": [
+            "6.9"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "PNN",
+          "unite": "G/L",
+          "valeurs": [
+            "4.1"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Lymphocytes",
+          "unite": "G/L",
+          "valeurs": [
+            "2.2"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Plaquettes",
+          "unite": "G/L",
+          "valeurs": [
+            "232"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Hemoglobine",
+          "unite": "g/dl",
+          "valeurs": [
+            "11.2"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "VGM",
+          "unite": "fL",
+          "valeurs": [
+            "92"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "1gG",
+          "unite": "g/L",
+          "valeurs": [
+            "8.1"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "C3",
+          "unite": "g/L",
+          "valeurs": [
+            "1.24"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Anticorps anti-DNA Ul/mL",
+          "unite": "",
+          "valeurs": [
+            "46"
+          ],
+          "douteux": [
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "encadre-gris",
+      "ms": 537,
+      "dates": [
+        "2023-11-08",
+        "2023-12-06"
+      ],
+      "lignes": [
+        {
+          "nom": "ASAT",
+          "unite": "",
+          "valeurs": [
+            "62",
+            "38"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "ALAT",
+          "unite": "",
+          "valeurs": [
+            "81",
+            "45"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "GGT",
+          "unite": "",
+          "valeurs": [
+            "155",
+            "98"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "PAL",
+          "unite": "",
+          "valeurs": [
+            "210",
+            "176"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Bilirubine totale",
+          "unite": "",
+          "valeurs": [
+            "24",
+            "15"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "TP",
+          "unite": "",
+          "valeurs": [
+            "68",
+            "84"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Fibrinogene",
+          "unite": "",
+          "valeurs": [
+            "572",
+            "8.7"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Ferritine",
+          "unite": "",
+          "valeurs": [
+            "1240",
+            "860"
+          ],
+          "douteux": [
+            false,
+            true
+          ]
+        },
+        {
+          "nom": "TSH",
+          "unite": "",
+          "valeurs": [
+            "0.42",
+            "1.85"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Vitamine D",
+          "unite": "",
+          "valeurs": [
+            "38",
+            "62"
+          ],
+          "douteux": [
+            false,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "zebre-hd",
+      "ms": 484,
+      "dates": [
+        "2026-02-03",
+        "2026-02-17",
+        "2026-03-10"
+      ],
+      "lignes": [
+        {
+          "nom": "Leucocytes",
+          "unite": "G/L",
+          "valeurs": [
+            "3.8",
+            "5.1",
+            "6.9"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "PNN",
+          "unite": "G/L",
+          "valeurs": [
+            "1.4",
+            "2.7",
+            "4.1"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Lymphocytes",
+          "unite": "G/L",
+          "valeurs": [
+            "1.9",
+            "1.7",
+            "2.2"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Plaquettes",
+          "unite": "G/L",
+          "valeurs": [
+            "96",
+            "145",
+            "232"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Hemoglobine",
+          "unite": "g/dL",
+          "valeurs": [
+            "8.4",
+            "9.6",
+            "11.2"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "VGM",
+          "unite": "fL",
+          "valeurs": [
+            "104",
+            "98",
+            "92"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "1gG",
+          "unite": "g/L",
+          "valeurs": [
+            "4.8",
+            "6.2",
+            "8.1"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "C3",
+          "unite": "g/L",
+          "valeurs": [
+            "0.72",
+            "0.95",
+            "1.24"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Anticorps anti-DNA Ul/mL",
+          "unite": "",
+          "valeurs": [
+            "300",
+            "184",
+            "46"
+          ],
+          "douteux": [
+            false,
+            false,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "encadre-minuscule",
+      "ms": 576,
+      "dates": [
+        "2024-01-15",
+        "2024-03-04",
+        "2024-06-18",
+        "2024-09-02"
+      ],
+      "lignes": [
+        {
+          "nom": "Sodium",
+          "unite": "",
+          "valeurs": [
+            "138",
+            "141",
+            "136",
+            "140"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Potassium",
+          "unite": "",
+          "valeurs": [
+            "4.1",
+            "3.8",
+            "4.6",
+            "4"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Uree",
+          "unite": "",
+          "valeurs": [
+            "8.2",
+            "6.4",
+            "12.1",
+            "7.3"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Creatinine",
+          "unite": "",
+          "valeurs": [
+            "142",
+            "118",
+            "205",
+            "131"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Calcium",
+          "unite": "",
+          "valeurs": [
+            "2.31",
+            "2.44",
+            "2.18",
+            "2.39"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Phosphore",
+          "unite": "",
+          "valeurs": [
+            "1.12",
+            "0.94",
+            "1.48",
+            "1.05"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "Albumine",
+          "unite": "",
+          "valeurs": [
+            "34",
+            "38",
+            "29",
+            "36"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "nom": "CRP",
+          "unite": "",
+          "valeurs": [
+            "12",
+            "",
+            "48",
+            "6"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "medecin",
+      "ms": 429,
+      "dates": [
+        "2024-09-21"
+      ],
+      "lignes": [
+        {
+          "nom": "Creatinine",
+          "unite": "",
+          "valeurs": [
+            "7"
+          ],
+          "douteux": [
+            true
+          ]
+        },
+        {
+          "nom": "CRP",
+          "unite": "",
+          "valeurs": [
+            "451"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Hemoglobine",
+          "unite": "",
+          "valeurs": [
+            "119"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Leucocytes",
+          "unite": "",
+          "valeurs": [
+            "122"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Plaquettes",
+          "unite": "",
+          "valeurs": [
+            "400"
+          ],
+          "douteux": [
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "medecin-petit",
+      "ms": 419,
+      "dates": [
+        "2024-09-20"
+      ],
+      "lignes": [
+        {
+          "nom": "Creatinine",
+          "unite": "",
+          "valeurs": [
+            "110"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "CRP",
+          "unite": "",
+          "valeurs": [
+            "451"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Hemoglobine",
+          "unite": "",
+          "valeurs": [
+            "11.9"
+          ],
+          "douteux": [
+            false
+          ]
+        },
+        {
+          "nom": "Leucocytes",
+          "unite": "",
+          "valeurs": [
+            "12.2"
+          ],
+          "douteux": [
+            true
+          ]
+        },
+        {
+          "nom": "Plaquettes",
+          "unite": "",
+          "valeurs": [
+            "400"
+          ],
+          "douteux": [
+            false
+          ]
+        }
+      ]
+    }
+  ],
+  "medecin": [
+    {
+      "numero": 1,
+      "fautes": 0,
+      "details": []
+    },
+    {
+      "numero": 2,
+      "fautes": 2,
+      "details": [
+        "medecin : Plaquettes : « 400 » est une borne de la norme « 150 - 400 »",
+        "medecin-petit : Plaquettes : « 400 » est une borne de la norme « 150 - 400 »"
+      ]
+    },
+    {
+      "numero": 3,
+      "fautes": 2,
+      "details": [
+        "encadre-normal : Leucocytes : « 7.4 » rendu « 74 »",
+        "encadre-petit : Leucocytes : « 7.4 » rendu « 74 »"
+      ]
+    },
+    {
+      "numero": 4,
+      "fautes": 0,
+      "details": []
+    },
+    {
+      "numero": 5,
+      "fautes": 3,
+      "details": [
+        "fleches-anormales : 3 colonnes de dates sur l'image, 0 datée(s) en sortie",
+        "medecin : 3 colonnes de dates sur l'image, 1 datée(s) en sortie",
+        "medecin-petit : 3 colonnes de dates sur l'image, 1 datée(s) en sortie"
+      ]
+    }
+  ]
+}

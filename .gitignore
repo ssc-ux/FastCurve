@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# Fichiers de travail
+captures/
+*.mjs
+!bench/*.mjs
+MEDECIN-CAHIER-DES-CHARGES.md
+RAPPORT-*.md

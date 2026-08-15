@@ -1,0 +1,168 @@
+:root {
+  --bg: #f5f6f8;
+  --canvas-bg: #eef1f5;
+  --panel: #ffffff;
+  --panel-2: #f6f8fa;
+  --border: #e6e9ee;
+  --border-strong: #d3d8df;
+  --ink: #1a2430;
+  --muted: #56616d;
+  --faint: #78818c;
+  --accent: #2f74d0;
+  --accent-soft: #eaf1fb;
+  --accent-ink: #ffffff;
+  --danger: #d0402f;
+  --ok: #1f9d55;
+  --warn-bg: #fff4d6;
+  --warn-ink: #7a5b00;
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(16,24,32,0.05), 0 4px 14px rgba(16,24,32,0.06);
+  --shadow-sm: 0 1px 2px rgba(16,24,32,0.06);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); }
+#app { height: 100vh; }
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 9px;
+  padding: 7px 13px;
+  transition: background .16s ease, border-color .16s ease, box-shadow .16s ease, transform .06s ease;
+}
+button:hover { background: var(--panel-2); border-color: var(--border-strong); }
+button:active { transform: scale(0.975); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: 0 1px 2px rgba(47,116,208,.25); }
+button.primary:hover { background: #2a6ac2; }
+button.ghost { border-color: transparent; background: transparent; }
+button.ghost:hover { background: rgba(0,0,0,.045); }
+button.danger { color: var(--danger); border-color: #e6bcb5; background: var(--panel); }
+button.danger:hover { background: #fbecea; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button:disabled:active { transform: none; }
+
+input, select, textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 7px 9px;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+label { font-size: 13px; color: var(--muted); }
+
+.small { font-size: 13px; }
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+.row { display: flex; gap: 8px; align-items: center; }
+.col { display: flex; flex-direction: column; gap: 8px; }
+.wrap { flex-wrap: wrap; }
+.grow { flex: 1; }
+.spacer { flex: 1; }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #eef2f6;
+  color: var(--muted);
+}
+
+.callout {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  border: 1px solid #f0d98a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+table.grid { border-collapse: collapse; width: 100%; }
+table.grid th, table.grid td {
+  border: 1px solid var(--border);
+  padding: 3px 6px;
+  text-align: center;
+  font-size: 13px;
+}
+table.grid th { background: var(--panel-2); font-weight: 600; color: var(--muted); }
+table.grid td.name { text-align: left; font-weight: 600; white-space: nowrap; }
+table.grid input { width: 62px; text-align: center; padding: 3px 4px; border-color: transparent; background: transparent; }
+table.grid input:focus { border-color: var(--accent); background: #fff; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #cbd3da; border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Impression : uniquement le graphique, mis en page A4 paysage */
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  /* Tout ce qui est de l'interface, pas du document : modales, notifications,
+     popovers. Sans cette liste, imprimer avec la présentation ouverte imprime
+     la présentation par-dessus un fond flouté. */
+  .topbar, .toolbar, .tip,
+  .overlay, .host, .point-pop, .title-editor, .title-hit, .divider, .savebanner { display: none !important; }
+
+  /* Le tableau des valeurs part sur une seconde page : dans un compte-rendu on
+     veut la courbe pour voir et les chiffres exacts pour citer. On imprime ce
+     qui est à l'écran — si l'onglet Données n'est pas ouvert, il n'y a pas de
+     seconde page. */
+  /* Sélecteur volontairement aussi spécifique que `.body.horizontal
+     .sidebar.collapsed` : imprimer alors que le panneau est replié doit quand
+     même sortir le tableau des valeurs. */
+  .sidebar,
+  .body.horizontal .sidebar.collapsed { display: block !important; width: 100% !important; height: auto !important; max-height: none !important; }
+  .sidebar .tabs, .modeseg, .aux, .add-param, .pied, .serie, .empty, .quickstarts { display: none !important; }
+  .tab-content { padding: 0 !important; overflow: visible !important; }
+  .tablecard { break-before: page; page-break-before: always; border: none !important; box-shadow: none !important; margin-top: 6mm; }
+  .tablescroll { max-height: none !important; overflow: visible !important; }
+  .colx, .add-date, .add-serie, .addcol { display: none !important; }
+  .dgrid .cell, .dgrid .dateinput { border: none !important; background: transparent !important; color: #111 !important; }
+  .dgrid .dateinput::-webkit-calendar-picker-indicator { display: none !important; }
+  .dgrid .rowname, .dgrid .corner { position: static !important; box-shadow: none !important; }
+  .app, .chart-area, .canvas {
+    display: block !important; height: auto !important;
+    overflow: visible !important; background: #fff !important; padding: 0 !important; margin: 0 !important;
+  }
+  /* La figure d'abord, le tableau ensuite — quel que soit le sens du plan de
+     travail à l'écran, où la grille est au-dessus. */
+  .body {
+    display: flex !important; flex-direction: column !important;
+    height: auto !important; overflow: visible !important; background: #fff !important;
+  }
+  .chart-area { order: 0; }
+  .sidebar { order: 1; }
+  .svg-host { box-shadow: none !important; border-radius: 0 !important; }
+  html, body { background: #fff !important; }
+  /* Bornée en hauteur : sans cela une figure à plusieurs paramètres déborde
+     de quelques pour cent et part sur une deuxième page. */
+  .svg-host svg {
+    width: auto !important; height: auto !important;
+    max-width: 100% !important; max-height: 178mm !important;
+  }
+}
