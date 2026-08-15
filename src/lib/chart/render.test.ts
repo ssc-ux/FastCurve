@@ -86,3 +86,119 @@ describe('renderChart — unité des paramètres EFR', () => {
     expect(renderChart(etudeEfr('percent'), 920).svg).toContain('CVF (% théo.)');
   });
 });
+
+// ── Outils d'inspection géométrique du SVG rendu ──────────────
+
+/** Rectangles du SVG, sous forme numérique. */
+function rects(svg: string) {
+  return [...svg.matchAll(/<rect x="([-\d.]+)" y="([-\d.]+)" width="([-\d.]+)" height="([-\d.]+)"([^>]*)\/>/g)]
+    .map(m => ({ x: +m[1], y: +m[2], w: +m[3], h: +m[4], reste: m[5] }));
+}
+/** Ordonnées extrêmes atteintes par les tracés d'une couleur donnée. */
+function etendueY(svg: string, couleur: string) {
+  let min = Infinity, max = -Infinity;
+  const noter = (v: number) => { min = Math.min(min, v); max = Math.max(max, v); };
+  for (const m of svg.matchAll(/<line x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)" stroke="([^"]+)"/g)) {
+    if (m[5] === couleur) { noter(+m[2]); noter(+m[4]); }
+  }
+  for (const m of svg.matchAll(/<polygon points="([^"]+)" fill="([^"]+)"/g)) {
+    if (m[2] !== couleur) continue;
+    for (const p of m[1].trim().split(/\s+/)) noter(+p.split(',')[1]);
+  }
+  return { min, max };
+}
+
+function etudeSimple(params: StudyState['parameters'], mesures: StudyState['measurements']): StudyState {
+  return {
+    version: 1, patientLabel: '', parameters: params, measurements: mesures,
+    treatments: [], annotations: [], extraDates: [],
+    settings: {
+      chartMode: 'stacked', title: '', subtitle: '', showReference: true,
+      showLegend: false, showValues: false, timeAxis: true, markOutOfRange: false,
+    },
+  };
+}
+
+describe('renderChart — bande de normale bornée au panneau', () => {
+  // Régression : une CRP dont la normale (< 5) tombait hors de l'échelle
+  // (panneau gradué de 60 à 160) faisait peindre la bande SOUS l'axe, donc
+  // par-dessus le panneau voisin : on y lisait une plage « normale » qui
+  // n'avait rien à voir avec le paramètre affiché.
+  const etude = etudeSimple(
+    [
+      { id: 'p1', name: 'CRP', unit: 'mg/L', category: 'biologie', refHigh: 5, color: '#2a78d6', order: 0 },
+      { id: 'p2', name: 'Créatinine', unit: 'µmol/L', category: 'biologie', refLow: 45, refHigh: 90, color: '#e34948', order: 1 },
+    ],
+    [
+      { id: 'm1', parameterId: 'p1', date: '2025-01-06', value: 148 },
+      { id: 'm2', parameterId: 'p1', date: '2025-02-06', value: 71 },
+      { id: 'm3', parameterId: 'p2', date: '2025-01-06', value: 245 },
+      { id: 'm4', parameterId: 'p2', date: '2025-02-06', value: 165 },
+    ],
+  );
+
+  it('ne peint aucune bande de normale hors du panneau qui la porte', () => {
+    const svg = renderChart(etude, 920).svg;
+    const bandes = rects(svg).filter(r => r.reste.includes('#f0f4f8'));
+    // Une seule bande légitime : celle de la créatinine (45–90 est dans son
+    // échelle). Celle de la CRP est hors échelle, donc rien.
+    expect(bandes).toHaveLength(1);
+    // Elle ne mord pas sur le panneau du dessus : les repères Y de la
+    // créatinine encadrent la bande.
+    const axes = [...svg.matchAll(/<line x1="66" y1="([-\d.]+)" x2="66" y2="([-\d.]+)"/g)].map(m => [+m[1], +m[2]]);
+    const panneau2 = axes[1];
+    expect(bandes[0].y).toBeGreaterThanOrEqual(panneau2[0] - 0.01);
+    expect(bandes[0].y + bandes[0].h).toBeLessThanOrEqual(panneau2[1] + 0.01);
+  });
+});
+
+describe('renderChart — flèches de seuil de détection', () => {
+  function etudeSeuil(valeur: number, q: '<' | '>', hautes: number[]): StudyState {
+    return etudeSimple(
+      [{ id: 'p1', name: 'Anticorps', unit: 'UI/mL', category: 'biologie', color: '#2a78d6', order: 0 }],
+      [
+        ...hautes.map((v, i) => ({ id: 'h' + i, parameterId: 'p1', date: `2025-0${i + 1}-06`, value: v })),
+        { id: 'q', parameterId: 'p1', date: '2025-06-06', value: valeur, qualifier: q },
+      ],
+    );
+  }
+
+  it('ne laisse pas la flèche « < » déborder sous le panneau', () => {
+    // Régression : une longueur plancher de 6 px était imposée avant de
+    // regarder la place restante ; la flèche mordait sur le panneau voisin.
+    const svg = renderChart(etudeSeuil(3, '<', [180, 90, 60]), 920).svg;
+    const axeBas = Math.max(...[...svg.matchAll(/<line x1="66" y1="([-\d.]+)" x2="66" y2="([-\d.]+)"/g)].map(m => +m[2]));
+    expect(etendueY(svg, '#2a78d6').max).toBeLessThanOrEqual(axeBas + 0.01);
+  });
+
+  it('ne laisse pas la flèche « > » déborder au-dessus du panneau', () => {
+    const svg = renderChart(etudeSeuil(1000, '>', [400, 820, 1000]), 920).svg;
+    const axeHaut = Math.min(...[...svg.matchAll(/<line x1="66" y1="([-\d.]+)" x2="66" y2="([-\d.]+)"/g)].map(m => +m[1]));
+    expect(etendueY(svg, '#2a78d6').min).toBeGreaterThanOrEqual(axeHaut - 0.01);
+  });
+
+  it('écrit toujours le qualificatif quand la flèche ne tient pas', () => {
+    // Sans cela « <3 » se lirait « 3 » : l'information de seuil disparaîtrait
+    // complètement dès que les valeurs ne sont pas affichées.
+    const svg = renderChart(etudeSeuil(1000, '>', [400, 820, 1000]), 920).svg;
+    expect(svg).toContain('>1000</text>');
+  });
+});
+
+describe('renderChart — densité des marqueurs', () => {
+  it('rétrécit les marqueurs quand les points se serrent', () => {
+    const mesure = (n: number) => etudeSimple(
+      [{ id: 'p1', name: 'CRP', unit: 'mg/L', category: 'biologie', color: '#2a78d6', order: 0 }],
+      Array.from({ length: n }, (_, i) => ({
+        id: 'm' + i, parameterId: 'p1',
+        date: new Date(Date.UTC(2025, 0, 6) + i * 7 * 86400000).toISOString().slice(0, 10),
+        value: 100 + (i % 5),
+      })),
+    );
+    const rayon = (svg: string) => +/<circle cx="[-\d.]+" cy="[-\d.]+" r="([\d.]+)"/.exec(svg)![1];
+    // À 40 prélèvements, des marqueurs de 4 px se touchaient et la série
+    // devenait un ruban continu.
+    expect(rayon(renderChart(mesure(5), 920).svg)).toBe(4);
+    expect(rayon(renderChart(mesure(40), 920).svg)).toBeLessThan(3.5);
+  });
+});

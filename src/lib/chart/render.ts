@@ -551,11 +551,23 @@ function panel(
   const { marginLeft, plotWidth } = layout;
   let out = '';
 
-  // Bande de normale
+  // Bande de normale — bornée au panneau.
+  //
+  // Sans ce bornage, une normale située hors de l'échelle (CRP « < 5 » sur un
+  // panneau gradué de 60 à 160 parce que le patient n'est jamais redescendu)
+  // faisait peindre la bande SOUS l'axe, c'est-à-dire par-dessus le panneau
+  // voisin : on lisait « créatinine normale entre 155 et 250 ». Une figure de
+  // compte-rendu ne peut pas se permettre ça.
   if (s.showReference && !(p.category === 'efr' && p.display === 'percent') && (p.refLow != null || p.refHigh != null)) {
-    const top = yOf(p.refHigh != null ? p.refHigh : sc.max);
-    const bot = yOf(p.refLow != null ? p.refLow : sc.min);
-    out += `<rect x="${marginLeft}" y="${Math.min(top, bot)}" width="${plotWidth}" height="${Math.abs(bot - top)}" fill="${REF_FILL}"/>`;
+    const bordHaut = yOf(p.refHigh != null ? p.refHigh : sc.max);
+    const bordBas = yOf(p.refLow != null ? p.refLow : sc.min);
+    const haut = clamp(Math.min(bordHaut, bordBas), y0, y1);
+    const bas = clamp(Math.max(bordHaut, bordBas), y0, y1);
+    // Bande entièrement hors du panneau : rien à dessiner (mieux vaut pas de
+    // repère qu'un repère faux).
+    if (bas - haut >= 0.5) {
+      out += `<rect x="${marginLeft}" y="${haut}" width="${plotWidth}" height="${bas - haut}" fill="${REF_FILL}"/>`;
+    }
   }
 
   // Grille horizontale + ticks Y
@@ -579,6 +591,25 @@ function panel(
   return out;
 }
 
+/**
+ * Rayon des marqueurs, réduit quand les points se serrent.
+ *
+ * À quarante prélèvements sur la largeur d'une page, des marqueurs de 4 px
+ * cerclés à 7 px se touchaient : la série devenait un ruban continu où l'on ne
+ * distinguait plus un point d'un autre. Le marqueur rétrécit donc avec
+ * l'espacement réel, sans jamais descendre sous 2,2 px (en deçà il disparaît à
+ * l'impression).
+ */
+function rayonMarqueur(pts: SeriesPoint[]): number {
+  if (pts.length < 2) return 4;
+  const ecarts: number[] = [];
+  for (let i = 1; i < pts.length; i++) ecarts.push(Math.abs(pts[i].x - pts[i - 1].x));
+  ecarts.sort((a, b) => a - b);
+  const median = ecarts[Math.floor(ecarts.length / 2)];
+  if (median >= 26) return 4;
+  return clamp(median / 6.5, 2.2, 4);
+}
+
 function series(
   p: Parameter, idx: number,
   pts: SeriesPoint[],
@@ -591,6 +622,8 @@ function series(
   if (!pts.length) return '';
   const color = p.color || '#2a78d6';
   const shape = MARKER_SHAPES[idx % MARKER_SHAPES.length];
+  const rayon = rayonMarqueur(pts);
+  const rAnneau = rayon + 3;
   let out = '';
   // Ligne
   const d = pts.map((pt, i) => `${i === 0 ? 'M' : 'L'}${pt.x.toFixed(1)},${yOf(pt.value).toFixed(1)}`).join(' ');
@@ -600,29 +633,55 @@ function series(
     const cy = yOf(pt.value);
     // Anneau hors-norme
     if (s.markOutOfRange && pt.outOfRange) {
-      out += `<circle cx="${pt.x}" cy="${cy}" r="7" fill="none" stroke="#c0392b" stroke-width="1.4"/>`;
+      out += `<circle cx="${pt.x}" cy="${cy}" r="${rAnneau}" fill="none" stroke="#c0392b" stroke-width="1.4"/>`;
     }
-    out += marker(shape, pt.x, cy, 4, color);
+    out += marker(shape, pt.x, cy, rayon, color);
     // Flèche de seuil (< : vraie valeur en dessous ; > : au dessus)
+    //
+    // Elle ne doit JAMAIS sortir du panneau : elle empiétait sur le panneau
+    // voisin et sur son titre, parce qu'une longueur plancher de 6 px était
+    // imposée avant même de regarder la place disponible. Son SENS porte
+    // l'information : on la raccourcit, on ne la retourne pas, et si la place
+    // manque vraiment on l'omet plutôt que de déborder — le qualificatif reste
+    // lisible dans l'étiquette de valeur et dans l'infobulle.
+    let fleche = 0; // encombrement effectif de la flèche (0 = pas de flèche)
     if (pt.q === '<' || pt.q === '>') {
       const dir = pt.q === '<' ? 1 : -1;
-      // La flèche ne doit pas sortir du panneau (elle chevaucherait le panneau
-      // voisin, voire son titre) — mais son SENS porte l'information « la vraie
-      // valeur est en dessous / au dessus » : on la raccourcit, jamais on ne la
-      // retourne.
-      const limite = dir === 1 ? botY - 2 : topY + 2;
-      const len = Math.max(6, Math.min(13, Math.abs(limite - cy)));
-      const ya = cy + dir * Math.min(6, len - 3), yb = cy + dir * len;
-      out += `<line x1="${pt.x}" y1="${ya}" x2="${pt.x}" y2="${yb}" stroke="${color}" stroke-width="1.5"/>`;
-      out += `<polygon points="${pt.x},${yb + dir * 3} ${pt.x - 3},${yb - dir * 1} ${pt.x + 3},${yb - dir * 1}" fill="${color}"/>`;
+      const limite = dir === 1 ? botY - 1 : topY + 1;
+      const place = Math.max(0, Math.abs(limite - cy));
+      const total = Math.min(16, place);
+      if (total >= 5) {
+        const pointe = Math.min(5, total - 1);
+        const yb = cy + dir * (total - pointe); // base du triangle
+        const yPointe = cy + dir * total;
+        const ya = cy + dir * (rayon + 1);
+        if ((yb - ya) * dir > 1) {
+          out += `<line x1="${pt.x}" y1="${ya}" x2="${pt.x}" y2="${yb}" stroke="${color}" stroke-width="1.5"/>`;
+        }
+        out += `<polygon points="${pt.x},${yPointe} ${pt.x - 3},${yb} ${pt.x + 3},${yb}" fill="${color}"/>`;
+        fleche = total * dir;
+      }
     }
-    if (s.showValues) {
+    // Un point au seuil de détection est toujours légendé, même quand les
+    // valeurs sont masquées : quand la flèche ne tient pas (valeur au ras du
+    // plancher de l'échelle, cas normal d'un anticorps devenu indétectable),
+    // c'est le seul endroit où « < » subsiste. Sans cela « <3 » se lit « 3 »,
+    // ce qui est faux. Ils sont rares : deux ou trois par série au plus.
+    if (s.showValues || (pt.q && fleche === 0)) {
       const lbl = (pt.q ?? '') + fmtNum(pt.value);
       // On place l'étiquette du côté où la courbe ne passe pas : sur une pente
       // forte, l'écrire au-dessus la fait traverser par le trait.
       const voisinHaut = (i > 0 && yOf(pts[i - 1].value) < cy - 2) || (i < pts.length - 1 && yOf(pts[i + 1].value) < cy - 2);
-      const placeDessous = (cy - 10 < topY + 6) || (voisinHaut && cy + 16 < botY);
-      const ly = placeDessous ? cy + 15 : cy - 8;
+      let placeDessous = (cy - 10 < topY + 6) || (voisinHaut && cy + 16 < botY);
+      // Une flèche de seuil occupe déjà un côté du point : « >200 » écrit
+      // par-dessus sa propre flèche était illisible. On passe de l'autre côté
+      // dès que la place le permet.
+      if (fleche > 0 && cy - 8 > topY + 4) placeDessous = false;
+      else if (fleche < 0 && cy + 16 < botY) placeDessous = true;
+      const decale = Math.abs(fleche) + 4;
+      let ly = placeDessous ? cy + 15 : cy - 8;
+      if (fleche > 0 && placeDessous) ly = Math.min(cy + decale + 10, botY - 2);
+      if (fleche < 0 && !placeDessous) ly = Math.max(cy - decale - 4, topY + 9);
       out += `<text x="${pt.x}" y="${ly}" text-anchor="middle" font-family="${FONT}" font-size="9.5" fill="${INK}">${lbl}</text>`;
     }
     hotspots.push({ param: p, date: pt.date, value: pt.value, cx: pt.x, cy });

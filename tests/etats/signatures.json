@@ -555,11 +555,11 @@
     "balises": {
       "svg": 1,
       "rect": 7,
-      "text": 20,
-      "line": 25,
+      "text": 22,
+      "line": 21,
       "path": 2,
       "circle": 7,
-      "polygon": 4
+      "polygon": 2
     },
     "textes": [
       "Seuils de détection : CRP « &lt; 5 » et ferritine « &gt; 1000 »",
@@ -576,6 +576,8 @@
       "800",
       "1000",
       "Ferritine (µg/L)",
+      ">1000",
+      ">1000",
       "08/01/2025",
       "12/02/2025",
       "19/03/2025",
