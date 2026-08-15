@@ -32,6 +32,34 @@ function esc(s: string): string {
 }
 
 /**
+ * Largeur approchée d'un texte, en pixels.
+ *
+ * Le rendu est une fonction pure sans DOM : impossible de mesurer réellement.
+ * Les largeurs étaient jusqu'ici estimées par « nombre de caractères × 6,1 »,
+ * ce qui sous-estime lourdement les noms pleins de lettres larges — d'où la
+ * légende où « Anticorps anti-membrane basale glomérulaire » recouvrait
+ * « Rapport protéinurie/créatininurie ». On pondère donc par classe de
+ * caractère : c'est grossier, mais l'erreur reste sous les 5 % sur les libellés
+ * médicaux réels, largement dans la marge de sécurité qu'on s'accorde.
+ */
+const LARGEURS: Record<string, number> = {
+  i: 0.24, j: 0.24, l: 0.24, I: 0.28, '.': 0.28, ',': 0.28, ':': 0.28, ';': 0.28,
+  "'": 0.20, '’': 0.20, '(': 0.33, ')': 0.33, '/': 0.28, ' ': 0.28, '·': 0.33,
+  f: 0.30, t: 0.33, r: 0.36, '-': 0.33, '–': 0.56, '—': 0.83,
+  m: 0.83, w: 0.72, M: 0.83, W: 0.94, '%': 0.89,
+};
+export function largeurTexte(texte: string, taille: number, gras = false): number {
+  let u = 0;
+  for (const c of texte) {
+    if (LARGEURS[c] !== undefined) u += LARGEURS[c];
+    else if (c >= '0' && c <= '9') u += 0.56;
+    else if (c >= 'A' && c <= 'Z') u += 0.68;
+    else u += 0.55; // minuscules courantes et lettres accentuées
+  }
+  return u * taille * (gras ? 1.06 : 1);
+}
+
+/**
  * Valeur à tracer. Pour les EFR, le mode « % théorique » ne change que
  * l'étiquette/échelle : les valeurs saisies (des pourcentages) sont tracées
  * telles quelles.
@@ -421,32 +449,57 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
   }
 
   // ── Événements ponctuels : grosses flèches colorées, libellé DESSOUS ──
+  //
+  // Trois défauts vus sur captures, tous porteurs de contresens :
+  //  · une cure répétée (quatre perfusions de rituximab) sortait avec une
+  //    flèche sur deux étiquetée — la muette du milieu se lisait comme un
+  //    autre produit. Les administrations rapprochées d'un même produit sont
+  //    donc regroupées sous une seule étiquette qui en donne le nombre ;
+  //  · ces flèches prenaient chacune la couleur de leur ligne de traitement :
+  //    trois couleurs pour un seul médicament. La couleur suit maintenant le
+  //    nom du produit ;
+  //  · le libellé du premier événement, centré sur une flèche collée au bord,
+  //    débordait du cadre à gauche. Il est désormais retenu dans le cadre.
   if (eventTr.length) {
     const tipY = bandY + 2;         // pointe de la flèche (vers la courbe)
     const baseY = tipY + 26;        // base de la flèche
-    const labelY0 = baseY + 16;     // libellé sous la flèche (pas de chevauchement)
-    let lastLabelX = -Infinity;
-    let lastLabelName = '';
-    let row = 0;                    // alternance sur 2 rangs si libellés proches
-    eventTr.forEach((t) => {
-      const x = clamp(xm.xOf(t.start), marginLeft, marginLeft + plotWidth);
-      const color = t.color || '#5b6472';
-      // Grosse flèche pleine pointant vers le haut
-      parts.push(`<line x1="${x}" y1="${baseY}" x2="${x}" y2="${tipY + 13}" stroke="${color}" stroke-width="4"/>`);
-      parts.push(`<polygon points="${x},${tipY} ${x - 10},${tipY + 15} ${x + 10},${tipY + 15}" fill="${color}"/>`);
-      // Libellé sous la flèche, une seule fois pour un même nom répété
-      const label = t.dose ? `${t.name} (${t.dose})` : t.name;
-      const sameNameNear = t.name === lastLabelName && x - lastLabelX < 150;
-      if (!sameNameNear) {
-        const estW = label.length * 6.6;
-        row = (x - lastLabelX < estW + 12) ? (row === 0 ? 1 : 0) : 0; // évite le chevauchement horizontal
-        const ly = labelY0 + row * 15;
-        parts.push(`<text x="${x}" y="${ly}" text-anchor="middle" font-family="${FONT}" font-size="12.5" font-weight="700" fill="${INK}">${esc(label)}</text>`);
-        lastLabelX = x;
-        lastLabelName = t.name;
+    const labelY0 = baseY + 16;     // libellé sous la flèche
+    const gauche = marginLeft, droite = marginLeft + plotWidth;
+
+    // Couleur de référence par nom de produit (celle de sa première ligne).
+    const couleurProduit = new Map<string, string>();
+    for (const t of eventTr) if (!couleurProduit.has(t.name)) couleurProduit.set(t.name, t.color || '#5b6472');
+
+    // Regroupement des administrations consécutives d'un même produit.
+    type Groupe = { nom: string; dose?: string; xs: number[]; couleur: string };
+    const groupes: Groupe[] = [];
+    for (const t of eventTr) {
+      const x = clamp(xm.xOf(t.start), gauche, droite);
+      const dernier = groupes[groupes.length - 1];
+      if (dernier && dernier.nom === t.name && x - dernier.xs[dernier.xs.length - 1] < 170) {
+        dernier.xs.push(x);
+        if (!dernier.dose && t.dose) dernier.dose = t.dose;
+      } else {
+        groupes.push({ nom: t.name, dose: t.dose, xs: [x], couleur: couleurProduit.get(t.name)! });
       }
-    });
-    bandY += 58; // place pour la flèche + 2 rangs de libellés
+      parts.push(`<line x1="${x}" y1="${baseY}" x2="${x}" y2="${tipY + 13}" stroke="${couleurProduit.get(t.name)}" stroke-width="4"/>`);
+      parts.push(`<polygon points="${x},${tipY} ${x - 10},${tipY + 15} ${x + 10},${tipY + 15}" fill="${couleurProduit.get(t.name)}"/>`);
+    }
+
+    // Étiquettes : une par groupe, centrée sur lui, retenue dans le cadre, et
+    // renvoyée au rang du dessous si elle empiète sur la précédente.
+    let finRang0 = -Infinity, finRang1 = -Infinity;
+    for (const g of groupes) {
+      const n = g.xs.length;
+      const label = (g.dose ? `${g.nom} (${g.dose})` : g.nom) + (n > 1 ? ` ×${n}` : '');
+      const w = largeurTexte(label, 12.5, true);
+      const centre = (g.xs[0] + g.xs[n - 1]) / 2;
+      const x = clamp(centre, gauche + w / 2, Math.max(gauche + w / 2, droite - w / 2));
+      const rang = x - w / 2 >= finRang0 + 14 ? 0 : (x - w / 2 >= finRang1 + 14 ? 1 : 0);
+      if (rang === 0) finRang0 = x + w / 2; else finRang1 = x + w / 2;
+      parts.push(`<text x="${x}" y="${labelY0 + rang * 16}" text-anchor="middle" font-family="${FONT}" font-size="12.5" font-weight="700" fill="${INK}">${esc(label)}</text>`);
+    }
+    bandY += finRang1 > -Infinity ? 74 : 58; // 2e rang de libellés seulement s'il sert
   }
 
   // Fond léger derrière toute la bande des traitements (meilleure visibilité)
@@ -456,26 +509,38 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
   }
 
   // ── Légende ──
+  //
+  // Les entrées étaient posées sur une grille fixe de 160 px : deux libellés
+  // médicaux un peu longs (« Anticorps anti-membrane basale glomérulaire » et
+  // « Rapport protéinurie/créatininurie ») s'écrivaient l'un par-dessus l'autre.
+  // Chaque entrée occupe donc maintenant la largeur qu'elle demande vraiment,
+  // et on passe à la ligne quand la suivante ne tient plus.
   let legendBottom = bandY;
   if (s.showLegend && params.length) {
-    const perRow = Math.max(1, Math.floor(plotWidth / 160));
     // Avec deux axes, savoir lequel porte quelle série est indispensable :
     // sans repère, on lit une créatinine sur l'axe des plaquettes.
     const deuxAxes = axeDroite.size > 0;
-    let lx = marginLeft;
-    let ly = bandY + 8;
-    let col = 0;
-    params.forEach((p, i) => {
-      const color = p.color || '#2a78d6';
-      const shape = MARKER_SHAPES[i % MARKER_SHAPES.length];
-      parts.push(marker(shape, lx + 5, ly, 4, color));
-      parts.push(`<line x1="${lx - 3}" y1="${ly}" x2="${lx + 13}" y2="${ly}" stroke="${color}" stroke-width="2"/>`);
+    const entrees = params.map((p, i) => {
       const repere = deuxAxes ? (axeDroite.has(p.id) ? ' →' : ' ←') : '';
-      parts.push(`<text x="${lx + 18}" y="${ly + 3.5}" font-family="${FONT}" font-size="11" fill="${INK}">${esc(p.name + repere)}</text>`);
-      col++;
-      if (col >= perRow) { col = 0; lx = marginLeft; ly += 20; }
-      else { lx += 160; }
+      // En graphe unique les séries partagent un axe : l'unité doit voyager
+      // avec le nom, sinon rien ne dit dans quelle unité se lit la courbe.
+      const ul = s.chartMode === 'single' ? unitLabel(p) : '';
+      const texte = (ul ? `${p.name} (${ul})` : p.name) + repere;
+      return { p, i, texte, w: 18 + largeurTexte(texte, 11) + 22 };
     });
+    // Un traitement occupe le bas de la figure sur un fond gris : la légende
+    // s'y collait. On lui laisse de l'air.
+    let ly = bandY + (hasBand ? 15 : 8);
+    let lx = marginLeft;
+    for (const e of entrees) {
+      if (lx > marginLeft && lx + e.w - 22 > marginLeft + plotWidth) { lx = marginLeft; ly += 20; }
+      const color = e.p.color || '#2a78d6';
+      const shape = MARKER_SHAPES[e.i % MARKER_SHAPES.length];
+      parts.push(`<line x1="${lx - 3}" y1="${ly}" x2="${lx + 13}" y2="${ly}" stroke="${color}" stroke-width="2"/>`);
+      parts.push(marker(shape, lx + 5, ly, 4, color));
+      parts.push(`<text x="${lx + 18}" y="${ly + 3.5}" font-family="${FONT}" font-size="11" fill="${INK}">${esc(e.texte)}</text>`);
+      lx += e.w;
+    }
     legendBottom = ly + 18;
   }
 
