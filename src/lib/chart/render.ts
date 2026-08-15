@@ -92,22 +92,36 @@ function unitLabel(p: Parameter): string {
   return p.unit || '';
 }
 
+/**
+ * Coordonnée écrite dans le SVG, arrondie au dixième de pixel.
+ *
+ * Les positions sortaient telles que calculées : « cx="96.74074074073943" ».
+ * Sur un suivi de douze paramètres et quatre-vingts prélèvements, ces décimales
+ * sans objet — l'écran ne descend pas sous le pixel, l'imprimante non plus —
+ * représentaient un quart des 211 Ko du fichier. Autant de texte à analyser et
+ * à réinsérer dans la page à chaque frappe, et autant de poids dans le SVG
+ * exporté.
+ */
+function n(v: number): string {
+  return String(Math.round(v * 10) / 10);
+}
+
 function marker(shape: MarkerShape, cx: number, cy: number, r: number, color: string): string {
   switch (shape) {
     case 'circle':
-      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" stroke="#fff" stroke-width="1"/>`;
+      return `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(r)}" fill="${color}" stroke="#fff" stroke-width="1"/>`;
     case 'circle-open':
-      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff" stroke="${color}" stroke-width="2"/>`;
+      return `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(r)}" fill="#fff" stroke="${color}" stroke-width="2"/>`;
     case 'square':
-      return `<rect x="${cx - r}" y="${cy - r}" width="${2 * r}" height="${2 * r}" fill="${color}" stroke="#fff" stroke-width="1"/>`;
+      return `<rect x="${n(cx - r)}" y="${n(cy - r)}" width="${n(2 * r)}" height="${n(2 * r)}" fill="${color}" stroke="#fff" stroke-width="1"/>`;
     case 'square-open':
-      return `<rect x="${cx - r}" y="${cy - r}" width="${2 * r}" height="${2 * r}" fill="#fff" stroke="${color}" stroke-width="2"/>`;
+      return `<rect x="${n(cx - r)}" y="${n(cy - r)}" width="${n(2 * r)}" height="${n(2 * r)}" fill="#fff" stroke="${color}" stroke-width="2"/>`;
     case 'triangle': {
-      const p = `${cx},${cy - r * 1.2} ${cx - r * 1.1},${cy + r} ${cx + r * 1.1},${cy + r}`;
+      const p = `${n(cx)},${n(cy - r * 1.2)} ${n(cx - r * 1.1)},${n(cy + r)} ${n(cx + r * 1.1)},${n(cy + r)}`;
       return `<polygon points="${p}" fill="${color}" stroke="#fff" stroke-width="1"/>`;
     }
     case 'diamond': {
-      const p = `${cx},${cy - r * 1.3} ${cx + r * 1.3},${cy} ${cx},${cy + r * 1.3} ${cx - r * 1.3},${cy}`;
+      const p = `${n(cx)},${n(cy - r * 1.3)} ${n(cx + r * 1.3)},${n(cy)} ${n(cx)},${n(cy + r * 1.3)} ${n(cx - r * 1.3)},${n(cy)}`;
       return `<polygon points="${p}" fill="${color}" stroke="#fff" stroke-width="1"/>`;
     }
   }
@@ -193,11 +207,34 @@ function applyPeriod(study: StudyState): StudyState {
   };
 }
 
+/**
+ * Mesures rangées par paramètre et triées par date, en une seule lecture.
+ *
+ * Chaque étape du tracé refiltrait `study.measurements` pour son compte :
+ * l'échelle, les points, la répartition des axes. Sur douze paramètres et
+ * quatre-vingts prélèvements, cela faisait une vingtaine de traversées de neuf
+ * cent soixante mesures. En mémoire ce n'est rien ; dans le navigateur, chaque
+ * lecture passe par un proxy réactif, et le rendu qui coûte 2 ms hors page en
+ * coûtait 19 dedans — à chaque caractère tapé. On ne lit donc plus qu'une fois.
+ */
+type IndexMesures = Map<string, StudyState['measurements']>;
+function indexerMesures(study: StudyState): IndexMesures {
+  const idx: IndexMesures = new Map();
+  for (const m of study.measurements) {
+    const l = idx.get(m.parameterId);
+    if (l) l.push(m); else idx.set(m.parameterId, [m]);
+  }
+  for (const l of idx.values()) l.sort((a, b) => a.date.localeCompare(b.date));
+  return idx;
+}
+
 export function renderChart(study: StudyState, width = 920): RenderResult {
   study = applyPeriod(study);
   const s = study.settings;
+  const mesures = indexerMesures(study);
+  const mesuresDe = (p: Parameter) => mesures.get(p.id) ?? [];
   const params = [...study.parameters].sort((a, b) => a.order - b.order)
-    .filter(p => study.measurements.some(m => m.parameterId === p.id));
+    .filter(p => mesures.has(p.id));
   const dates = [...new Set(study.measurements.map(m => m.date))].sort();
 
   // Domaine de l'axe X : toutes les dates (mesures + traitements + repères),
@@ -278,8 +315,8 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     const panelH = Math.max(110, Math.min(hauteurConfort, 560 / Math.min(params.length, 3)));
     let py = availTop;
     params.forEach((p, pi) => {
-      const pts = collectPoints(study, p, xm.xOf);
-      const sc = valueScale(study, p);
+      const pts = collectPoints(mesuresDe(p), p, xm.xOf);
+      const sc = valueScale(mesuresDe(p), p, s);
       const y0 = py;
       const y1 = py + panelH;
       const yOf = (v: number) => y1 - ((v - sc.min) / (sc.max - sc.min)) * (y1 - y0);
@@ -297,7 +334,7 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     const plotH = 420;
     const y0 = availTop;
     const y1 = availTop + plotH;
-    const { gauche: leftParams, droite: rightParams } = repartirAxes(study, params);
+    const { gauche: leftParams, droite: rightParams } = repartirAxes(mesuresDe, params);
 
     /*
      * Un axe ne peut pas porter honnêtement dix unités : « mg/L · g/dL · G/L ·
@@ -313,30 +350,30 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     const titreGauche = libelleAxe(leftParams);
     const titreDroite = libelleAxe(rightParams);
 
-    const scL = valueScaleMulti(study, leftParams);
-    const scR = rightParams.length ? valueScaleMulti(study, rightParams) : null;
+    const scL = valueScaleMulti(mesuresDe, leftParams);
+    const scR = rightParams.length ? valueScaleMulti(mesuresDe, rightParams) : null;
     const yOfL = (v: number) => y1 - ((v - scL.min) / (scL.max - scL.min)) * (y1 - y0);
     const yOfR = scR ? (v: number) => y1 - ((v - scR.min) / (scR.max - scR.min)) * (y1 - y0) : yOfL;
 
     // Grille + axe gauche
-    panelsSVG += `<line x1="${marginLeft}" y1="${y0}" x2="${marginLeft}" y2="${y1}" stroke="${AXIS}" stroke-width="1.2"/>`;
+    panelsSVG += `<line x1="${marginLeft}" y1="${n(y0)}" x2="${marginLeft}" y2="${n(y1)}" stroke="${AXIS}" stroke-width="1.2"/>`;
     scL.ticks.forEach(t => {
       const yy = yOfL(t);
-      panelsSVG += `<line x1="${marginLeft}" y1="${yy}" x2="${marginLeft + plotWidth}" y2="${yy}" stroke="${GRID}" stroke-width="1"/>`;
-      panelsSVG += `<text x="${marginLeft - 8}" y="${yy + 3.5}" text-anchor="end" font-family="${FONT}" font-size="10.5" fill="${MUTED}">${fmtTick(t, scL.step)}</text>`;
+      panelsSVG += `<line x1="${marginLeft}" y1="${n(yy)}" x2="${marginLeft + plotWidth}" y2="${n(yy)}" stroke="${GRID}" stroke-width="1"/>`;
+      panelsSVG += `<text x="${marginLeft - 8}" y="${n(yy + 3.5)}" text-anchor="end" font-family="${FONT}" font-size="10.5" fill="${MUTED}">${fmtTick(t, scL.step)}</text>`;
     });
     if (titreGauche) {
-      panelsSVG += `<text transform="translate(16,${(y0 + y1) / 2}) rotate(-90)" text-anchor="middle" font-family="${FONT}" font-size="11" fill="${INK}">${esc(titreGauche)}</text>`;
+      panelsSVG += `<text transform="translate(16,${n((y0 + y1) / 2)}) rotate(-90)" text-anchor="middle" font-family="${FONT}" font-size="11" fill="${INK}">${esc(titreGauche)}</text>`;
     }
 
     if (scR) {
-      panelsSVG += `<line x1="${marginLeft + plotWidth}" y1="${y0}" x2="${marginLeft + plotWidth}" y2="${y1}" stroke="${AXIS}" stroke-width="1.2"/>`;
+      panelsSVG += `<line x1="${marginLeft + plotWidth}" y1="${n(y0)}" x2="${marginLeft + plotWidth}" y2="${n(y1)}" stroke="${AXIS}" stroke-width="1.2"/>`;
       scR.ticks.forEach(t => {
         const yy = yOfR(t);
-        panelsSVG += `<text x="${marginLeft + plotWidth + 8}" y="${yy + 3.5}" text-anchor="start" font-family="${FONT}" font-size="10.5" fill="${MUTED}">${fmtTick(t, scR.step)}</text>`;
+        panelsSVG += `<text x="${marginLeft + plotWidth + 8}" y="${n(yy + 3.5)}" text-anchor="start" font-family="${FONT}" font-size="10.5" fill="${MUTED}">${fmtTick(t, scR.step)}</text>`;
       });
       if (titreDroite) {
-        panelsSVG += `<text transform="translate(${width - 14},${(y0 + y1) / 2}) rotate(90)" text-anchor="middle" font-family="${FONT}" font-size="11" fill="${INK}">${esc(titreDroite)}</text>`;
+        panelsSVG += `<text transform="translate(${width - 14},${n((y0 + y1) / 2)}) rotate(90)" text-anchor="middle" font-family="${FONT}" font-size="11" fill="${INK}">${esc(titreDroite)}</text>`;
       }
     }
 
@@ -344,7 +381,7 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     params.forEach((p, i) => {
       const onRight = rightParams.includes(p);
       const yOf = onRight ? yOfR : yOfL;
-      const pts = collectPoints(study, p, xm.xOf);
+      const pts = collectPoints(mesuresDe(p), p, xm.xOf);
       panelsSVG += series(p, i, pts, yOf, s, hotspots, y0, y1, motifTrait(i, params.length > MARKER_SHAPES.length));
     });
 
@@ -373,10 +410,10 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     annotations.forEach((a) => {
       const x = xm.xOf(a.date);
       if (x < marginLeft - 1 || x > marginLeft + plotWidth + 1) return;
-      parts.push(`<line x1="${x}" y1="${availTop}" x2="${x}" y2="${plotAreaBottom}" stroke="#2a6fb0" stroke-width="1" opacity="0.55"/>`);
-      parts.push(`<polygon points="${x},${availTop} ${x - 3.5},${availTop - 6} ${x + 3.5},${availTop - 6}" fill="#2a6fb0"/>`);
+      parts.push(`<line x1="${n(x)}" y1="${availTop}" x2="${n(x)}" y2="${n(plotAreaBottom)}" stroke="#2a6fb0" stroke-width="1" opacity="0.55"/>`);
+      parts.push(`<polygon points="${n(x)},${availTop} ${n(x - 3.5)},${availTop - 6} ${n(x + 3.5)},${availTop - 6}" fill="#2a6fb0"/>`);
       if (x - lastAx >= 30) {
-        parts.push(`<text x="${x}" y="${annLabelY}" text-anchor="middle" font-family="${FONT}" font-size="9.5" font-style="italic" fill="#2a6fb0">${esc(a.text)}</text>`);
+        parts.push(`<text x="${n(x)}" y="${n(annLabelY)}" text-anchor="middle" font-family="${FONT}" font-size="9.5" font-style="italic" fill="#2a6fb0">${esc(a.text)}</text>`);
         lastAx = x;
       }
     });
@@ -427,20 +464,20 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
         for (const p of dp) {
           const px = clamp(xm.xOf(p.date), marginLeft, marginLeft + plotWidth);
           if (px - lastLx < 20) continue;
-          parts.push(`<text x="${px}" y="${(yOfDose(p.dose) - 2.5).toFixed(1)}" text-anchor="middle" font-family="${FONT}" font-size="9.5" font-weight="600" fill="${MUTED}">${fmtNum(p.dose)}</text>`);
+          parts.push(`<text x="${n(px)}" y="${n(yOfDose(p.dose) - 2.5)}" text-anchor="middle" font-family="${FONT}" font-size="9.5" font-weight="600" fill="${MUTED}">${fmtNum(p.dose)}</text>`);
           lastLx = px;
         }
       } else {
         // ── Dose constante : barre pleine ──
         const h = Math.min(24, trRowH - 6);
-        parts.push(`<rect x="${x1}" y="${bandY + (trRowH - h) / 2}" width="${w}" height="${h}" rx="4" fill="${color}"/>`);
+        parts.push(`<rect x="${n(x1)}" y="${n(bandY + (trRowH - h) / 2)}" width="${n(w)}" height="${n(h)}" rx="4" fill="${color}"/>`);
       }
       // Traitement toujours en cours : chevron « se poursuit » en bout de barre.
       // Sans lui, un traitement débuté à la dernière date connue se lit comme un
       // événement ponctuel alors qu'il n'est pas terminé.
       if (!t.end) {
         const cx = Math.min(x1 + w + 4, marginLeft + plotWidth - 7);
-        parts.push(`<polygon points="${cx},${yy - 6} ${cx + 6},${yy} ${cx},${yy + 6}" fill="${color}" opacity="0.75"/>`);
+        parts.push(`<polygon points="${n(cx)},${n(yy - 6)} ${n(cx + 6)},${n(yy)} ${n(cx)},${n(yy + 6)}" fill="${color}" opacity="0.75"/>`);
       }
 
       const label = t.name;
@@ -449,19 +486,19 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
       if (taper) {
         // Décroissance : nom en bas à gauche du coin (les doses sont en haut)
         if (x2 + 6 + estW <= rightEdge) {
-          parts.push(`<text x="${x2 + 6}" y="${yy + 3.5}" font-family="${FONT}" font-size="13.5" font-weight="600" fill="${INK}">${esc(label)}</text>`);
+          parts.push(`<text x="${n(x2 + 6)}" y="${n(yy + 3.5)}" font-family="${FONT}" font-size="13.5" font-weight="600" fill="${INK}">${esc(label)}</text>`);
         } else {
-          parts.push(`<text x="${x1 + 5}" y="${rowBot - 3}" font-family="${FONT}" font-size="10.5" font-weight="600" fill="#ffffff">${esc(label)}</text>`);
+          parts.push(`<text x="${n(x1 + 5)}" y="${n(rowBot - 3)}" font-family="${FONT}" font-size="10.5" font-weight="600" fill="#ffffff">${esc(label)}</text>`);
         }
       } else if (x2 + 6 + estW <= rightEdge) {
         // À droite de la barre
-        parts.push(`<text x="${x2 + 6}" y="${yy + 3.5}" font-family="${FONT}" font-size="13.5" font-weight="600" fill="${INK}">${esc(label)}</text>`);
+        parts.push(`<text x="${n(x2 + 6)}" y="${n(yy + 3.5)}" font-family="${FONT}" font-size="13.5" font-weight="600" fill="${INK}">${esc(label)}</text>`);
       } else if (w > estW + 12) {
         // À l'intérieur de la barre (texte blanc)
-        parts.push(`<text x="${x1 + 6}" y="${yy + 3.5}" font-family="${FONT}" font-size="13.5" font-weight="700" fill="#ffffff">${esc(label)}</text>`);
+        parts.push(`<text x="${n(x1 + 6)}" y="${n(yy + 3.5)}" font-family="${FONT}" font-size="13.5" font-weight="700" fill="#ffffff">${esc(label)}</text>`);
       } else {
         // À gauche de la barre
-        parts.push(`<text x="${x1 - 6}" y="${yy + 3.5}" text-anchor="end" font-family="${FONT}" font-size="13.5" font-weight="600" fill="${INK}">${esc(label)}</text>`);
+        parts.push(`<text x="${n(x1 - 6)}" y="${n(yy + 3.5)}" text-anchor="end" font-family="${FONT}" font-size="13.5" font-weight="600" fill="${INK}">${esc(label)}</text>`);
       }
       bandY += trRowH;
     });
@@ -502,29 +539,29 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
       } else {
         groupes.push({ nom: t.name, dose: t.dose, xs: [x], couleur: couleurProduit.get(t.name)! });
       }
-      parts.push(`<line x1="${x}" y1="${baseY}" x2="${x}" y2="${tipY + 13}" stroke="${couleurProduit.get(t.name)}" stroke-width="4"/>`);
-      parts.push(`<polygon points="${x},${tipY} ${x - 10},${tipY + 15} ${x + 10},${tipY + 15}" fill="${couleurProduit.get(t.name)}"/>`);
+      parts.push(`<line x1="${n(x)}" y1="${n(baseY)}" x2="${n(x)}" y2="${n(tipY + 13)}" stroke="${couleurProduit.get(t.name)}" stroke-width="4"/>`);
+      parts.push(`<polygon points="${n(x)},${n(tipY)} ${n(x - 10)},${n(tipY + 15)} ${n(x + 10)},${n(tipY + 15)}" fill="${couleurProduit.get(t.name)}"/>`);
     }
 
     // Étiquettes : une par groupe, centrée sur lui, retenue dans le cadre, et
     // renvoyée au rang du dessous si elle empiète sur la précédente.
     let finRang0 = -Infinity, finRang1 = -Infinity;
     for (const g of groupes) {
-      const n = g.xs.length;
-      const label = (g.dose ? `${g.nom} (${g.dose})` : g.nom) + (n > 1 ? ` ×${n}` : '');
+      const nb = g.xs.length;
+      const label = (g.dose ? `${g.nom} (${g.dose})` : g.nom) + (nb > 1 ? ` ×${nb}` : '');
       const w = largeurTexte(label, 12.5, true);
-      const centre = (g.xs[0] + g.xs[n - 1]) / 2;
+      const centre = (g.xs[0] + g.xs[nb - 1]) / 2;
       const x = clamp(centre, gauche + w / 2, Math.max(gauche + w / 2, droite - w / 2));
       const rang = x - w / 2 >= finRang0 + 14 ? 0 : (x - w / 2 >= finRang1 + 14 ? 1 : 0);
       if (rang === 0) finRang0 = x + w / 2; else finRang1 = x + w / 2;
-      parts.push(`<text x="${x}" y="${labelY0 + rang * 16}" text-anchor="middle" font-family="${FONT}" font-size="12.5" font-weight="700" fill="${INK}">${esc(label)}</text>`);
+      parts.push(`<text x="${n(x)}" y="${n(labelY0 + rang * 16)}" text-anchor="middle" font-family="${FONT}" font-size="12.5" font-weight="700" fill="${INK}">${esc(label)}</text>`);
     }
     bandY += finRang1 > -Infinity ? 74 : 58; // 2e rang de libellés seulement s'il sert
   }
 
   // Fond léger derrière toute la bande des traitements (meilleure visibilité)
   if (hasBand) {
-    const bg = `<rect x="${marginLeft - 8}" y="${bandStartY - 5}" width="${plotWidth + 16}" height="${bandY - bandStartY + 4}" rx="7" fill="#f3f6fa" stroke="#dfe6ee" stroke-width="1"/>`;
+    const bg = `<rect x="${marginLeft - 8}" y="${n(bandStartY - 5)}" width="${plotWidth + 16}" height="${n(bandY - bandStartY + 4)}" rx="7" fill="#f3f6fa" stroke="#dfe6ee" stroke-width="1"/>`;
     parts.splice(bandBgIndex, 0, bg);
   }
 
@@ -558,9 +595,9 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
       const shape = MARKER_SHAPES[e.i % MARKER_SHAPES.length];
       const dash = s.chartMode === 'single' ? motifTrait(e.i, params.length > MARKER_SHAPES.length) : '';
       const trait = dash ? ` stroke-dasharray="${dash}"` : '';
-      parts.push(`<line x1="${lx - 3}" y1="${ly}" x2="${lx + 13}" y2="${ly}" stroke="${color}" stroke-width="2"${trait}/>`);
+      parts.push(`<line x1="${n(lx - 3)}" y1="${n(ly)}" x2="${n(lx + 13)}" y2="${n(ly)}" stroke="${color}" stroke-width="2"${trait}/>`);
       parts.push(marker(shape, lx + 5, ly, 4, color));
-      parts.push(`<text x="${lx + 18}" y="${ly + 3.5}" font-family="${FONT}" font-size="11" fill="${INK}">${esc(e.texte)}</text>`);
+      parts.push(`<text x="${n(lx + 18)}" y="${n(ly + 3.5)}" font-family="${FONT}" font-size="11" fill="${INK}">${esc(e.texte)}</text>`);
       lx += e.w;
     }
     legendBottom = ly + 18;
@@ -580,29 +617,26 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
 
 type SeriesPoint = { date: string; x: number; value: number; q: '<' | '>' | null; outOfRange: boolean };
 
-function collectPoints(study: StudyState, p: Parameter, xOf: (d: string) => number): SeriesPoint[] {
+function collectPoints(mesures: StudyState['measurements'], p: Parameter, xOf: (d: string) => number): SeriesPoint[] {
   const isPct = p.category === 'efr' && p.display === 'percent';
-  return study.measurements
-    .filter(m => m.parameterId === p.id)
+  return mesures
     .map(m => {
       const value = plottedValue(p, m.value);
       const oor = !isPct && value != null &&
         ((p.refLow != null && value < p.refLow) || (p.refHigh != null && value > p.refHigh));
       return { date: m.date, x: xOf(m.date), value, q: m.qualifier ?? null, outOfRange: !!oor };
     })
-    .filter(pt => pt.value != null)
-    .sort((a, b) => a.date.localeCompare(b.date)) as SeriesPoint[];
+    .filter(pt => pt.value != null) as SeriesPoint[];
 }
 
-function valueScale(study: StudyState, p: Parameter) {
-  const vals = study.measurements
-    .filter(m => m.parameterId === p.id)
+function valueScale(mesures: StudyState['measurements'], p: Parameter, reglages: StudyState['settings']) {
+  const vals = mesures
     .map(m => plottedValue(p, m.value))
     .filter((v): v is number => v != null);
   let lo = Math.min(...vals);
   let hi = Math.max(...vals);
   // Intégrer les bornes de normale si affichées et en valeur absolue
-  if (study.settings.showReference && !(p.category === 'efr' && p.display === 'percent')) {
+  if (reglages.showReference && !(p.category === 'efr' && p.display === 'percent')) {
     if (p.refLow != null) lo = Math.min(lo, p.refLow);
     if (p.refHigh != null) hi = Math.max(hi, p.refHigh);
   }
@@ -630,9 +664,9 @@ function valueScale(study: StudyState, p: Parameter) {
  *  · parmi les coupures possibles entre groupes d'unités triés par amplitude,
  *    on retient celle qui minimise le pire écart d'amplitude au sein d'un axe.
  */
-function repartirAxes(study: StudyState, params: Parameter[]): { gauche: Parameter[]; droite: Parameter[] } {
+function repartirAxes(mesuresDe: (p: Parameter) => StudyState['measurements'], params: Parameter[]): { gauche: Parameter[]; droite: Parameter[] } {
   const ampli = (p: Parameter) => {
-    const vs = study.measurements.filter(m => m.parameterId === p.id).map(m => Math.abs(m.value));
+    const vs = mesuresDe(p).map(m => Math.abs(m.value));
     return vs.length ? Math.max(...vs) : 0;
   };
   // Groupes indivisibles : une unité, ses paramètres, son amplitude.
@@ -672,10 +706,10 @@ function repartirAxes(study: StudyState, params: Parameter[]): { gauche: Paramet
   return { gauche: trier(gGauche), droite: trier(gDroite) };
 }
 
-function valueScaleMulti(study: StudyState, params: Parameter[]) {
+function valueScaleMulti(mesuresDe: (p: Parameter) => StudyState['measurements'], params: Parameter[]) {
   const vals: number[] = [];
   for (const p of params) {
-    for (const m of study.measurements.filter(m => m.parameterId === p.id)) {
+    for (const m of mesuresDe(p)) {
       const v = plottedValue(p, m.value);
       if (v != null) vals.push(v);
     }
@@ -713,7 +747,7 @@ function panel(
     // Bande entièrement hors du panneau : rien à dessiner (mieux vaut pas de
     // repère qu'un repère faux).
     if (bas - haut >= 0.5) {
-      out += `<rect x="${marginLeft}" y="${haut}" width="${plotWidth}" height="${bas - haut}" fill="${REF_FILL}"/>`;
+      out += `<rect x="${marginLeft}" y="${n(haut)}" width="${plotWidth}" height="${n(bas - haut)}" fill="${REF_FILL}"/>`;
     }
   }
 
@@ -721,18 +755,18 @@ function panel(
   sc.ticks.forEach(t => {
     const yy = yOf(t);
     if (yy < y0 - 0.5 || yy > y1 + 0.5) return;
-    out += `<line x1="${marginLeft}" y1="${yy}" x2="${marginLeft + plotWidth}" y2="${yy}" stroke="${GRID}" stroke-width="1"/>`;
-    out += `<text x="${marginLeft - 8}" y="${yy + 3.5}" text-anchor="end" font-family="${FONT}" font-size="10" fill="${MUTED}">${fmtTick(t, sc.step)}</text>`;
+    out += `<line x1="${marginLeft}" y1="${n(yy)}" x2="${marginLeft + plotWidth}" y2="${n(yy)}" stroke="${GRID}" stroke-width="1"/>`;
+    out += `<text x="${marginLeft - 8}" y="${n(yy + 3.5)}" text-anchor="end" font-family="${FONT}" font-size="10" fill="${MUTED}">${fmtTick(t, sc.step)}</text>`;
   });
 
   // Axe Y
-  out += `<line x1="${marginLeft}" y1="${y0}" x2="${marginLeft}" y2="${y1}" stroke="${AXIS}" stroke-width="1.2"/>`;
-  out += `<line x1="${marginLeft}" y1="${y1}" x2="${marginLeft + plotWidth}" y2="${y1}" stroke="${AXIS}" stroke-width="1.2"/>`;
+  out += `<line x1="${marginLeft}" y1="${n(y0)}" x2="${marginLeft}" y2="${n(y1)}" stroke="${AXIS}" stroke-width="1.2"/>`;
+  out += `<line x1="${marginLeft}" y1="${n(y1)}" x2="${marginLeft + plotWidth}" y2="${n(y1)}" stroke="${AXIS}" stroke-width="1.2"/>`;
 
   // Étiquette du panneau (nom + unité) au dessus à gauche
   const ul = unitLabel(p);
   const title = ul ? `${p.name} (${ul})` : p.name;
-  out += `<text x="${marginLeft}" y="${y0 - 4}" font-family="${FONT}" font-size="11.5" font-weight="600" fill="${INK}">${esc(title)}</text>`;
+  out += `<text x="${marginLeft}" y="${n(y0 - 4)}" font-family="${FONT}" font-size="11.5" font-weight="600" fill="${INK}">${esc(title)}</text>`;
 
   out += series(p, pi, pts, yOf, s, hotspots, y0, y1);
   return out;
@@ -782,7 +816,7 @@ function series(
     const cy = yOf(pt.value);
     // Anneau hors-norme
     if (s.markOutOfRange && pt.outOfRange) {
-      out += `<circle cx="${pt.x}" cy="${cy}" r="${rAnneau}" fill="none" stroke="#c0392b" stroke-width="1.4"/>`;
+      out += `<circle cx="${n(pt.x)}" cy="${n(cy)}" r="${n(rAnneau)}" fill="none" stroke="#c0392b" stroke-width="1.4"/>`;
     }
     out += marker(shape, pt.x, cy, rayon, color);
     // Flèche de seuil (< : vraie valeur en dessous ; > : au dessus)
@@ -805,9 +839,9 @@ function series(
         const yPointe = cy + dir * total;
         const ya = cy + dir * (rayon + 1);
         if ((yb - ya) * dir > 1) {
-          out += `<line x1="${pt.x}" y1="${ya}" x2="${pt.x}" y2="${yb}" stroke="${color}" stroke-width="1.5"/>`;
+          out += `<line x1="${n(pt.x)}" y1="${n(ya)}" x2="${n(pt.x)}" y2="${n(yb)}" stroke="${color}" stroke-width="1.5"/>`;
         }
-        out += `<polygon points="${pt.x},${yPointe} ${pt.x - 3},${yb} ${pt.x + 3},${yb}" fill="${color}"/>`;
+        out += `<polygon points="${n(pt.x)},${n(yPointe)} ${n(pt.x - 3)},${n(yb)} ${n(pt.x + 3)},${n(yb)}" fill="${color}"/>`;
         fleche = total * dir;
       }
     }
@@ -831,7 +865,7 @@ function series(
       let ly = placeDessous ? cy + 15 : cy - 8;
       if (fleche > 0 && placeDessous) ly = Math.min(cy + decale + 10, botY - 2);
       if (fleche < 0 && !placeDessous) ly = Math.max(cy - decale - 4, topY + 9);
-      out += `<text x="${pt.x}" y="${ly}" text-anchor="middle" font-family="${FONT}" font-size="9.5" fill="${INK}">${lbl}</text>`;
+      out += `<text x="${n(pt.x)}" y="${n(ly)}" text-anchor="middle" font-family="${FONT}" font-size="9.5" fill="${INK}">${lbl}</text>`;
     }
     hotspots.push({ param: p, date: pt.date, value: pt.value, cx: pt.x, cy });
   });
@@ -840,10 +874,10 @@ function series(
 
 function xAxis(xm: ReturnType<typeof buildXMapper>, y: number, layout: Layout): string {
   const { marginLeft, plotWidth } = layout;
-  let out = `<line x1="${marginLeft}" y1="${y}" x2="${marginLeft + plotWidth}" y2="${y}" stroke="${AXIS}" stroke-width="1.2"/>`;
+  let out = `<line x1="${marginLeft}" y1="${n(y)}" x2="${marginLeft + plotWidth}" y2="${n(y)}" stroke="${AXIS}" stroke-width="1.2"/>`;
   xm.ticks.forEach(t => {
-    out += `<line x1="${t.x}" y1="${y}" x2="${t.x}" y2="${y + 4}" stroke="${AXIS}" stroke-width="1"/>`;
-    out += `<text x="${t.x}" y="${y + 16}" text-anchor="middle" font-family="${FONT}" font-size="10" fill="${MUTED}">${esc(t.label)}</text>`;
+    out += `<line x1="${n(t.x)}" y1="${n(y)}" x2="${n(t.x)}" y2="${n(y + 4)}" stroke="${AXIS}" stroke-width="1"/>`;
+    out += `<text x="${n(t.x)}" y="${n(y + 16)}" text-anchor="middle" font-family="${FONT}" font-size="10" fill="${MUTED}">${esc(t.label)}</text>`;
   });
   return out;
 }
