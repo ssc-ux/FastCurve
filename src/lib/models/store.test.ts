@@ -225,3 +225,62 @@ describe('store — colonnes de dates', () => {
     expect(store.columnDates).toEqual(['2025-01-10', '2025-03-10', '2025-05-10']);
   });
 });
+
+// ── Index des mesures : l'accélération ne doit jamais rendre de valeur périmée ──
+describe('index de valueAt', () => {
+  it('voit une valeur écrite après une première lecture', async () => {
+    const store = await neufStore();
+    const p = store.addParameter({ name: 'CRP', unit: 'mg/L' });
+    expect(store.valueAt(p.id, '2025-01-10')).toBeUndefined(); // amorce l'index
+    store.setMeasurement(p.id, '2025-01-10', 42);
+    expect(store.valueAt(p.id, '2025-01-10')?.value).toBe(42);
+  });
+
+  it('voit une valeur modifiée en place', async () => {
+    const store = await neufStore();
+    const p = store.addParameter({ name: 'CRP', unit: 'mg/L' });
+    store.setMeasurement(p.id, '2025-01-10', 42);
+    expect(store.valueAt(p.id, '2025-01-10')?.value).toBe(42);
+    store.setMeasurement(p.id, '2025-01-10', 7); // écrit en place, la référence ne bouge pas
+    expect(store.valueAt(p.id, '2025-01-10')?.value).toBe(7);
+  });
+
+  it('voit une valeur effacée', async () => {
+    const store = await neufStore();
+    const p = store.addParameter({ name: 'CRP', unit: 'mg/L' });
+    store.setMeasurement(p.id, '2025-01-10', 42);
+    expect(store.valueAt(p.id, '2025-01-10')).toBeDefined();
+    store.setMeasurement(p.id, '2025-01-10', null);
+    expect(store.valueAt(p.id, '2025-01-10')).toBeUndefined();
+  });
+
+  it('revient en arrière avec Annuler', async () => {
+    const store = await neufStore();
+    const p = store.addParameter({ name: 'CRP', unit: 'mg/L' });
+    store.setMeasurement(p.id, '2025-01-10', 42);
+    expect(store.valueAt(p.id, '2025-01-10')?.value).toBe(42);
+    store.undo(); // remplace l'étude entière : c'est la référence qui invalide
+    expect(store.valueAt(p.id, '2025-01-10')).toBeUndefined();
+  });
+
+  it('suit un déplacement de date', async () => {
+    const store = await neufStore();
+    const p = store.addParameter({ name: 'CRP', unit: 'mg/L' });
+    store.setMeasurement(p.id, '2025-01-10', 42);
+    expect(store.valueAt(p.id, '2025-01-10')?.value).toBe(42);
+    store.moveDate('2025-01-10', '2025-02-20');
+    expect(store.valueAt(p.id, '2025-01-10')).toBeUndefined();
+    expect(store.valueAt(p.id, '2025-02-20')?.value).toBe(42);
+  });
+
+  it('suit l’ouverture d’un fichier importé', async () => {
+    const store = await neufStore();
+    const p = store.addParameter({ name: 'CRP', unit: 'mg/L' });
+    store.setMeasurement(p.id, '2025-01-10', 42);
+    expect(store.valueAt(p.id, '2025-01-10')?.value).toBe(42);
+    const autre = JSON.parse(store.exportJSON());
+    autre.measurements = [];
+    expect(store.importJSON(JSON.stringify(autre))).toBe(true);
+    expect(store.valueAt(p.id, '2025-01-10')).toBeUndefined();
+  });
+});
