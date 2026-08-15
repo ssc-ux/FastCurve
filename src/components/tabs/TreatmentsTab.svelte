@@ -153,7 +153,7 @@
             onfocus={dateFocus}
             onkeydown={(e) => dateKeydown(e, a.date)}
             onblur={(e) => dateBlur(e, a.date, (iso) => store.updateAnnotation(a.id, { date: iso }))} />
-          <button class="danger small" onclick={() => store.removeAnnotation(a.id)}>✕</button>
+          <button class="danger small" onclick={() => store.removeAnnotation(a.id)} title="Supprimer cette annotation" aria-label="Supprimer l'annotation « {a.text} »">✕</button>
         </div>
       {/each}
     </div>
