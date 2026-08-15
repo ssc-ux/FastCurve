@@ -320,5 +320,11 @@
     .divider { display: none; }
     .chart-area { height: 48%; }
     .side-toggle { display: none; }
+    /* En dessous de 800px environ, la barre du haut n'a plus la place pour
+       « Nouveau / Ouvrir / Enregistrer » (jamais compressibles, l'action
+       reste lisible) ET le badge « ✓ Enregistré » : les deux finissaient par
+       occuper le même espace, l'un peint par-dessus l'autre. Le badge est le
+       moins utile des deux — la sauvegarde reste automatique sans lui. */
+    .saved { display: none; }
   }
 </style>
