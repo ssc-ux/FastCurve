@@ -139,10 +139,27 @@ table.grid input:focus { border-color: var(--accent); background: #fff; }
   .body.horizontal .sidebar.collapsed { display: block !important; width: 100% !important; height: auto !important; max-height: none !important; }
   .sidebar .tabs, .modeseg, .aux, .add-param, .pied, .serie, .empty, .quickstarts { display: none !important; }
   .tab-content { padding: 0 !important; overflow: visible !important; }
-  .tablecard { break-before: page; page-break-before: always; border: none !important; box-shadow: none !important; margin-top: 6mm; }
+  /* Artefacts de saisie à écarter du tableau imprimé : l'icône calendrier de
+     chaque colonne, la ligne « + analyte » et la colonne « + date » toujours
+     vides qui permettent d'ajouter une ligne/colonne à l'écran. `visibility`
+     (et non `display`) sur la colonne « + date » : elle garde sa cellule
+     d'en-tête pour ne pas décaler les colonnes des lignes du tableau. */
+  .colicon { display: none !important; }
+  .newrow { display: none !important; }
+  .neuvecol { visibility: hidden !important; }
+  /* PAS de margin-top ici : un élément qui force un saut de page (`break-before:
+     page`) et qui porte en plus une marge haute fait sortir une page blanche
+     entière sous Chromium (le moteur de pagination ajoute la marge comme une
+     page de plus au lieu de l'absorber en haut de la nouvelle page) — le
+     tableau atterrit alors en page 3 au lieu de la page 2. La marge de la
+     page (`@page { margin: 12mm }` plus haut) donne déjà de l'air en haut. */
+  .tablecard { break-before: page; page-break-before: always; border: none !important; box-shadow: none !important; margin-top: 0 !important; }
   .tablescroll { max-height: none !important; overflow: visible !important; }
-  .colx, .add-date, .add-serie, .addcol { display: none !important; }
-  .dgrid .cell, .dgrid .dateinput { border: none !important; background: transparent !important; color: #111 !important; }
+  .colx, .add-serie { display: none !important; }
+  /* `box-shadow`/`outline` retirés aussi : sans ça, la cellule qui avait le
+     focus au moment d'imprimer (ex. juste après une saisie) sort encadrée en
+     bleu sur le papier. */
+  .dgrid .cell, .dgrid .dateinput { border: none !important; background: transparent !important; color: #111 !important; box-shadow: none !important; outline: none !important; }
   .dgrid .dateinput::-webkit-calendar-picker-indicator { display: none !important; }
   .dgrid .rowname, .dgrid .corner { position: static !important; box-shadow: none !important; }
   .app, .chart-area, .canvas {
