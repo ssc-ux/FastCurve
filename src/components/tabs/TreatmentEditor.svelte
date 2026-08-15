@@ -1,7 +1,7 @@
 <script lang="ts">
   import { store } from '../../lib/models/store.svelte';
   import { uiBus } from '../../lib/models/ui.svelte';
-  import type { Treatment, DosePoint } from '../../lib/models/types';
+  import { formatDate, lireDateSouple, type Treatment, type DosePoint } from '../../lib/models/types';
   import { getKnownDrugs } from '../../lib/learn/memory';
 
   let { treatment, onClose }: { treatment: Treatment; onClose: () => void } = $props();
@@ -97,6 +97,47 @@
     const n = parseFloat(v.replace(',', '.'));
     return isNaN(n) ? 0 : n;
   }
+
+  /**
+   * Champ de date en texte libre, toujours affiché JJ/MM/AAAA — comme la grille
+   * de saisie (`DataTab`). Remplace le `<input type="date">` natif : celui-ci
+   * enregistre au milieu de la frappe (dès que ses segments prennent une valeur
+   * plausible) et s'affiche au format de la langue du navigateur
+   * (`mm/dd/yyyy` vu ici en anglais) — le grief n°1 et l'irritant C du médecin,
+   * rejoués dans cet onglet. Rien n'est enregistré avant `Entrée` / `Tab` /
+   * perte du focus, et Échap annule la frappe en cours.
+   */
+  function dateFocus(e: FocusEvent) {
+    (e.currentTarget as HTMLInputElement).select();
+  }
+  function dateKeydown(e: KeyboardEvent, iso: string) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      const t = e.currentTarget as HTMLInputElement;
+      t.value = iso ? formatDate(iso) : '';
+      t.blur();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      (e.currentTarget as HTMLInputElement).blur();
+    }
+  }
+  function dateBlur(e: FocusEvent, iso: string, onChange: (iso: string) => void, allowEmpty = false) {
+    const input = e.currentTarget as HTMLInputElement;
+    const brut = input.value.trim();
+    if (brut === '') {
+      if (allowEmpty) { onChange(''); return; }
+      input.value = iso ? formatDate(iso) : '';
+      return;
+    }
+    const lu = lireDateSouple(brut);
+    if (!lu) {
+      uiBus.toast(`Date « ${brut} » non comprise : tapez par exemple 12/03/2024, 12032024 ou mars 2024.`, 'error', 6000);
+      input.value = iso ? formatDate(iso) : '';
+      return;
+    }
+    input.value = formatDate(lu.iso);
+    onChange(lu.iso);
+  }
 </script>
 
 <div class="editor">
@@ -114,9 +155,17 @@
       <button class:on={treatment.kind === 'continuous'} onclick={() => set({ kind: 'continuous' })}>Continu</button>
       <button class:on={treatment.kind === 'event'} onclick={() => set({ kind: 'event' })}>Événement</button>
     </div>
-    <label class="fld">Début<input type="date" value={treatment.start} oninput={(e) => set({ start: e.currentTarget.value })} /></label>
+    <label class="fld">Début<input class="dateinput" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA"
+      value={formatDate(treatment.start)}
+      onfocus={dateFocus}
+      onkeydown={(e) => dateKeydown(e, treatment.start)}
+      onblur={(e) => dateBlur(e, treatment.start, (iso) => set({ start: iso }))} /></label>
     {#if treatment.kind === 'continuous'}
-      <label class="fld">Fin<input type="date" value={treatment.end ?? ''} oninput={(e) => set({ end: e.currentTarget.value || null })} /></label>
+      <label class="fld">Fin<input class="dateinput" type="text" inputmode="numeric" placeholder="en cours"
+        value={treatment.end ? formatDate(treatment.end) : ''}
+        onfocus={dateFocus}
+        onkeydown={(e) => dateKeydown(e, treatment.end ?? '')}
+        onblur={(e) => dateBlur(e, treatment.end ?? '', (iso) => set({ end: iso || null }), true)} /></label>
     {/if}
   </div>
 
@@ -149,7 +198,11 @@
         </div>
         {#each treatment.dosePoints ?? [] as p, i (i)}
           <div class="palier">
-            <input type="date" value={p.date} oninput={(e) => updatePoint(i, { date: e.currentTarget.value })} />
+            <input class="dateinput" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA"
+              value={formatDate(p.date)}
+              onfocus={dateFocus}
+              onkeydown={(e) => dateKeydown(e, p.date)}
+              onblur={(e) => dateBlur(e, p.date, (iso) => updatePoint(i, { date: iso }))} />
             <input class="dose" type="text" inputmode="decimal" value={p.dose || ''} placeholder="dose"
               onchange={(e) => updatePoint(i, { dose: numVal(e.currentTarget.value) })} />
             <span class="small faint">{treatment.doseUnit ?? 'mg/j'}</span>
@@ -180,6 +233,8 @@
   .seg button.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
   .fld { display: inline-flex; flex-direction: column; gap: 3px; font-size: 12px; }
   .fld.inline { flex-direction: row; align-items: center; gap: 5px; }
+  .dateinput { width: 108px; text-align: left; font-variant-numeric: tabular-nums; }
+  .palier .dateinput { width: 96px; }
   .taper-toggle { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink); padding: 4px 0; }
   .gentaper { background: var(--panel); border: 1px solid var(--border); border-radius: 9px; padding: 9px 10px; }
   .genrow { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
