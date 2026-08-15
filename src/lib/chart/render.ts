@@ -17,6 +17,25 @@ const REF_FILL = '#f0f4f8';
 const MARKER_SHAPES = ['circle', 'square', 'triangle', 'diamond', 'circle-open', 'square-open'] as const;
 type MarkerShape = typeof MARKER_SHAPES[number];
 
+/**
+ * Motif de trait, en secours de la couleur et de la forme.
+ *
+ * La palette compte huit teintes et les marqueurs six formes : à partir de la
+ * septième série d'un même graphe, deux courbes peuvent devenir jumelles — sur
+ * douze paramètres, la créatinine et la ferritine sortaient du même rouge, et
+ * se croisaient. Le motif de trait change tous les six rangs : forme et motif
+ * combinés donnent dix-huit signatures distinctes.
+ *
+ * C'est aussi ce qui sauve la figure imprimée en noir et blanc, cas courant à
+ * l'hôpital : les teintes y deviennent des gris voisins, la forme et le motif
+ * restent.
+ */
+const TRAITS = ['', '7 4', '2 3', '9 3 2 3'] as const;
+function motifTrait(idx: number, plusieursSeries: boolean): string {
+  if (!plusieursSeries) return '';
+  return TRAITS[Math.floor(idx / MARKER_SHAPES.length) % TRAITS.length];
+}
+
 export interface PlotPoint { date: string; x: number; y: number; value: number; }
 
 export interface RenderResult {
@@ -278,22 +297,19 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     const plotH = 420;
     const y0 = availTop;
     const y1 = availTop + plotH;
-    // Répartition gauche/droite par unité
-    const units = [...new Set(params.map(p => unitLabel(p)))];
-    const leftUnit = units[0];
-    const rightUnit = units.find(u => u !== leftUnit);
-    const leftParams = params.filter(p => unitLabel(p) === leftUnit);
-    const rightParams = rightUnit ? params.filter(p => unitLabel(p) === rightUnit) : [];
-    const otherParams = params.filter(p => !leftParams.includes(p) && !rightParams.includes(p));
-    leftParams.push(...otherParams); // les unités surnuméraires vont à gauche
+    const { gauche: leftParams, droite: rightParams } = repartirAxes(study, params);
 
     /*
-     * L'axe de gauche peut porter plusieurs unités (CRP en mg/L, plaquettes en
-     * G/L…). L'étiqueter avec la seule première est faux à la lecture : on
-     * annonce toutes celles qu'il porte réellement.
+     * Un axe ne peut pas porter honnêtement dix unités : « mg/L · g/dL · G/L ·
+     * UI/mL · L · mmol/min/kPa · µg/L · U/L · mUI/L » était une phrase tournée
+     * à 90° plus haute que le graphique, et surtout fausse à la lecture. On ne
+     * titre l'axe que lorsqu'il ne porte qu'une seule unité ; sinon l'unité est
+     * portée par chaque entrée de légende, où elle est rattachée à sa série.
      */
-    const libelleAxe = (liste: Parameter[]) =>
-      [...new Set(liste.map(unitLabel).filter(Boolean))].join(' · ');
+    const libelleAxe = (liste: Parameter[]) => {
+      const u = [...new Set(liste.map(unitLabel).filter(Boolean))];
+      return u.length === 1 ? u[0] : '';
+    };
     const titreGauche = libelleAxe(leftParams);
     const titreDroite = libelleAxe(rightParams);
 
@@ -309,7 +325,9 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
       panelsSVG += `<line x1="${marginLeft}" y1="${yy}" x2="${marginLeft + plotWidth}" y2="${yy}" stroke="${GRID}" stroke-width="1"/>`;
       panelsSVG += `<text x="${marginLeft - 8}" y="${yy + 3.5}" text-anchor="end" font-family="${FONT}" font-size="10.5" fill="${MUTED}">${fmtTick(t, scL.step)}</text>`;
     });
-    panelsSVG += `<text transform="translate(16,${(y0 + y1) / 2}) rotate(-90)" text-anchor="middle" font-family="${FONT}" font-size="11" fill="${INK}">${esc(titreGauche)}</text>`;
+    if (titreGauche) {
+      panelsSVG += `<text transform="translate(16,${(y0 + y1) / 2}) rotate(-90)" text-anchor="middle" font-family="${FONT}" font-size="11" fill="${INK}">${esc(titreGauche)}</text>`;
+    }
 
     if (scR) {
       panelsSVG += `<line x1="${marginLeft + plotWidth}" y1="${y0}" x2="${marginLeft + plotWidth}" y2="${y1}" stroke="${AXIS}" stroke-width="1.2"/>`;
@@ -317,15 +335,17 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
         const yy = yOfR(t);
         panelsSVG += `<text x="${marginLeft + plotWidth + 8}" y="${yy + 3.5}" text-anchor="start" font-family="${FONT}" font-size="10.5" fill="${MUTED}">${fmtTick(t, scR.step)}</text>`;
       });
-      panelsSVG += `<text transform="translate(${width - 14},${(y0 + y1) / 2}) rotate(90)" text-anchor="middle" font-family="${FONT}" font-size="11" fill="${INK}">${esc(titreDroite)}</text>`;
+      if (titreDroite) {
+        panelsSVG += `<text transform="translate(${width - 14},${(y0 + y1) / 2}) rotate(90)" text-anchor="middle" font-family="${FONT}" font-size="11" fill="${INK}">${esc(titreDroite)}</text>`;
+      }
     }
 
     for (const p of rightParams) axeDroite.add(p.id);
-    params.forEach((p) => {
+    params.forEach((p, i) => {
       const onRight = rightParams.includes(p);
       const yOf = onRight ? yOfR : yOfL;
       const pts = collectPoints(study, p, xm.xOf);
-      panelsSVG += series(p, params.indexOf(p), pts, yOf, s, hotspots, y0, y1);
+      panelsSVG += series(p, i, pts, yOf, s, hotspots, y0, y1, motifTrait(i, params.length > MARKER_SHAPES.length));
     });
 
     panelsSVG += xAxis(xm, y1, layout);
@@ -536,7 +556,9 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
       if (lx > marginLeft && lx + e.w - 22 > marginLeft + plotWidth) { lx = marginLeft; ly += 20; }
       const color = e.p.color || '#2a78d6';
       const shape = MARKER_SHAPES[e.i % MARKER_SHAPES.length];
-      parts.push(`<line x1="${lx - 3}" y1="${ly}" x2="${lx + 13}" y2="${ly}" stroke="${color}" stroke-width="2"/>`);
+      const dash = s.chartMode === 'single' ? motifTrait(e.i, params.length > MARKER_SHAPES.length) : '';
+      const trait = dash ? ` stroke-dasharray="${dash}"` : '';
+      parts.push(`<line x1="${lx - 3}" y1="${ly}" x2="${lx + 13}" y2="${ly}" stroke="${color}" stroke-width="2"${trait}/>`);
       parts.push(marker(shape, lx + 5, ly, 4, color));
       parts.push(`<text x="${lx + 18}" y="${ly + 3.5}" font-family="${FONT}" font-size="11" fill="${INK}">${esc(e.texte)}</text>`);
       lx += e.w;
@@ -588,6 +610,66 @@ function valueScale(study: StudyState, p: Parameter) {
   // soit un tiers de panneau vide. Dans une figure de compte-rendu qui doit
   // tenir en quart de page, c'est de la place perdue.
   return niceScale(lo, hi, 5);
+}
+
+/**
+ * Répartition des séries entre l'axe de gauche et celui de droite, en mode
+ * graphe unique.
+ *
+ * L'ancienne règle prenait la première unité rencontrée à gauche et la
+ * deuxième à droite, les suivantes revenant à gauche. Sur un suivi ordinaire
+ * (CRP, créatinine, hémoglobine, plaquettes, leucocytes, albumine) cela mettait
+ * la créatinine seule à droite et tout le reste à gauche sur une échelle de
+ * 0 à 500 : l'hémoglobine et l'albumine devenaient deux traits plats au ras du
+ * zéro, et la courbe de créatinine culminait visuellement à « 490 » sur un axe
+ * gradué en mg/L. On ne peut pas mettre ça dans un compte-rendu.
+ *
+ * On répartit donc selon l'ordre de grandeur. Deux règles :
+ *  · une même unité ne se scinde jamais entre les deux axes — deux axes gradués
+ *    en mg/L à des échelles différentes seraient pires que le mal ;
+ *  · parmi les coupures possibles entre groupes d'unités triés par amplitude,
+ *    on retient celle qui minimise le pire écart d'amplitude au sein d'un axe.
+ */
+function repartirAxes(study: StudyState, params: Parameter[]): { gauche: Parameter[]; droite: Parameter[] } {
+  const ampli = (p: Parameter) => {
+    const vs = study.measurements.filter(m => m.parameterId === p.id).map(m => Math.abs(m.value));
+    return vs.length ? Math.max(...vs) : 0;
+  };
+  // Groupes indivisibles : une unité, ses paramètres, son amplitude.
+  const parUnite = new Map<string, { params: Parameter[]; max: number }>();
+  for (const p of params) {
+    const u = unitLabel(p);
+    const g = parUnite.get(u) ?? { params: [], max: 0 };
+    g.params.push(p);
+    g.max = Math.max(g.max, ampli(p));
+    parUnite.set(u, g);
+  }
+  const groupes = [...parUnite.values()].sort((a, b) => b.max - a.max);
+  const tout = { gauche: params, droite: [] as Parameter[] };
+  if (groupes.length < 2) return tout;
+
+  const ecart = (g: typeof groupes) => {
+    const maxs = g.map(x => x.max).filter(v => v > 0);
+    if (maxs.length < 2) return 1;
+    return Math.max(...maxs) / Math.min(...maxs);
+  };
+  // Un seul axe suffit tant que tout tient dans le même ordre de grandeur :
+  // un deuxième axe est une charge de lecture, on ne l'impose pas sans raison.
+  if (ecart(groupes) <= 8) return tout;
+
+  let meilleure = -1;
+  let pire = Infinity;
+  for (let i = 1; i < groupes.length; i++) {
+    const p = Math.max(ecart(groupes.slice(0, i)), ecart(groupes.slice(i)));
+    if (p < pire) { pire = p; meilleure = i; }
+  }
+  if (meilleure < 0) return tout;
+  const gGauche = groupes.slice(0, meilleure).flatMap(g => g.params);
+  const gDroite = groupes.slice(meilleure).flatMap(g => g.params);
+  // On conserve l'ordre voulu par l'utilisateur à l'intérieur de chaque axe.
+  const rang = new Map(params.map((p, i) => [p.id, i]));
+  const trier = (l: Parameter[]) => l.sort((a, b) => rang.get(a.id)! - rang.get(b.id)!);
+  return { gauche: trier(gGauche), droite: trier(gDroite) };
 }
 
 function valueScaleMulti(study: StudyState, params: Parameter[]) {
@@ -683,6 +765,7 @@ function series(
   hotspots: RenderResult['hotspots'],
   topY = -Infinity,
   botY = Infinity,
+  dash = '',
 ): string {
   if (!pts.length) return '';
   const color = p.color || '#2a78d6';
@@ -692,7 +775,8 @@ function series(
   let out = '';
   // Ligne
   const d = pts.map((pt, i) => `${i === 0 ? 'M' : 'L'}${pt.x.toFixed(1)},${yOf(pt.value).toFixed(1)}`).join(' ');
-  out += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const trait = dash ? ` stroke-dasharray="${dash}"` : '';
+  out += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${trait}/>`;
   // Marqueurs + indicateurs
   pts.forEach((pt, i) => {
     const cy = yOf(pt.value);

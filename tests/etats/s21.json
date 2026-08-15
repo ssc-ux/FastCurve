@@ -1,0 +1,419 @@
+{
+ "version": 1,
+ "patientLabel": "Test",
+ "parameters": [
+  {
+   "id": "p0",
+   "name": "CRP",
+   "unit": "mg/L",
+   "category": "biologie",
+   "refLow": null,
+   "refHigh": 5,
+   "color": "#2a78d6",
+   "order": 0
+  },
+  {
+   "id": "p1",
+   "name": "Créatinine",
+   "unit": "µmol/L",
+   "category": "biologie",
+   "refLow": 45,
+   "refHigh": 90,
+   "color": "#e34948",
+   "order": 1
+  },
+  {
+   "id": "p2",
+   "name": "Hémoglobine",
+   "unit": "g/dL",
+   "category": "biologie",
+   "refLow": 12,
+   "refHigh": 16,
+   "color": "#008300",
+   "order": 2
+  },
+  {
+   "id": "p3",
+   "name": "Plaquettes",
+   "unit": "G/L",
+   "category": "biologie",
+   "refLow": 150,
+   "refHigh": 400,
+   "color": "#eb6834",
+   "order": 3
+  },
+  {
+   "id": "p4",
+   "name": "Leucocytes",
+   "unit": "G/L",
+   "category": "biologie",
+   "refLow": 4,
+   "refHigh": 10,
+   "color": "#4a3aa7",
+   "order": 4
+  },
+  {
+   "id": "p5",
+   "name": "Albumine",
+   "unit": "g/L",
+   "category": "biologie",
+   "refLow": 35,
+   "refHigh": 50,
+   "color": "#1baf7a",
+   "order": 5
+  }
+ ],
+ "measurements": [
+  {
+   "id": "m0_0",
+   "parameterId": "p0",
+   "date": "2025-01-06",
+   "value": 148,
+   "qualifier": null
+  },
+  {
+   "id": "m0_1",
+   "parameterId": "p0",
+   "date": "2025-01-13",
+   "value": 111,
+   "qualifier": null
+  },
+  {
+   "id": "m0_2",
+   "parameterId": "p0",
+   "date": "2025-01-20",
+   "value": 71,
+   "qualifier": null
+  },
+  {
+   "id": "m0_3",
+   "parameterId": "p0",
+   "date": "2025-01-27",
+   "value": 56,
+   "qualifier": null
+  },
+  {
+   "id": "m0_4",
+   "parameterId": "p0",
+   "date": "2025-02-03",
+   "value": 40,
+   "qualifier": null
+  },
+  {
+   "id": "m0_5",
+   "parameterId": "p0",
+   "date": "2025-02-10",
+   "value": 26,
+   "qualifier": null
+  },
+  {
+   "id": "m0_6",
+   "parameterId": "p0",
+   "date": "2025-02-17",
+   "value": 21,
+   "qualifier": null
+  },
+  {
+   "id": "m0_7",
+   "parameterId": "p0",
+   "date": "2025-02-24",
+   "value": 14,
+   "qualifier": null
+  },
+  {
+   "id": "m1_0",
+   "parameterId": "p1",
+   "date": "2025-01-06",
+   "value": 245,
+   "qualifier": null
+  },
+  {
+   "id": "m1_1",
+   "parameterId": "p1",
+   "date": "2025-01-13",
+   "value": 217,
+   "qualifier": null
+  },
+  {
+   "id": "m1_2",
+   "parameterId": "p1",
+   "date": "2025-01-20",
+   "value": 165,
+   "qualifier": null
+  },
+  {
+   "id": "m1_3",
+   "parameterId": "p1",
+   "date": "2025-01-27",
+   "value": 154,
+   "qualifier": null
+  },
+  {
+   "id": "m1_4",
+   "parameterId": "p1",
+   "date": "2025-02-03",
+   "value": 127,
+   "qualifier": null
+  },
+  {
+   "id": "m1_5",
+   "parameterId": "p1",
+   "date": "2025-02-10",
+   "value": 101,
+   "qualifier": null
+  },
+  {
+   "id": "m1_6",
+   "parameterId": "p1",
+   "date": "2025-02-17",
+   "value": 95,
+   "qualifier": null
+  },
+  {
+   "id": "m1_7",
+   "parameterId": "p1",
+   "date": "2025-02-24",
+   "value": 75,
+   "qualifier": null
+  },
+  {
+   "id": "m2_0",
+   "parameterId": "p2",
+   "date": "2025-01-06",
+   "value": 10.4,
+   "qualifier": null
+  },
+  {
+   "id": "m2_1",
+   "parameterId": "p2",
+   "date": "2025-01-13",
+   "value": 11.6,
+   "qualifier": null
+  },
+  {
+   "id": "m2_2",
+   "parameterId": "p2",
+   "date": "2025-01-20",
+   "value": 11.5,
+   "qualifier": null
+  },
+  {
+   "id": "m2_3",
+   "parameterId": "p2",
+   "date": "2025-01-27",
+   "value": 10.2,
+   "qualifier": null
+  },
+  {
+   "id": "m2_4",
+   "parameterId": "p2",
+   "date": "2025-02-03",
+   "value": 9.1,
+   "qualifier": null
+  },
+  {
+   "id": "m2_5",
+   "parameterId": "p2",
+   "date": "2025-02-10",
+   "value": 9.4,
+   "qualifier": null
+  },
+  {
+   "id": "m2_6",
+   "parameterId": "p2",
+   "date": "2025-02-17",
+   "value": 10.8,
+   "qualifier": null
+  },
+  {
+   "id": "m2_7",
+   "parameterId": "p2",
+   "date": "2025-02-24",
+   "value": 11.8,
+   "qualifier": null
+  },
+  {
+   "id": "m3_0",
+   "parameterId": "p3",
+   "date": "2025-01-06",
+   "value": 320,
+   "qualifier": null
+  },
+  {
+   "id": "m3_1",
+   "parameterId": "p3",
+   "date": "2025-01-13",
+   "value": 400,
+   "qualifier": null
+  },
+  {
+   "id": "m3_2",
+   "parameterId": "p3",
+   "date": "2025-01-20",
+   "value": 393,
+   "qualifier": null
+  },
+  {
+   "id": "m3_3",
+   "parameterId": "p3",
+   "date": "2025-01-27",
+   "value": 306,
+   "qualifier": null
+  },
+  {
+   "id": "m3_4",
+   "parameterId": "p3",
+   "date": "2025-02-03",
+   "value": 234,
+   "qualifier": null
+  },
+  {
+   "id": "m3_5",
+   "parameterId": "p3",
+   "date": "2025-02-10",
+   "value": 257,
+   "qualifier": null
+  },
+  {
+   "id": "m3_6",
+   "parameterId": "p3",
+   "date": "2025-02-17",
+   "value": 348,
+   "qualifier": null
+  },
+  {
+   "id": "m3_7",
+   "parameterId": "p3",
+   "date": "2025-02-24",
+   "value": 409,
+   "qualifier": null
+  },
+  {
+   "id": "m4_0",
+   "parameterId": "p4",
+   "date": "2025-01-06",
+   "value": 11.2,
+   "qualifier": null
+  },
+  {
+   "id": "m4_1",
+   "parameterId": "p4",
+   "date": "2025-01-13",
+   "value": 14.3,
+   "qualifier": null
+  },
+  {
+   "id": "m4_2",
+   "parameterId": "p4",
+   "date": "2025-01-20",
+   "value": 14,
+   "qualifier": null
+  },
+  {
+   "id": "m4_3",
+   "parameterId": "p4",
+   "date": "2025-01-27",
+   "value": 10.6,
+   "qualifier": null
+  },
+  {
+   "id": "m4_4",
+   "parameterId": "p4",
+   "date": "2025-02-03",
+   "value": 7.9,
+   "qualifier": null
+  },
+  {
+   "id": "m4_5",
+   "parameterId": "p4",
+   "date": "2025-02-10",
+   "value": 8.7,
+   "qualifier": null
+  },
+  {
+   "id": "m4_6",
+   "parameterId": "p4",
+   "date": "2025-02-17",
+   "value": 12.3,
+   "qualifier": null
+  },
+  {
+   "id": "m4_7",
+   "parameterId": "p4",
+   "date": "2025-02-24",
+   "value": 14.7,
+   "qualifier": null
+  },
+  {
+   "id": "m5_0",
+   "parameterId": "p5",
+   "date": "2025-01-06",
+   "value": 31,
+   "qualifier": null
+  },
+  {
+   "id": "m5_1",
+   "parameterId": "p5",
+   "date": "2025-01-13",
+   "value": 34.6,
+   "qualifier": null
+  },
+  {
+   "id": "m5_2",
+   "parameterId": "p5",
+   "date": "2025-01-20",
+   "value": 34.2,
+   "qualifier": null
+  },
+  {
+   "id": "m5_3",
+   "parameterId": "p5",
+   "date": "2025-01-27",
+   "value": 30.4,
+   "qualifier": null
+  },
+  {
+   "id": "m5_4",
+   "parameterId": "p5",
+   "date": "2025-02-03",
+   "value": 27.2,
+   "qualifier": null
+  },
+  {
+   "id": "m5_5",
+   "parameterId": "p5",
+   "date": "2025-02-10",
+   "value": 28.2,
+   "qualifier": null
+  },
+  {
+   "id": "m5_6",
+   "parameterId": "p5",
+   "date": "2025-02-17",
+   "value": 32.2,
+   "qualifier": null
+  },
+  {
+   "id": "m5_7",
+   "parameterId": "p5",
+   "date": "2025-02-24",
+   "value": 35,
+   "qualifier": null
+  }
+ ],
+ "treatments": [],
+ "annotations": [],
+ "settings": {
+  "chartMode": "single",
+  "title": "Graphe unique : six séries, trois ordres de grandeur",
+  "subtitle": "Cas n°21 — répartition des axes et unités en légende",
+  "showReference": true,
+  "showLegend": true,
+  "showValues": false,
+  "timeAxis": true,
+  "markOutOfRange": true,
+  "fromDate": null,
+  "toDate": null
+ },
+ "extraDates": []
+}
