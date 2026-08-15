@@ -424,6 +424,10 @@
       e.preventDefault();
       creerPuisFocus();
     } else if (e.key === 'Tab') {
+      // Grille entièrement vide et rien de tapé : il n'y a rien à circuler
+      // dedans. Piéger quand même le clavier ici rendrait le reste de la page
+      // — bascule de mode, boutons du graphique — inatteignable sans souris.
+      if (!params.length && !colonnes.length && !nomNeuf.trim()) return;
       e.preventDefault();
       const suite = () => deplacer({ t: 'neuveLigne' }, e.shiftKey);
       if (nomNeuf.trim()) { creerLigne(); tick().then(suite); } else suite();
@@ -545,6 +549,9 @@
   async function neuveKey(e: KeyboardEvent) {
     const t = e.currentTarget as HTMLInputElement;
     if (e.key === 'Escape') { e.preventDefault(); t.value = ''; return; }
+    // Grille entièrement vide, rien de tapé ici : voir le commentaire jumeau
+    // dans nouvelleLigneKey — piéger le clavier serait pire que le laisser sortir.
+    if (e.key === 'Tab' && t.value.trim() === '' && !params.length && !colonnes.length) return;
     if (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'Tab' || (e.key === 'ArrowRight' && t.value === '')) {
       e.preventDefault();
       const arriere = e.key === 'Tab' && e.shiftKey;

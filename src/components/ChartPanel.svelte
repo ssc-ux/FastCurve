@@ -2,7 +2,7 @@
   import { store } from '../lib/models/store.svelte';
   import { renderChart, type RenderResult } from '../lib/chart/render';
   import { svgToPngBlob, downloadBlob, downloadText, copyPngToClipboard } from '../lib/chart/export';
-  import { formatDate } from '../lib/models/types';
+  import { formatDate, parseDateSouple } from '../lib/models/types';
   import { uiBus } from '../lib/models/ui.svelte';
 
   let container: HTMLDivElement;
@@ -12,6 +12,23 @@
   let showMenu = $state(false);
   let showExport = $state(false);
   let editingTitle = $state(false);
+
+  /**
+   * Filtre de période : mêmes libertés de saisie que la grille (n'importe quel
+   * format compris par `parseDateSouple`), pour ne pas réintroduire ici le
+   * champ natif du navigateur qui posait le problème du grief n°1 — verrouillé
+   * sur le format anglo-saxon selon la langue du système, et qui valide avant
+   * que la frappe soit terminée.
+   */
+  let saisieDu = $state('');
+  let saisieAu = $state('');
+  function validerPeriode(champ: 'fromDate' | 'toDate', brut: string) {
+    if (!brut.trim()) { store.updateSettings({ [champ]: null }); return; }
+    const iso = parseDateSouple(brut);
+    if (!iso) return; // date illisible : on laisse le texte tel quel, rien n'est perdu ni écrasé
+    store.updateSettings({ [champ]: iso });
+    if (champ === 'fromDate') saisieDu = formatDate(iso); else saisieAu = formatDate(iso);
+  }
 
   // #6 : édition d'un point directement sur la courbe (popover)
   type PointEdit = { pId: string; name: string; date: string; x: number; y: number };
@@ -145,7 +162,11 @@
     </div>
 
     <div class="menu-wrap">
-      <button class="menu-btn" onclick={(e) => { e.stopPropagation(); showMenu = !showMenu; }}>Affichage ▾</button>
+      <button class="menu-btn" onclick={(e) => {
+        e.stopPropagation();
+        showMenu = !showMenu;
+        if (showMenu) { saisieDu = s().fromDate ? formatDate(s().fromDate!) : ''; saisieAu = s().toDate ? formatDate(s().toDate!) : ''; }
+      }}>Affichage ▾</button>
       {#if showMenu}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div class="menu" onclick={(e) => e.stopPropagation()}>
@@ -157,10 +178,14 @@
           <div class="mdiv"></div>
           <div class="mperiod">
             <span class="mp-title">Période affichée</span>
-            <label class="mp-row">Du <input type="date" value={s().fromDate ?? ''} onchange={(e) => store.updateSettings({ fromDate: e.currentTarget.value || null })} /></label>
-            <label class="mp-row">Au <input type="date" value={s().toDate ?? ''} onchange={(e) => store.updateSettings({ toDate: e.currentTarget.value || null })} /></label>
+            <label class="mp-row">Du <input type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" bind:value={saisieDu}
+              onblur={() => validerPeriode('fromDate', saisieDu)}
+              onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); validerPeriode('fromDate', saisieDu); (e.currentTarget as HTMLInputElement).blur(); } }} /></label>
+            <label class="mp-row">Au <input type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" bind:value={saisieAu}
+              onblur={() => validerPeriode('toDate', saisieAu)}
+              onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); validerPeriode('toDate', saisieAu); (e.currentTarget as HTMLInputElement).blur(); } }} /></label>
             {#if s().fromDate || s().toDate}
-              <button class="mp-reset" onclick={() => store.updateSettings({ fromDate: null, toDate: null })}>Tout afficher</button>
+              <button class="mp-reset" onclick={() => { store.updateSettings({ fromDate: null, toDate: null }); saisieDu = ''; saisieAu = ''; }}>Tout afficher</button>
             {/if}
           </div>
         </div>

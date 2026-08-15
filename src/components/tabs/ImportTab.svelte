@@ -16,7 +16,7 @@
   import { preheatOcr } from '../../lib/ocr/ocr';
   import { reconnaitreTableau, type TableauLu } from '../../lib/ocr/pipeline';
   import { parseReport, type ExtractedTreatment } from '../../lib/text/reportParser';
-  import { todayISO, uid } from '../../lib/models/types';
+  import { todayISO, uid, formatDate, parseDateSouple } from '../../lib/models/types';
   import { matchCatalog } from '../../lib/models/catalog';
   import { learnAnalyte, lookupAnalyte, learnDrug, getKnownDrugs } from '../../lib/learn/memory';
   import { uiBus } from '../../lib/models/ui.svelte';
@@ -441,7 +441,9 @@
                         <option value="event">Événement</option>
                       </select>
                     </td>
-                    <td><input class="dinp" type="date" value={r.date ?? ''} onchange={(e) => (r.date = e.currentTarget.value || null)} /></td>
+                    <td><input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" value={r.date ? formatDate(r.date) : ''}
+                      onblur={(e) => { const brut = e.currentTarget.value; if (!brut.trim()) { r.date = null; return; } const iso = parseDateSouple(brut); if (iso) { r.date = iso; e.currentTarget.value = formatDate(iso); } }}
+                      onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); } }} /></td>
                     <td class="flags">
                       {#if r.isStop}<span class="flag stop">arrêt</span>{/if}
                       {#if r.taper}<span class="flag taper">↘ décroissance</span>{/if}
@@ -539,7 +541,9 @@
                 <th style="text-align:left;">Analyte</th>
                 {#each vDates as _d, i (i)}
                   <th class:doute={vDatesDoute[i] || missingDateCols.has(i)}>
-                    <input class="dinp" type="date" bind:value={vDates[i]}
+                    <input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" value={vDates[i] ? formatDate(vDates[i]) : ''}
+                           onblur={(e) => { const brut = e.currentTarget.value; if (!brut.trim()) { vDates[i] = ''; return; } const iso = parseDateSouple(brut); if (iso) { vDates[i] = iso; e.currentTarget.value = formatDate(iso); } }}
+                           onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); } }}
                            title={missingDateCols.has(i) ? 'Date manquante : renseignez-la avant d’ajouter' : infobulle(vDatesMotifs[i] ?? [])} />
                   </th>
                 {/each}
