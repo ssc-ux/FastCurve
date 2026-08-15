@@ -939,7 +939,7 @@
   .datecol { padding: 2px 4px 6px 8px; position: relative; white-space: nowrap; border-bottom: 1px solid var(--border); vertical-align: top; }
   /* Les commandes de colonne sont sur leur propre ligne, à l'écart du champ de
      date : viser la date ne doit jamais pouvoir supprimer la colonne. */
-  .colbar { display: flex; justify-content: flex-end; gap: 2px; height: 16px; }
+  .colbar { display: flex; justify-content: flex-end; align-items: center; gap: 2px; height: 24px; }
   .dateinput { border: none; background: transparent; font-size: 12px; color: var(--muted); width: 84px; padding: 2px 3px; text-align: center; font-variant-numeric: tabular-nums; }
   .dateinput:focus { background: #fff; border-radius: 5px; box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); color: var(--ink); }
   .dateinput.neuve { color: var(--faint); }
@@ -948,7 +948,10 @@
   /* Le champ date natif ne sert qu'à ouvrir le calendrier du système : il reste
      dans la page (sinon `showPicker()` est refusé) mais hors du flux visuel. */
   .datepick { position: absolute; left: 8px; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: none; padding: 0; }
-  .colx, .colicon { border: none; background: transparent; color: var(--faint); font-size: 10px; padding: 0 3px; cursor: pointer; line-height: 1; }
+  .colx, .colicon {
+    border: none; background: transparent; color: var(--faint); font-size: 10px; cursor: pointer; line-height: 1;
+    min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
   .colicon { font-size: 11px; filter: grayscale(1); }
   .colx:hover { color: var(--danger); }
   .colicon:hover { filter: none; }

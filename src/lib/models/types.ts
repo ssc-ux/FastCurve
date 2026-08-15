@@ -307,11 +307,20 @@ export function parseDateSouple(input: string, reference?: string): string | nul
   return lireDateSouple(input, reference)?.iso ?? null;
 }
 
+/**
+ * Une date calendaire qui n'existe pas (31 février, 30 février, 31 avril…)
+ * doit être refusée ici, pas plus loin : sinon elle produit un ISO qui a l'air
+ * valide (`2024-02-31`) mais qui, converti en jour réel pour positionner le
+ * point sur l'axe du temps, déborde silencieusement sur le mois suivant — le
+ * libellé affiché et la position du point divergent, et la courbe fait un
+ * zigzag qui n'existe pas dans les données.
+ */
 function validYMD(y: number, m: number, d: number): boolean {
   if (m < 1 || m > 12) return false;
-  if (d < 1 || d > 31) return false;
   if (y < 1900 || y > 2100) return false;
-  return true;
+  const bissextile = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  const joursDuMois = [31, bissextile ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return d >= 1 && d <= joursDuMois[m - 1];
 }
 
 function pad(n: number): string {
