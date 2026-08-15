@@ -88,6 +88,18 @@
     { id: 'settings', label: 'Réglages', icon: 'settings' },
   ];
 
+  /**
+   * Tant qu'aucune valeur n'a été saisie, il n'y a rien à montrer sur la
+   * courbe — juste « Ajoutez des valeurs… » sur les deux tiers de l'écran,
+   * pendant que la saisie, ce qu'il y a effectivement à faire, est reléguée au
+   * tiers restant. Le cahier des charges est explicite : la saisie doit
+   * occuper la majorité de l'écran tant que le suivi est vide. Un
+   * redimensionnement manuel de la poignée est un choix délibéré qui l'emporte
+   * définitivement sur cette bascule automatique.
+   */
+  let reglageManuel = $state(false);
+  const sansDonnees = $derived(store.study.measurements.length === 0 && !reglageManuel);
+
   // ── Barre latérale redimensionnable / repliable ──
   const MIN = 320;
   const UI_KEY = 'fastcurve.ui.v1';
@@ -127,6 +139,7 @@
 
   function startDrag(e: PointerEvent) {
     if (collapsed) return;
+    reglageManuel = true; // choix délibéré : l'emporte sur la mise en page « suivi vide »
     dragging = true;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     e.preventDefault();
@@ -182,7 +195,7 @@
     </div>
   {/if}
 
-  <div class="body" class:dragging class:horizontal={sens === 'horizontal'}>
+  <div class="body" class:dragging class:horizontal={sens === 'horizontal'} class:vide={sansDonnees && !collapsed}>
     <aside class="sidebar" class:collapsed
            style={sens === 'horizontal'
              ? `max-height:${collapsed ? 0 : sidebarH}px`
@@ -280,6 +293,14 @@
   }
   .body.horizontal.dragging .sidebar { transition: none; }
   .body.horizontal .sidebar.collapsed { max-height: 0 !important; }
+  /* Suivi vide : la saisie doit occuper la majorité de l'écran, pas le
+     graphique qui n'a rien à montrer. `flex-basis: 0` + un ratio de
+     croissance fait la proportion indépendamment de la hauteur du contenu —
+     contrairement au `max-height` ci-dessus, qui plafonne mais ne fait
+     jamais grandir. `!important` nécessaire : l'attribut `style` du `<aside>`
+     pose un `max-height` en ligne qui l'emporterait sinon. */
+  .body.horizontal.vide .sidebar { flex: 62 38 0%; max-height: none !important; }
+  .body.horizontal.vide .chart-area { flex: 38 62 0%; }
   /* Les onglets Repères et Réglages sont des formulaires : en pleine largeur
      ils deviennent illisibles. On les garde dans une colonne confortable. */
   .body.horizontal .tab-content.forme { max-width: 760px; }
