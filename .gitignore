@@ -7,3 +7,5 @@ dist/
 captures/
 *.mjs
 !bench/*.mjs
+MEDECIN-CAHIER-DES-CHARGES.md
+RAPPORT-*.md
