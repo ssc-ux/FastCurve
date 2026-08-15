@@ -29,11 +29,11 @@
 
 <div class="editor">
   <div class="row">
-    <input class="color" type="color" value={param.color} onchange={(e) => store.updateParameter(param.id, { color: e.currentTarget.value })} title="Couleur" />
+    <input class="color" type="color" value={param.color} onchange={(e) => store.updateParameter(param.id, { color: e.currentTarget.value })} title="Couleur" aria-label="Couleur du paramètre" />
     <input class="name grow" value={param.name} onchange={(e) => store.updateParameter(param.id, { name: e.currentTarget.value })} />
-    <button class="icon" disabled={idx === 0} onclick={() => move(-1)} title="Monter">↑</button>
-    <button class="icon" disabled={idx === params.length - 1} onclick={() => move(1)} title="Descendre">↓</button>
-    <button class="icon" onclick={onClose} title="Fermer">✕</button>
+    <button class="icon" disabled={idx === 0} onclick={() => move(-1)} title="Monter" aria-label="Monter ce paramètre">↑</button>
+    <button class="icon" disabled={idx === params.length - 1} onclick={() => move(1)} title="Descendre" aria-label="Descendre ce paramètre">↓</button>
+    <button class="icon" onclick={onClose} title="Fermer" aria-label="Fermer l'éditeur du paramètre">✕</button>
   </div>
   <div class="fields">
     <label>Unité<input value={param.unit} onchange={(e) => store.updateParameter(param.id, { unit: e.currentTarget.value })} /></label>

@@ -83,7 +83,7 @@
           <div class="row" style="gap:6px;">
             <span class="grow small"><strong>{t.name}</strong> <span class="faint">· {t.parameters.length} paramètre{t.parameters.length > 1 ? 's' : ''}</span></span>
             <button class="small" onclick={() => applyTemplate(t.id)}>Appliquer</button>
-            <button class="danger small" onclick={() => deleteTemplate(t.id)}>✕</button>
+            <button class="danger small" onclick={() => deleteTemplate(t.id)} title="Supprimer ce modèle" aria-label="Supprimer le modèle « {t.name} »">✕</button>
           </div>
         {/each}
       </div>

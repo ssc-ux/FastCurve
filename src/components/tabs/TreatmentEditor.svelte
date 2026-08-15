@@ -142,12 +142,12 @@
 
 <div class="editor">
   <div class="row">
-    <input class="color" type="color" value={treatment.color} onchange={(e) => set({ color: e.currentTarget.value })} title="Couleur" />
+    <input class="color" type="color" value={treatment.color} onchange={(e) => set({ color: e.currentTarget.value })} title="Couleur" aria-label="Couleur du traitement" />
     <input class="grow" list="druglist" value={treatment.name} onchange={(e) => set({ name: e.currentTarget.value })} placeholder="Nom" />
     <datalist id="druglist">
       {#each knownDrugs as d (d)}<option value={d}></option>{/each}
     </datalist>
-    <button class="icon" onclick={onClose} title="Fermer">✕</button>
+    <button class="icon" onclick={onClose} title="Fermer" aria-label="Fermer l'éditeur du traitement">✕</button>
   </div>
 
   <div class="row wrap">
@@ -206,7 +206,7 @@
             <input class="dose" type="text" inputmode="decimal" value={p.dose || ''} placeholder="dose"
               onchange={(e) => updatePoint(i, { dose: numVal(e.currentTarget.value) })} />
             <span class="small faint">{treatment.doseUnit ?? 'mg/j'}</span>
-            <button class="icon" onclick={() => removePoint(i)} title="Retirer">✕</button>
+            <button class="icon" onclick={() => removePoint(i)} title="Retirer" aria-label="Retirer ce palier">✕</button>
           </div>
         {/each}
         <button class="addp" onclick={addPoint}>+ Ajouter un palier</button>
