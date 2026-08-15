@@ -229,7 +229,7 @@
   .color { width: 30px; height: 30px; padding: 2px; border-radius: 8px; }
   .icon { padding: 4px 8px; }
   .seg { display: inline-flex; background: #eef1f4; border-radius: 8px; padding: 2px; }
-  .seg button { border: none; background: transparent; border-radius: 6px; padding: 4px 11px; font-size: 12.5px; color: var(--muted); }
+  .seg button { border: none; background: transparent; border-radius: 6px; padding: 5px 11px; font-size: 12.5px; color: var(--muted); }
   .seg button.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
   .fld { display: inline-flex; flex-direction: column; gap: 3px; font-size: 12px; }
   .fld.inline { flex-direction: row; align-items: center; gap: 5px; }
