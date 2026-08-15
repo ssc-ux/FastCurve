@@ -106,7 +106,8 @@
       <button onclick={exportLearn}>⬇ Exporter l'apprentissage</button>
       <label class="filebtn-wrap"><span>⬆ Importer un apprentissage</span><input type="file" accept=".json,application/json" onchange={importLearn} hidden /></label>
       <div class="spacer"></div>
-      <button class="danger small" onclick={() => { const snap = exportLearning(); resetLearning(); learn = learnStats(); uiBus.toastAction('Apprentissage de ce poste réinitialisé.', 'Annuler', () => { importLearning(snap); learn = learnStats(); }); }}>Réinitialiser (ce poste)</button>
+      <button class="danger small" title="N'efface aucun patient : oublie seulement les corrections de lecture apprises sur ce poste."
+        onclick={() => { const snap = exportLearning(); resetLearning(); learn = learnStats(); uiBus.toastAction('Apprentissage de ce poste réinitialisé.', 'Annuler', () => { importLearning(snap); learn = learnStats(); }); }}>Réinitialiser (ce poste)</button>
     </div>
   </div>
 
@@ -134,8 +135,10 @@
     <div class="row" style="margin-bottom:8px;"><strong>Démarrage rapide</strong></div>
     <div class="row wrap">
       <button onclick={() => loadSample()}>Charger un exemple</button>
-      <button class="danger" onclick={() => { store.clearData(); uiBus.toastAction('Données effacées (mesures et traitements).', 'Annuler', () => store.undo()); }}>Effacer les données</button>
-      <button class="danger" onclick={() => { store.clearAll(); uiBus.toastAction('Dossier réinitialisé.', 'Annuler', () => store.undo()); }}>Tout réinitialiser</button>
+      <button class="danger" title="Vide les valeurs, dates et traitements ; garde les paramètres (analytes) et le titre du graphique."
+        onclick={() => { store.clearData(); uiBus.toastAction('Données effacées (mesures et traitements).', 'Annuler', () => store.undo()); }}>Effacer les données</button>
+      <button class="danger" title="Repart d'un suivi entièrement vierge : paramètres, titre et traitements compris — comme au tout premier lancement."
+        onclick={() => { store.clearAll(); uiBus.toastAction('Dossier réinitialisé.', 'Annuler', () => store.undo()); }}>Tout réinitialiser</button>
     </div>
   </div>
 
