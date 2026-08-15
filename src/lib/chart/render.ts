@@ -255,8 +255,26 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
   for (const a of study.annotations || []) if (a.date) allDatesSet.add(a.date);
   const allDates = [...allDatesSet].sort();
 
-  const marginLeft = 66;
-  const marginRight = s.chartMode === 'single' ? 66 : 24;
+  /*
+   * Marge gauche ajustée à la largeur réelle des graduations.
+   *
+   * Elle valait 66 px quoi qu'il arrive. Les analyses rendues en unités
+   * « brutes » — charge virale en copies/mL, plaquettes ou leucocytes par mm³ —
+   * graduent l'axe à sept chiffres : « 1 500 000 » demande une soixantaine de
+   * pixels et sortait du cadre par la gauche, tronqué. Les échelles Y ne
+   * dépendant pas de la largeur du tracé, on peut les calculer d'abord et
+   * dimensionner la marge en conséquence.
+   */
+  const echelles = new Map(params.map(p => [p.id, valueScale(mesuresDe(p), p, s)]));
+  const largeurGraduations = () => {
+    let max = 0;
+    for (const sc of echelles.values()) {
+      for (const t of sc.ticks) max = Math.max(max, largeurTexte(fmtTick(t, sc.step), 10.5));
+    }
+    return max;
+  };
+  const marginLeft = Math.round(clamp(largeurGraduations() + 16, 66, Math.max(66, width * 0.22)));
+  const marginRight = s.chartMode === 'single' ? marginLeft : 24;
   const plotWidth = width - marginLeft - marginRight;
   const layout: Layout = { width, marginLeft, marginRight, plotWidth };
 
@@ -324,7 +342,7 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     let py = availTop;
     params.forEach((p, pi) => {
       const pts = collectPoints(mesuresDe(p), p, xm.xOf);
-      const sc = valueScale(mesuresDe(p), p, s);
+      const sc = echelles.get(p.id)!;
       const y0 = py;
       const y1 = py + panelH;
       const yOf = (v: number) => y1 - ((v - sc.min) / (sc.max - sc.min)) * (y1 - y0);

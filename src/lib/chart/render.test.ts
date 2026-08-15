@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderChart } from './render';
+import { renderChart, largeurTexte } from './render';
 import type { StudyState, Treatment } from '../models/types';
 
 function studyWith(treatment: Treatment): StudyState {
@@ -257,6 +257,36 @@ describe('renderChart — graphe unique : axes honnêtes', () => {
     };
     expect(renderChart(douze, 920).svg).toContain('stroke-dasharray');
     expect(renderChart(etude, 920).svg).not.toContain('stroke-dasharray');
+  });
+});
+
+describe('renderChart — marge gauche et graduations', () => {
+  const avecValeurs = (valeurs: number[], unite: string) => etudeSimple(
+    [{ id: 'p1', name: 'Analyte', unit: unite, category: 'biologie', color: '#2a78d6', order: 0 }],
+    valeurs.map((v, i) => ({ id: 'm' + i, parameterId: 'p1', date: `2025-0${i + 1}-06`, value: v })),
+  );
+  const axeY = (svg: string) => +/<line x1="(\d+)" y1="[-\d.]+" x2="\1"/.exec(svg)![1];
+
+  it('élargit la marge quand les graduations sont longues', () => {
+    // Régression : la marge valait 66 px quoi qu'il arrive, et « 1 500 000 »
+    // (charge virale, plaquettes par mm³) sortait du cadre par la gauche.
+    const etroit = renderChart(avecValeurs([148, 92, 31], 'mg/L'), 920).svg;
+    const large = renderChart(avecValeurs([1250000, 840000, 320000], 'copies/mL'), 920).svg;
+    expect(axeY(etroit)).toBe(66);
+    expect(axeY(large)).toBeGreaterThan(66);
+    // La graduation la plus longue tient entièrement dans la marge.
+    const gradMax = [...large.matchAll(/<text x="(\d+)" y="[-\d.]+" text-anchor="end"[^>]*>([^<]+)</g)]
+      .map(m => largeurTexte(m[2], 10.5));
+    expect(Math.max(...gradMax)).toBeLessThan(axeY(large) - 8);
+  });
+
+  it('garde des décimales homogènes sur un même axe', () => {
+    // Un axe qui gradue « 2 » puis « 2,20 » se lit mal : le pas fixe le nombre
+    // de décimales pour toutes les graduations.
+    const svg = renderChart(avecValeurs([2.42, 2.38, 2.55], 'mmol/L'), 920).svg;
+    const grads = [...svg.matchAll(/text-anchor="end"[^>]*>([^<]+)</g)].map(m => m[1]);
+    const dec = new Set(grads.map(g => (g.split(',')[1] ?? '').length));
+    expect(dec.size).toBe(1);
   });
 });
 
