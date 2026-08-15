@@ -82,7 +82,13 @@
 </div>
 
 <style>
-  .doc { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  /* `overflow: hidden` en secours : sans lui, si le nom du suivi est déjà
+     réduit à rien et que la place manque encore, le texte des boutons
+     « Nouveau / Ouvrir / Enregistrer » (en nowrap, donc non compressible)
+     déborde silencieusement de sa propre case et se peint par-dessus le
+     badge « ✓ Enregistré » à sa droite — repéré à 760px de large avec un
+     suivi déjà enregistré. */
+  .doc { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; }
   .nom {
     display: inline-flex; align-items: center; gap: 7px; max-width: 260px;
     border: 1px solid transparent; background: transparent; border-radius: 9px;
@@ -97,8 +103,11 @@
   .act {
     border: none; background: transparent; color: var(--muted);
     font-size: 12.5px; padding: 5px 10px; border-radius: 8px; white-space: nowrap; cursor: pointer;
+    /* Ne rétrécit jamais : c'est le nom du suivi (ellipsis ci-dessus) qui doit
+       céder la place en premier, jamais ces trois actions. */
+    flex-shrink: 0;
   }
   .act:hover:not(:disabled) { background: var(--panel-2); color: var(--ink); }
   .act:disabled { opacity: .45; cursor: default; }
-  .fichier { display: inline-flex; align-items: center; }
+  .fichier { display: inline-flex; align-items: center; flex-shrink: 0; }
 </style>
