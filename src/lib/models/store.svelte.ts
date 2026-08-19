@@ -25,13 +25,18 @@ function defaultSettings(): Settings {
     chartMode: 'stacked',
     title: 'Suivi biologique',
     subtitle: '',
-    showReference: true,
+    // Décision explicite du médecin : les bandes de normale et le marquage
+    // « hors-norme » sont retirés par défaut. Une seule borne générique par
+    // analyte (le catalogue n'a pas le sexe/l'âge du patient) est trop
+    // grossière pour un jugement clinique ; mieux vaut que le médecin lise la
+    // valeur lui-même que de laisser une bande potentiellement fausse dicter
+    // une lecture. Il les réactive lui-même dans le menu Affichage s'il en a
+    // besoin sur un suivi donné.
+    showReference: false,
     showLegend: true,
     showValues: false,
     timeAxis: true,
-    // Montrer la bande de normale sans signaler les valeurs qui en sortent
-    // n'a pas de sens en usage médical : les deux vont de pair.
-    markOutOfRange: true,
+    markOutOfRange: false,
   };
 }
 

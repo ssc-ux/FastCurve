@@ -100,11 +100,11 @@ describe('matchCatalog — résolution des alias vers le bon analyte', () => {
 });
 
 describe('bornes corrigées après audit médical', () => {
-  it('Créatinine : 45-115 µmol/L (union homme/femme, l’exemple du cahier des charges)', () => {
+  it('Créatinine : 5-13 mg/L (unité du laboratoire du médecin, reconvertie depuis 45-115 µmol/L)', () => {
     const e = CATALOG.find(x => x.name === 'Créatinine')!;
-    expect(e.unit).toBe('µmol/L');
-    expect(e.refLow).toBe(45);
-    expect(e.refHigh).toBe(115);
+    expect(e.unit).toBe('mg/L');
+    expect(e.refLow).toBe(5);
+    expect(e.refHigh).toBe(13);
   });
 
   it('Hémoglobine : 12-17 g/dL (union homme/femme, jamais g/L)', () => {
