@@ -199,11 +199,22 @@
       que de laisser croire à un paramètre resté stable, on le dit, et un clic
       bascule vers le mode où chaque série retrouve son échelle.
     -->
-    {#if result.ecrasees.length}
+    {#if result.ecrasees.length && s().chartMode === 'single'}
       <button class="ecrase-badge" onclick={() => store.updateSettings({ chartMode: 'stacked' })}
               title="Sur un seul graphe, ces paramètres sont écrasés au ras de leur axe : leurs variations y sont invisibles. Cliquer pour passer en panneaux, où chacun a sa propre échelle.">
         ⚠ {result.ecrasees.length === 1 ? `« ${result.ecrasees[0]} » est écrasé` : `${result.ecrasees.length} séries écrasées`} — voir en panneaux
       </button>
+    {:else if result.ecrasees.length}
+      <!--
+        Même signal en mode Panneaux, mais pour un panneau groupé : ses deux
+        axes n'arrivent pas à loger tous ses paramètres lisiblement. « Voir en
+        panneaux » n'a pas de sens ici (on y est déjà) — la sortie, c'est de
+        séparer le paramètre écrasé de son groupe (éditeur du paramètre).
+      -->
+      <span class="ecrase-badge" role="status"
+            title="Dans un panneau groupé, ces paramètres restent écrasés au ras de leur axe : leurs variations n'y sont pas lisibles. Séparez-les de leur groupe (éditeur du paramètre) pour leur redonner leur propre échelle.">
+        ⚠ {result.ecrasees.length === 1 ? `« ${result.ecrasees[0]} » est écrasé dans son groupe` : `${result.ecrasees.length} séries écrasées dans un groupe`}
+      </span>
     {/if}
 
     {#if s().fromDate || s().toDate}
