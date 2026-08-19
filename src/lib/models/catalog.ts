@@ -43,9 +43,10 @@ export const CATALOG: CatalogEntry[] = [
   { name: 'Magnésium', unit: 'mmol/L', category: 'biologie', refLow: 0.7, refHigh: 1.0, aliases: ['mg', 'mg2+', 'magnesium', 'magnesemie'] },
   { name: 'Urée', unit: 'mmol/L', category: 'biologie', refLow: 2.5, refHigh: 7.5, aliases: ['uree', 'urea'] },
   // Sexuée (femme ~45-84, homme ~64-104 µmol/L) : union des deux sexes, cf. Hb.
-  // C'est l'exemple d'ouverture du cahier des charges du médecin — à vérifier
-  // en priorité si les valeurs de son labo habituel diffèrent.
-  { name: 'Créatinine', unit: 'µmol/L', category: 'biologie', refLow: 45, refHigh: 115, aliases: ['creat', 'creatinine', 'creatininemie'] },
+  // Unité choisie par le médecin lui-même (mg/L, pas µmol/L malgré l'usage SI
+  // le plus répandu) : c'est ce que rend son laboratoire habituel. Bornes
+  // reconverties depuis 45-115 µmol/L (masse molaire 113,12 g/mol), arrondies.
+  { name: 'Créatinine', unit: 'mg/L', category: 'biologie', refLow: 5, refHigh: 13, aliases: ['creat', 'creatinine', 'creatininemie'] },
   // Renommé MDRD → CKD-EPI : le MDRD est abandonné en pratique courante en
   // France depuis le début des années 2010, CKD-EPI est la formule rendue par
   // les laboratoires aujourd'hui. Alias 'mdrd' conservé pour les anciens CR.
