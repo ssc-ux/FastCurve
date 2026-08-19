@@ -427,8 +427,9 @@
 <div class="col" style="gap:14px;">
   {#if importMode === 'text'}
     <div class="card" style="padding:12px;">
-      <p class="faint small" style="margin-bottom:8px;">Collez le « carré bleu » (ou tout compte-rendu). J'en extrais les <strong>lignes thérapeutiques</strong> — vous validez avant d'ajouter. 100% local.</p>
-      <textarea class="report" bind:value={reportText} placeholder="Collez ici le texte du compte-rendu…"></textarea>
+      <p class="faint small" style="margin-bottom:8px;">Collez le « carré bleu » (ou tout compte-rendu), ou dictez-le directement ici (Dragon). J'en extrais les <strong>lignes thérapeutiques</strong> — vous validez avant d'ajouter. 100% local.</p>
+      <!-- svelte-ignore a11y_autofocus -->
+      <textarea class="report" bind:value={reportText} placeholder="Collez ou dictez ici le texte du compte-rendu…" autofocus></textarea>
       <div class="row" style="margin-top:8px;">
         <div class="spacer"></div>
         <button class="primary" disabled={!reportText.trim()} onclick={analyzeText}>Analyser</button>
@@ -669,7 +670,7 @@
   .vgrid td.thumb { padding: 2px; }
   .vgrid td.thumb img { display: block; max-height: 34px; max-width: 260px; border: 1px solid var(--border); border-radius: 3px; }
 
-  .report { width: 100%; min-height: 190px; resize: vertical; font-size: 13px; line-height: 1.5; }
+  .report { width: 100%; min-height: 260px; resize: vertical; font-size: 13px; line-height: 1.5; }
   .vgrid .flags { white-space: nowrap; }
   .flag { font-size: 12px; padding: 1px 6px; border-radius: 9px; margin-right: 3px; }
   .flag.stop { background: #eee; color: #666; }
