@@ -166,8 +166,9 @@
 
 <div class="app">
   <header class="topbar">
-    <button class="icon-btn side-toggle" onclick={toggleCollapse} title={collapsed ? 'Afficher le panneau' : 'Masquer le panneau (plein écran courbe)'} aria-label="Basculer le panneau">
-      <Icon name="panel-left" size={18} />
+    <button class="pill side-toggle" onclick={toggleCollapse} title={collapsed ? 'Afficher le panneau de saisie' : 'Masquer le panneau : donne toute la place à la courbe'}>
+      <Icon name="panel-left" size={15} />
+      {collapsed ? 'Afficher le panneau' : 'Plein écran courbe'}
     </button>
     <div class="brand"><span class="logo"><Icon name="chart-spline" size={19} /></span><span class="title">FastCurve</span></div>
     <BarreDocument />
@@ -245,12 +246,6 @@
   .brand { display: flex; align-items: center; gap: 8px; }
   .logo { display: inline-flex; color: var(--accent); }
   .title { font-weight: 650; font-size: 15px; letter-spacing: .2px; }
-  .icon-btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; border-radius: 9px; border: none;
-    background: transparent; color: var(--muted); font-size: 16px;
-  }
-  .icon-btn:hover { background: var(--panel-2); color: var(--ink); }
   .pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 6px 13px; font-size: 12.5px; }
 
   .saved { font-size: 12px; color: var(--ok); font-weight: 600; white-space: nowrap; animation: savedpulse 1.4s ease-out; }
