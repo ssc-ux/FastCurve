@@ -20,8 +20,9 @@
   import { matchCatalog } from '../../lib/models/catalog';
   import { learnAnalyte, lookupAnalyte, learnDrug, getKnownDrugs } from '../../lib/learn/memory';
   import { uiBus } from '../../lib/models/ui.svelte';
+  import DicteeBio from './DicteeBio.svelte';
 
-  let { initialMode = 'photo', onImported = () => {} }: { initialMode?: 'photo' | 'text'; onImported?: () => void } = $props();
+  let { initialMode = 'photo', onImported = () => {} }: { initialMode?: 'photo' | 'text' | 'dictee'; onImported?: () => void } = $props();
   // svelte-ignore state_referenced_locally
   const importMode = initialMode;
 
@@ -480,6 +481,9 @@
         <div class="callout">Aucune ligne thérapeutique reconnue. Vérifiez que le texte contient des médicaments datés (ex. « Mai 2020 : CELLCEPT 3 g/jour »).</div>
       {/if}
     {/if}
+
+  {:else if importMode === 'dictee'}
+    <DicteeBio {onImported} />
 
   {:else}
     {#if !hasValidation && !pending.length && !busy}
