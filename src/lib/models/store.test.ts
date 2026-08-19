@@ -284,3 +284,53 @@ describe('index de valueAt', () => {
     expect(store.valueAt(p.id, '2025-01-10')).toBeUndefined();
   });
 });
+
+describe('store — groupParameterWith (panneaux groupés)', () => {
+  let store: Awaited<ReturnType<typeof neufStore>>;
+  beforeEach(async () => { store = await neufStore(); });
+
+  it("n'a pas de groupe par défaut", () => {
+    const p = store.addParameter({ name: 'CRP', unit: 'mg/L', category: 'biologie' });
+    expect(p.panelGroup ?? null).toBeNull();
+  });
+
+  it('rejoint le groupe du paramètre cible', () => {
+    const a = store.addParameter({ name: 'CRP', unit: 'mg/L', category: 'biologie' });
+    const b = store.addParameter({ name: 'Créatinine', unit: 'µmol/L', category: 'biologie' });
+    store.groupParameterWith(a.id, b.id);
+    const [ra, rb] = [
+      store.study.parameters.find(p => p.id === a.id)!,
+      store.study.parameters.find(p => p.id === b.id)!,
+    ];
+    expect(ra.panelGroup).toBeTruthy();
+    expect(ra.panelGroup).toBe(rb.panelGroup);
+  });
+
+  it('un troisième paramètre peut rejoindre un groupe existant', () => {
+    const a = store.addParameter({ name: 'CRP', unit: 'mg/L', category: 'biologie' });
+    const b = store.addParameter({ name: 'Créatinine', unit: 'µmol/L', category: 'biologie' });
+    const c = store.addParameter({ name: 'Hémoglobine', unit: 'g/dL', category: 'biologie' });
+    store.groupParameterWith(a.id, b.id);
+    store.groupParameterWith(c.id, a.id);
+    const cles = [a, b, c].map(p => store.study.parameters.find(x => x.id === p.id)!.panelGroup);
+    expect(new Set(cles).size).toBe(1);
+  });
+
+  it('quitte son groupe quand on choisit « panneau séparé » (targetId null)', () => {
+    const a = store.addParameter({ name: 'CRP', unit: 'mg/L', category: 'biologie' });
+    const b = store.addParameter({ name: 'Créatinine', unit: 'µmol/L', category: 'biologie' });
+    store.groupParameterWith(a.id, b.id);
+    store.groupParameterWith(a.id, null);
+    expect(store.study.parameters.find(p => p.id === a.id)!.panelGroup ?? null).toBeNull();
+    // b garde sa clé de groupe (désormais seul dedans) : sans effet visuel.
+  });
+
+  it('est réversible par undo, comme les autres modifications de paramètre', () => {
+    const a = store.addParameter({ name: 'CRP', unit: 'mg/L', category: 'biologie' });
+    const b = store.addParameter({ name: 'Créatinine', unit: 'µmol/L', category: 'biologie' });
+    store.groupParameterWith(a.id, b.id);
+    expect(store.study.parameters.find(p => p.id === a.id)!.panelGroup).toBeTruthy();
+    store.undo();
+    expect(store.study.parameters.find(p => p.id === a.id)!.panelGroup ?? null).toBeNull();
+  });
+});
