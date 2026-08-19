@@ -93,6 +93,12 @@ function findDates(text: string): DateHit[] {
 
 // Médicaments fréquents en médecine interne (marque ou DCI). La casse est
 // ignorée ; sert de liste blanche prioritaire.
+// Revue volontairement resserrée à la médecine interne (maladies systémiques,
+// auto-immunes, vascularites) — rien à retirer ici : chaque entrée avait déjà
+// sa place. Seul TACROLIMUS, dupliqué, a été dédoublonné. Les molécules plus
+// récentes (biothérapies) ajoutées à `SEED_DRUGS` (seed.ts) sont reconnues
+// ici aussi sans duplication : `ImportTab` fusionne `getKnownDrugs()` (qui
+// inclut `SEED_DRUGS`) dans `extraDrugs` à chaque appel de `parseReport`.
 const DRUGS = [
   'SOLUMEDROL', 'SMD', 'MEDROL', 'CORTANCYL', 'PREDNISONE', 'PREDNISOLONE', 'CORTICOTHERAPIE',
   'CELLCEPT', 'MYCOPHENOLATE', 'MYFORTIC', 'PROGRAF', 'TACROLIMUS', 'ADVAGRAF',
@@ -100,7 +106,7 @@ const DRUGS = [
   'METHOTREXATE', 'MTX', 'PLAQUENIL', 'HYDROXYCHLOROQUINE', 'NINTEDANIB', 'OFEV',
   'PIRFENIDONE', 'ESBRIET', 'TOCILIZUMAB', 'ROACTEMRA', 'ABATACEPT', 'ORENCIA',
   'BELIMUMAB', 'BENLYSTA', 'INFLIXIMAB', 'ADALIMUMAB', 'HUMIRA', 'ETANERCEPT',
-  'CICLOSPORINE', 'TACROLIMUS', 'IGIV', 'IMMUNOGLOBULINES', 'PRIVIGEN', 'TEGELINE',
+  'CICLOSPORINE', 'IGIV', 'IMMUNOGLOBULINES', 'PRIVIGEN', 'TEGELINE',
   'COLCHICINE', 'ANAKINRA', 'KINERET', 'CTC',
 ];
 const DRUG_SET = new Set(DRUGS.map(norm));
