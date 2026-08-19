@@ -354,6 +354,31 @@ class Store {
     this.updateParameter(id, { display });
   }
 
+  /**
+   * Associe (ou dissocie) un paramètre à un groupe de panneau partagé — le
+   * geste du médecin pour dire « ces deux-là vont sur le même graphique ».
+   *
+   * `targetId` null : le paramètre reprend son panneau à lui.
+   * `targetId` = id d'un autre paramètre : il rejoint le groupe de ce
+   * paramètre (créé au besoin, à partir de l'id du paramètre cible — donc
+   * stable, pas de nouvel identifiant à faire circuler).
+   */
+  groupParameterWith(paramId: string, targetId: string | null) {
+    const p = this.study.parameters.find(x => x.id === paramId);
+    if (!p) return;
+    this.snap();
+    if (!targetId || targetId === paramId) {
+      p.panelGroup = null;
+    } else {
+      const target = this.study.parameters.find(x => x.id === targetId);
+      if (!target) return;
+      const groupId = target.panelGroup || target.id;
+      target.panelGroup = groupId;
+      p.panelGroup = groupId;
+    }
+    this.save();
+  }
+
   // ── Mesures ──────────────────────────────────
   /** Insère ou remplace la mesure (param, date). */
   setMeasurement(parameterId: string, date: string, value: number | null, qualifier?: '<' | '>' | null) {

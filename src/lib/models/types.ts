@@ -21,6 +21,17 @@ export interface Parameter {
   color?: string | null;
   /** Ordre d'affichage. */
   order: number;
+  /**
+   * Identifiant de groupe de panneau (mode « Panneaux » uniquement).
+   *
+   * Absent ou `null` : le paramètre a son panneau à lui, comportement
+   * historique. Deux paramètres qui partagent la même valeur sont dessinés
+   * dans le MÊME panneau, avec jusqu'à deux axes (gauche/droite) répartis
+   * comme en mode « Graphe unique » — voir `repartirAxes` dans `render.ts`.
+   * La valeur elle-même n'a pas de sens propre : c'est juste une clé de
+   * regroupement (en pratique, l'id du premier paramètre du groupe).
+   */
+  panelGroup?: string | null;
 }
 
 export interface Measurement {
