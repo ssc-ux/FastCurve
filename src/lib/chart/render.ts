@@ -45,10 +45,12 @@ export interface RenderResult {
   /** Zones interactives des points (coord SVG) pour le survol. */
   hotspots: { param: Parameter; date: string; value: number; cx: number; cy: number }[];
   /**
-   * Séries que le graphe unique écrase au ras de leur axe : deux échelles ne
-   * peuvent pas loger des ordres de grandeur trop éloignés. La figure reste
-   * juste, mais ces courbes n'y sont pas lisibles — autant le dire au médecin
-   * plutôt que de le laisser croire à des paramètres restés plats.
+   * Séries écrasées au ras de leur axe : deux échelles ne peuvent pas loger
+   * des ordres de grandeur trop éloignés. La figure reste juste, mais ces
+   * courbes n'y sont pas lisibles — autant le dire au médecin plutôt que de
+   * le laisser croire à des paramètres restés plats. Peut venir du mode
+   * « Graphe unique » (tous les paramètres) ou d'un panneau groupé en mode
+   * « Panneaux » (les membres d'un même groupe).
    */
   ecrasees: string[];
 }
@@ -97,6 +99,44 @@ function plottedValue(_p: Parameter, value: number): number | null {
 function unitLabel(p: Parameter): string {
   if (p.category === 'efr' && p.display === 'percent') return '% théo.';
   return p.unit || '';
+}
+
+/**
+ * Libellé d'un axe partagé par plusieurs paramètres : leur unité commune, ou
+ * rien si elle diffère. Un axe ne peut pas porter honnêtement plusieurs
+ * unités à la fois (voir le commentaire de `repartirAxes`) ; dans ce cas
+ * chaque série porte son unité dans sa propre entrée de légende.
+ */
+function libelleAxe(liste: Parameter[]): string {
+  const u = [...new Set(liste.map(unitLabel).filter(Boolean))];
+  return u.length === 1 ? u[0] : '';
+}
+
+interface GroupePanneau { params: Parameter[]; }
+
+/**
+ * Regroupe les paramètres à afficher par panneau (mode « Panneaux »).
+ *
+ * Chaque paramètre porte un `panelGroup` optionnel. Par défaut il est absent :
+ * le paramètre forme alors un groupe à lui seul (sa propre id sert de clé),
+ * exactement le comportement historique — un panneau par paramètre. Deux
+ * paramètres qui partagent la même valeur de `panelGroup` sont rendus
+ * ensemble par `groupPanel`. L'ordre des groupes suit l'ordre (`order`) du
+ * premier de leurs membres, pour rester fidèle à l'ordre voulu par le
+ * médecin dans la grille.
+ */
+function grouperPourPanneaux(params: Parameter[]): GroupePanneau[] {
+  const map = new Map<string, Parameter[]>();
+  for (const p of params) {
+    const cle = p.panelGroup || p.id;
+    const liste = map.get(cle);
+    if (liste) liste.push(p); else map.set(cle, [p]);
+  }
+  const groupes = [...map.values()].map(liste => ({
+    params: [...liste].sort((a, b) => a.order - b.order),
+  }));
+  groupes.sort((a, b) => a.params[0].order - b.params[0].order);
+  return groupes;
 }
 
 /**
@@ -273,8 +313,16 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     }
     return max;
   };
+  // Groupes de panneaux (mode « Panneaux ») : calculés ici, avant la mise en
+  // page, parce qu'un groupe à deux axes a besoin d'une marge de droite —
+  // comme le mode « Graphe unique » en a déjà besoin pour son propre axe
+  // droit. Sans groupe (cas par défaut), chaque groupe ne contient qu'un
+  // paramètre : aucun n'a besoin d'un second axe, la marge ne change pas.
+  const groupesPanneaux = grouperPourPanneaux(params);
+  const needsGroupRightAxis = s.chartMode === 'stacked' &&
+    groupesPanneaux.some(g => g.params.length > 1 && repartirAxes(mesuresDe, g.params).droite.length > 0);
   const marginLeft = Math.round(clamp(largeurGraduations() + 16, 66, Math.max(66, width * 0.22)));
-  const marginRight = s.chartMode === 'single' ? marginLeft : 24;
+  const marginRight = (s.chartMode === 'single' || needsGroupRightAxis) ? marginLeft : 24;
   const plotWidth = width - marginLeft - marginRight;
   const layout: Layout = { width, marginLeft, marginRight, plotWidth };
 
@@ -330,27 +378,50 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
 
   if (s.chartMode === 'stacked' && params.length) {
     // ── Mode panneaux empilés ──
+    //
+    // Un panneau par GROUPE, pas par paramètre : par défaut chaque paramètre
+    // est seul dans son groupe (voir `grouperPourPanneaux`), et cette boucle
+    // se comporte exactement comme avant — un panneau par paramètre, dans le
+    // même ordre. Un groupe à plusieurs membres (choisi par le médecin) est
+    // rendu par `groupPanel`, qui répartit ses séries sur un ou deux axes
+    // avec la même règle que le mode « Graphe unique ».
     const gap = 26;
     /*
      * Hauteur PAR panneau, pas hauteur totale répartie : à six paramètres, une
      * enveloppe fixe de 520 px donnait des bandes de 65 px où toutes les courbes
      * paraissaient plates. Une figure de compte-rendu doit rester lisible quel
      * que soit le nombre de séries — elle grandit, elle ne s'écrase pas.
+     *
+     * Le calcul porte sur le nombre de PANNEAUX affichés (groupes), pas le
+     * nombre de paramètres : deux paramètres réunis dans un même panneau ne
+     * doivent pas le faire rétrécir comme s'il y en avait deux à afficher.
      */
-    const hauteurConfort = params.length <= 2 ? 240 : params.length <= 4 ? 170 : 130;
-    const panelH = Math.max(110, Math.min(hauteurConfort, 560 / Math.min(params.length, 3)));
+    const nbPanneaux = groupesPanneaux.length;
+    const hauteurConfort = nbPanneaux <= 2 ? 240 : nbPanneaux <= 4 ? 170 : 130;
+    const panelH = Math.max(110, Math.min(hauteurConfort, 560 / Math.min(nbPanneaux, 3)));
+    const globalIndex = new Map(params.map((p, i) => [p.id, i]));
     let py = availTop;
-    params.forEach((p, pi) => {
-      const pts = collectPoints(mesuresDe(p), p, xm.xOf);
-      const sc = echelles.get(p.id)!;
-      const y0 = py;
-      const y1 = py + panelH;
-      const yOf = (v: number) => y1 - ((v - sc.min) / (sc.max - sc.min)) * (y1 - y0);
+    for (const g of groupesPanneaux) {
+      if (g.params.length === 1) {
+        const p = g.params[0];
+        const pi = globalIndex.get(p.id)!;
+        const pts = collectPoints(mesuresDe(p), p, xm.xOf);
+        const sc = echelles.get(p.id)!;
+        const y0 = py;
+        const y1 = py + panelH;
+        const yOf = (v: number) => y1 - ((v - sc.min) / (sc.max - sc.min)) * (y1 - y0);
 
-      panelsSVG += panel(p, pi, pts, sc, yOf, y0, y1, layout, xm, s, hotspots, false);
-      py = y1 + gap;
-      plotBottom = y1;
-    });
+        panelsSVG += panel(p, pi, pts, sc, yOf, y0, y1, layout, xm, s, hotspots, false);
+        py = y1 + gap;
+        plotBottom = y1;
+      } else {
+        const indices = g.params.map(p => globalIndex.get(p.id)!);
+        const rendu = groupPanel(g.params, indices, mesuresDe, py, panelH, layout, xm, s, hotspots, ecrasees);
+        panelsSVG += rendu.svg;
+        py = rendu.y1 + gap;
+        plotBottom = rendu.y1;
+      }
+    }
     plotAreaBottom = plotBottom;
     // Axe X commun sous le dernier panneau
     panelsSVG += xAxis(xm, plotBottom, layout);
@@ -806,6 +877,131 @@ function panel(
 
   out += series(p, pi, pts, yOf, s, hotspots, y0, y1);
   return out;
+}
+
+/**
+ * Panneau à plusieurs paramètres (groupe choisi par le médecin).
+ *
+ * Répartit les séries du groupe entre un axe gauche et, au besoin, un axe
+ * droit — la même règle que `repartirAxes` en mode « Graphe unique » (jamais
+ * plus de deux axes, même unité jamais scindée). Contrairement au panneau
+ * simple, le titre ne peut pas être « nom (unité) » : plusieurs séries aux
+ * couleurs et unités propres se disputent la place, donc chaque série est
+ * listée avec sa couleur, son marqueur et sa flèche d'axe (← / →) juste
+ * au-dessus du panneau — une mini-légende locale, sur autant de lignes que
+ * nécessaire si les noms ne tiennent pas sur une seule.
+ *
+ * Pas de bande de normale ici : avec deux échelles dans un même panneau, une
+ * bande calée sur l'une des deux se lirait comme si elle valait pour l'autre
+ * — plus trompeur qu'utile. Le médecin qui veut la bande d'un paramètre le
+ * ressort de son groupe.
+ */
+function groupPanel(
+  groupParams: Parameter[],
+  indices: number[],
+  mesuresDe: (p: Parameter) => StudyState['measurements'],
+  py: number,
+  panelH: number,
+  layout: Layout, xm: ReturnType<typeof buildXMapper>,
+  s: StudyState['settings'],
+  hotspots: RenderResult['hotspots'],
+  ecrasees: string[],
+): { svg: string; y1: number } {
+  const { marginLeft, plotWidth } = layout;
+  const { gauche, droite } = repartirAxes(mesuresDe, groupParams);
+
+  // Mini-légende : une entrée par série, mise en ligne(s) au-dessus du panneau.
+  const entrees = groupParams.map((p, idx) => {
+    const onRight = droite.includes(p);
+    const repere = droite.length ? (onRight ? ' →' : ' ←') : '';
+    const ul = unitLabel(p);
+    const texte = (ul ? `${p.name} (${ul})` : p.name) + repere;
+    return { p, i: indices[idx], texte, w: 14 + largeurTexte(texte, 11.5, true) + 16 };
+  });
+  const lignes: (typeof entrees)[] = [];
+  {
+    let cur: typeof entrees = [];
+    let used = 0;
+    for (const e of entrees) {
+      if (cur.length && used + e.w > plotWidth) { lignes.push(cur); cur = []; used = 0; }
+      cur.push(e); used += e.w;
+    }
+    if (cur.length) lignes.push(cur);
+  }
+  const LIGNE_H = 15;
+  // Un panneau simple loge son titre sur une ligne dans les ~22 px d'air déjà
+  // laissés par l'écart entre panneaux (`gap`) : au-delà, il faut repousser
+  // le panneau vers le bas pour ne pas chevaucher celui du dessus.
+  const HEADROOM = 22;
+  const titreH = lignes.length * LIGNE_H;
+  const y0 = py + Math.max(0, titreH - HEADROOM);
+  const y1 = y0 + panelH;
+
+  let out = '';
+  const baseY = y0 - 4;
+  lignes.forEach((ligne, li) => {
+    const y = baseY - (lignes.length - 1 - li) * LIGNE_H;
+    let lx = marginLeft;
+    for (const e of ligne) {
+      const color = e.p.color || '#2a78d6';
+      const shape = MARKER_SHAPES[e.i % MARKER_SHAPES.length];
+      out += marker(shape, lx + 4, y - 3.5, 3.5, color);
+      out += `<text x="${n(lx + 12)}" y="${n(y)}" font-family="${FONT}" font-size="11.5" font-weight="600" fill="${INK}">${esc(e.texte)}</text>`;
+      lx += e.w;
+    }
+  });
+
+  const scL = valueScaleMulti(mesuresDe, gauche);
+  const scR = droite.length ? valueScaleMulti(mesuresDe, droite) : null;
+  const yOfL = (v: number) => y1 - ((v - scL.min) / (scL.max - scL.min)) * (y1 - y0);
+  const yOfR = scR ? (v: number) => y1 - ((v - scR.min) / (scR.max - scR.min)) * (y1 - y0) : yOfL;
+
+  scL.ticks.forEach(t => {
+    const yy = yOfL(t);
+    if (yy < y0 - 0.5 || yy > y1 + 0.5) return;
+    out += `<line x1="${marginLeft}" y1="${n(yy)}" x2="${marginLeft + plotWidth}" y2="${n(yy)}" stroke="${GRID}" stroke-width="1"/>`;
+    out += `<text x="${marginLeft - 8}" y="${n(yy + 3.5)}" text-anchor="end" font-family="${FONT}" font-size="10" fill="${MUTED}">${fmtTick(t, scL.step)}</text>`;
+  });
+  out += `<line x1="${marginLeft}" y1="${n(y0)}" x2="${marginLeft}" y2="${n(y1)}" stroke="${AXIS}" stroke-width="1.2"/>`;
+  out += `<line x1="${marginLeft}" y1="${n(y1)}" x2="${marginLeft + plotWidth}" y2="${n(y1)}" stroke="${AXIS}" stroke-width="1.2"/>`;
+  const titreGauche = libelleAxe(gauche);
+  if (titreGauche) {
+    out += `<text transform="translate(16,${n((y0 + y1) / 2)}) rotate(-90)" text-anchor="middle" font-family="${FONT}" font-size="10.5" fill="${INK}">${esc(titreGauche)}</text>`;
+  }
+
+  if (scR) {
+    out += `<line x1="${marginLeft + plotWidth}" y1="${n(y0)}" x2="${marginLeft + plotWidth}" y2="${n(y1)}" stroke="${AXIS}" stroke-width="1.2"/>`;
+    scR.ticks.forEach(t => {
+      const yy = yOfR(t);
+      if (yy < y0 - 0.5 || yy > y1 + 0.5) return;
+      out += `<text x="${marginLeft + plotWidth + 8}" y="${n(yy + 3.5)}" text-anchor="start" font-family="${FONT}" font-size="10" fill="${MUTED}">${fmtTick(t, scR.step)}</text>`;
+    });
+    const titreDroite = libelleAxe(droite);
+    if (titreDroite) {
+      out += `<text transform="translate(${layout.width - 14},${n((y0 + y1) / 2)}) rotate(90)" text-anchor="middle" font-family="${FONT}" font-size="10.5" fill="${INK}">${esc(titreDroite)}</text>`;
+    }
+  }
+
+  // Même règle qu'en mode « Graphe unique » : une série écrasée au ras de son
+  // axe n'est pas mensongère (elle est tracée juste), mais illisible. On le
+  // signale plutôt que de laisser croire à un paramètre resté plat.
+  for (const p of groupParams) {
+    const sc = droite.includes(p) ? scR! : scL;
+    const vs = mesuresDe(p).map(m => m.value).filter(v => isFinite(v));
+    if (!vs.length) continue;
+    const etendue = sc.max - sc.min;
+    if (etendue > 0 && (Math.max(...vs) - Math.min(...vs)) / etendue < 0.04) ecrasees.push(p.name);
+  }
+
+  groupParams.forEach((p, idx) => {
+    const i = indices[idx];
+    const onRight = droite.includes(p);
+    const yOf = onRight ? yOfR : yOfL;
+    const pts = collectPoints(mesuresDe(p), p, xm.xOf);
+    out += series(p, i, pts, yOf, s, hotspots, y0, y1, motifTrait(i, true));
+  });
+
+  return { svg: out, y1 };
 }
 
 /**
