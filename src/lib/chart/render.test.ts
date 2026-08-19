@@ -290,6 +290,118 @@ describe('renderChart — marge gauche et graduations', () => {
   });
 });
 
+describe('renderChart — panneaux groupés (panelGroup)', () => {
+  const quatre = (overrides: (Partial<StudyState['parameters'][number]> | undefined)[] = []) => {
+    const noms = ['CRP', 'Créatinine', 'Hémoglobine', 'Plaquettes'];
+    const unites = ['mg/L', 'µmol/L', 'g/dL', 'G/L'];
+    const params = noms.map((n, i) => ({
+      id: 'p' + i, name: n, unit: unites[i], category: 'biologie' as const,
+      color: '#2a78d6', order: i, ...(overrides[i] || {}),
+    }));
+    const mesures = noms.flatMap((_, i) => [
+      { id: `a${i}`, parameterId: 'p' + i, date: '2025-01-06', value: [148, 245, 11.8, 400][i] },
+      { id: `b${i}`, parameterId: 'p' + i, date: '2025-02-06', value: [90, 165, 10.9, 320][i] },
+    ]);
+    return etudeSimple(params, mesures);
+  };
+
+  // Lignes verticales d'axe Y (gauche ou droit d'un panneau) : x1 === x2,
+  // épaisseur 1,2 — ce qui les distingue des graduations de l'axe X en bas
+  // (épaisseur 1) qui sont, elles aussi, verticales.
+  const lignesAxe = (svg: string) =>
+    [...svg.matchAll(/<line x1="([\d.]+)" y1="[-\d.]+" x2="\1" y2="[-\d.]+" stroke="[^"]+" stroke-width="1\.2"\/>/g)]
+      .map(m => +m[1]);
+
+  it('sans groupe : un panneau par paramètre, comportement inchangé', () => {
+    const svg = renderChart(quatre(), 920).svg;
+    // Quatre panneaux = quatre axes Y (une ligne verticale d'axe par panneau,
+    // jamais de ligne d'axe droit en mode Panneaux sans groupe).
+    expect(lignesAxe(svg).length).toBe(4);
+    expect(svg).not.toContain('→');
+    expect(svg).not.toContain('←');
+  });
+
+  it('deux paramètres groupés partagent un seul panneau', () => {
+    const gid = 'g1';
+    const svg = renderChart(quatre([{ panelGroup: gid }, { panelGroup: gid }]), 920).svg;
+    // CRP et Créatinine sont d'amplitudes proches (ratio < 8) : ils restent
+    // sur un seul axe partagé. Trois panneaux affichés : le groupe (1 axe) +
+    // Hémoglobine (1 axe) + Plaquettes (1 axe) = trois lignes d'axe.
+    expect(lignesAxe(svg).length).toBe(3);
+    expect(svg).toContain('CRP');
+    expect(svg).toContain('Créatinine');
+  });
+
+  it('deux unités très éloignées dans un groupe donnent deux axes (← / →)', () => {
+    // CRP (mg/L) et Plaquettes (unité changée en ng/mL, valeurs ×50) :
+    // l'écart d'amplitude dépasse le seuil de bascule à deux axes (×8).
+    const gid = 'g1';
+    const etude = quatre([{ panelGroup: gid }, undefined, undefined, { panelGroup: gid, unit: 'ng/mL' }]);
+    etude.measurements = etude.measurements.map(m =>
+      m.parameterId === 'p3' ? { ...m, value: m.value * 50 } : m,
+    );
+    const svg = renderChart(etude, 920).svg;
+    expect(svg).toContain('←');
+    expect(svg).toContain('→');
+    // Le groupe porte deux axes, Créatinine et Hémoglobine un chacune : 4 au total.
+    expect(lignesAxe(svg).length).toBe(4);
+  });
+
+  it('une même unité ne se scinde jamais entre deux axes dans un groupe', () => {
+    // Deux paramètres groupés partageant la même unité restent sur un seul axe,
+    // même à amplitudes très différentes.
+    const gid = 'g1';
+    const etude = quatre([{ panelGroup: gid }, undefined, undefined, { panelGroup: gid, unit: 'mg/L' }]);
+    etude.measurements = etude.measurements.map(m =>
+      m.parameterId === 'p3' ? { ...m, value: m.value * 50 } : m,
+    );
+    const svg = renderChart(etude, 920).svg;
+    expect(svg).not.toContain('→');
+    expect(lignesAxe(svg).length).toBe(3); // le groupe n'a qu'un seul axe
+  });
+
+  it('signale une série écrasée dans un panneau groupé partageant un axe', () => {
+    // CRP et Créatinine groupés, même axe (amplitudes proches, pas de bascule
+    // à deux axes) : on écrase artificiellement la variation de CRP pour
+    // qu'elle devienne un trait quasi plat sur l'échelle partagée, dominée
+    // par Créatinine.
+    const gid = 'g1';
+    const etude = quatre([{ panelGroup: gid }, { panelGroup: gid }]);
+    etude.measurements = etude.measurements.map(m =>
+      m.parameterId === 'p0' ? { ...m, value: m.date === '2025-01-06' ? 140 : 141 } : m,
+    );
+    const { ecrasees } = renderChart(etude, 920);
+    expect(ecrasees).toContain('CRP');
+  });
+
+  it('un groupe de trois paramètres reste à deux axes au plus', () => {
+    const gid = 'g1';
+    const etude = quatre([{ panelGroup: gid }, { panelGroup: gid }, undefined, { panelGroup: gid, unit: 'ng/mL' }]);
+    etude.measurements = etude.measurements.map(m =>
+      m.parameterId === 'p3' ? { ...m, value: m.value * 50 } : m,
+    );
+    const svg = renderChart(etude, 920).svg;
+    // Le groupe (CRP + Créatinine + Plaquettes, trois unités) a besoin de
+    // deux axes, jamais trois : au plus deux abscisses distinctes portent une
+    // ligne d'axe dans tout le graphique (gauche commun, droit commun).
+    expect(new Set(lignesAxe(svg)).size).toBeLessThanOrEqual(2);
+    expect(svg).toContain('←');
+    expect(svg).toContain('→');
+  });
+
+  it('le mode « Graphe unique » ignore les groupes', () => {
+    // Les groupes ne concernent que le mode « Panneaux » ; le graphe unique
+    // continue de répartir tous les paramètres ensemble, comme avant — le
+    // rendu est rigoureusement identique, groupe ou pas.
+    const gid = 'g1';
+    const etude = quatre([{ panelGroup: gid }, { panelGroup: gid }]);
+    etude.settings = { ...etude.settings, chartMode: 'single' };
+    const groupe = renderChart(etude, 920).svg;
+    const sansGroupe = renderChart({ ...quatre(), settings: etude.settings }, 920).svg;
+    expect(groupe).toBe(sansGroupe);
+  });
+});
+
 describe('renderChart — densité des marqueurs', () => {
   it('rétrécit les marqueurs quand les points se serrent', () => {
     const mesure = (n: number) => etudeSimple(
