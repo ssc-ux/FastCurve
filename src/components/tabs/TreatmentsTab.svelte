@@ -4,6 +4,7 @@
   import type { TreatmentKind } from '../../lib/models/types';
   import { getKnownDrugs } from '../../lib/learn/memory';
   import { uiBus } from '../../lib/models/ui.svelte';
+  import { posologiesPour, datesDuSchema, type SchemaPosologie } from '../../lib/models/posologies';
   import TreatmentEditor from './TreatmentEditor.svelte';
 
   const knownDrugs = getKnownDrugs();
@@ -12,6 +13,31 @@
   let kind = $state<TreatmentKind>('continuous');
   let start = $state(todayISO());
   let openId = $state<string | null>(null);
+
+  // Puces de posologie standard (#12) : proposées dès que le nom tapé
+  // correspond à un médicament dont on connaît un schéma sûr — cliquer en
+  // choisit un plutôt que de taper la dose (et, pour un schéma à plusieurs
+  // prises, crée directement les événements aux bonnes dates).
+  const schemasProposes = $derived(posologiesPour(name));
+
+  function choisirPosologie(schema: SchemaPosologie) {
+    const n = name.trim();
+    if (!n) return;
+    const dates = datesDuSchema(start, schema);
+    let premier: string | null = null;
+    for (const d of dates) {
+      const t = store.addTreatment({ name: n, kind: schema.kind, start: d, dose: schema.dose });
+      if (premier === null) premier = t.id;
+    }
+    uiBus.toast(
+      dates.length > 1
+        ? `${dates.length} événements créés — ${schema.libelle}.`
+        : `« ${n} » ajouté — ${schema.libelle}.`,
+    );
+    name = '';
+    kind = 'continuous';
+    openId = premier;
+  }
 
   // Annotations
   let annText = $state('');
@@ -99,6 +125,14 @@
         onblur={(e) => dateBlur(e, start, (iso) => (start = iso))} />
       <button class="primary" onclick={add}>Ajouter</button>
     </div>
+    {#if schemasProposes.length}
+      <div class="schemas">
+        <span class="small muted">Schéma standard :</span>
+        {#each schemasProposes as s (s.libelle)}
+          <button class="chip" onclick={() => choisirPosologie(s)} title="Remplit la dose{s.joursSuivants?.length ? ` et crée les ${s.joursSuivants.length + 1} événements` : ''}">{s.libelle}</button>
+        {/each}
+      </div>
+    {/if}
     <p class="hint">Après l'ajout, précisez la dose ou la <strong>décroissance</strong> dans l'éditeur qui s'ouvre.</p>
   </div>
 
@@ -167,6 +201,9 @@
   .seg button { border: none; background: transparent; border-radius: 6px; padding: 5px 11px; font-size: 12.5px; color: var(--muted); }
   .seg button.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
   .hint { font-size: 11.5px; color: var(--faint); margin: 8px 0 0; }
+  .schemas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 9px; }
+  .chip { border: 1px solid var(--border-strong); background: var(--panel); color: var(--ink); font-size: 12px; padding: 4px 10px; border-radius: 999px; }
+  .chip:hover { background: var(--accent-weak, #eaf2fb); border-color: var(--accent); color: var(--accent); }
   .trow { overflow: hidden; }
   .head { display: flex; align-items: center; gap: 9px; width: 100%; border: none; background: transparent; padding: 10px 12px; text-align: left; }
   .head:hover { background: var(--panel-2); }
