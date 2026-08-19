@@ -12,8 +12,8 @@
 
   // Vue « Saisir » (grille) ou « Importer » (capture / compte-rendu)
   let mode = $state<'saisir' | 'importer'>('saisir');
-  let importInitial = $state<'photo' | 'text'>('photo');
-  function openImport(kind: 'photo' | 'text') { importInitial = kind; mode = 'importer'; }
+  let importInitial = $state<'photo' | 'text' | 'dictee'>('photo');
+  function openImport(kind: 'photo' | 'text' | 'dictee') { importInitial = kind; mode = 'importer'; }
 
   // Collage global d'image → bascule automatiquement en import
   $effect(() => {
@@ -688,7 +688,8 @@
 <div class="data">
   <div class="modeseg">
     <button class:on={mode === 'saisir'} onclick={() => (mode = 'saisir')}>⌨️ Saisir</button>
-    <button class:on={mode === 'importer'} onclick={() => openImport('photo')}>📥 Importer</button>
+    <button class:on={mode === 'importer' && importInitial !== 'dictee'} onclick={() => openImport('photo')}>📥 Importer</button>
+    <button class:on={mode === 'importer' && importInitial === 'dictee'} onclick={() => openImport('dictee')}>🎙️ Dicter</button>
   </div>
 
   {#if mode === 'importer'}
@@ -750,6 +751,7 @@
       <div class="depart-b">
         <button class="qs" onclick={() => openImport('photo')}>📷 Coller une capture</button>
         <button class="qs" onclick={() => openImport('text')}>📄 Coller un compte-rendu</button>
+        <button class="qs" onclick={() => openImport('dictee')}>🎙️ Dicter les résultats</button>
         <span class="astuce"><kbd>Ctrl</kbd>+<kbd>V</kbd> fonctionne aussi depuis n'importe où.</span>
       </div>
     </div>
