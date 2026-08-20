@@ -83,8 +83,8 @@
   let activeTab = $state<Tab>('data');
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: 'data', label: 'Données', icon: 'table' },
-    { id: 'treatments', label: 'Repères', icon: 'pill' },
+    { id: 'data', label: 'Biologie/EFR', icon: 'table' },
+    { id: 'treatments', label: 'Traitements', icon: 'pill' },
     { id: 'settings', label: 'Réglages', icon: 'settings' },
   ];
 
@@ -296,8 +296,8 @@
      pose un `max-height` en ligne qui l'emporterait sinon. */
   .body.horizontal.vide .sidebar { flex: 62 38 0%; max-height: none !important; }
   .body.horizontal.vide .chart-area { flex: 38 62 0%; }
-  /* Les onglets Repères et Réglages sont des formulaires : en pleine largeur
-     ils deviennent illisibles. On les garde dans une colonne confortable. */
+  /* Les onglets Traitements et Réglages sont des formulaires : en pleine
+     largeur ils deviennent illisibles. On les garde dans une colonne confortable. */
   .body.horizontal .tab-content.forme { max-width: 760px; }
 
   .tabs { display: flex; gap: 2px; padding: 10px 12px 0; background: var(--panel); flex-wrap: wrap; }

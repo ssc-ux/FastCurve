@@ -2,8 +2,8 @@
   let { onClose }: { onClose: () => void } = $props();
 
   const steps = [
-    { icon: '📥', t: 'Ajoutez vos données', d: 'Collez une capture (Ctrl+V), saisissez à la main, ou collez un compte-rendu — la courbe se génère aussitôt.' },
-    { icon: '💊', t: 'Ajoutez les traitements', d: 'Barres, décroissances de corticoïdes, événements et annotations dans l’onglet « Repères ».' },
+    { icon: '📥', t: 'Ajoutez vos données', d: 'Collez une capture (Ctrl+V), saisissez à la main, ou dictez les résultats — la courbe se génère aussitôt.' },
+    { icon: '💊', t: 'Ajoutez les traitements', d: 'Barres, décroissances de corticoïdes, événements, compte-rendu collé et annotations dans l’onglet « Traitements ».' },
     { icon: '📤', t: 'Exportez', d: 'Image haute résolution, PDF / impression A4, ou copie dans le presse-papiers — qualité publication.' },
   ];
 

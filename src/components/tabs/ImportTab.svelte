@@ -15,14 +15,13 @@
   import { isPdf, pdfToCanvases, canvasToImage } from '../../lib/ocr/pdf';
   import { preheatOcr } from '../../lib/ocr/ocr';
   import { reconnaitreTableau, type TableauLu } from '../../lib/ocr/pipeline';
-  import { parseReport, type ExtractedTreatment } from '../../lib/text/reportParser';
-  import { todayISO, uid, formatDate, parseDateSouple } from '../../lib/models/types';
+  import { uid, formatDate, parseDateSouple } from '../../lib/models/types';
   import { matchCatalog } from '../../lib/models/catalog';
-  import { learnAnalyte, lookupAnalyte, learnDrug, getKnownDrugs } from '../../lib/learn/memory';
+  import { learnAnalyte, lookupAnalyte } from '../../lib/learn/memory';
   import { uiBus } from '../../lib/models/ui.svelte';
   import DicteeBio from './DicteeBio.svelte';
 
-  let { initialMode = 'photo', onImported = () => {} }: { initialMode?: 'photo' | 'text' | 'dictee'; onImported?: () => void } = $props();
+  let { initialMode = 'photo', onImported = () => {} }: { initialMode?: 'photo' | 'dictee'; onImported?: () => void } = $props();
   // svelte-ignore state_referenced_locally
   const importMode = initialMode;
 
@@ -37,61 +36,6 @@
       if (f) useFile(f);
     }
   });
-
-  // ── Import texte (compte-rendu / carré bleu) ──
-  type TRow = ExtractedTreatment & { include: boolean; origName: string };
-  let reportText = $state('');
-  let trows = $state<TRow[]>([]);
-  let analyzed = $state(false);
-
-  function analyzeText() {
-    const list = parseReport(reportText, getKnownDrugs());
-    trows = list.map(t => ({ ...t, include: true, origName: t.name }));
-    analyzed = true;
-  }
-
-  /** Fin par défaut d'une décroissance repérée dans un compte-rendu. */
-  function plusSixMois(iso: string): string {
-    const d = new Date(iso);
-    d.setMonth(d.getMonth() + 6);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-
-  function commitText() {
-    const rows = [...trows].filter(r => r.include && r.name.trim())
-      .sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999'));
-    const openByName = new Map<string, string>(); // nom normalisé → id du traitement ouvert
-    const nrm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-    let added = 0, ended = 0;
-    for (const r of rows) {
-      if (r.isStop && r.date) {
-        const id = openByName.get(nrm(r.name));
-        if (id) { store.updateTreatment(id, { end: r.date }); ended++; continue; }
-        continue; // arrêt sans traitement ouvert correspondant → ignoré
-      }
-      const t = store.addTreatment({
-        name: r.name.trim(), dose: r.dose, kind: r.kind, start: r.date ?? todayISO(),
-      });
-      // « avec décroissance progressive » dans le compte-rendu : on amorce les
-      // paliers à partir de la dose lue, plutôt que de détecter sans rien faire.
-      if (r.taper && r.kind === 'continuous') {
-        const n = (r.dose ?? '').match(/-?\d+(?:[.,]\d+)?/);
-        const depart = n ? parseFloat(n[0].replace(',', '.')) : 0;
-        if (depart > 0) {
-          store.updateTreatment(t.id, {
-            dosePoints: [{ date: t.start, dose: depart }, { date: plusSixMois(t.start), dose: 0 }],
-            doseUnit: 'mg/j',
-          });
-        }
-      }
-      added++;
-      learnDrug(r.origName, r.name); // apprentissage : retenir ce médicament
-      if (r.kind === 'continuous') openByName.set(nrm(r.name), t.id);
-    }
-    trows = []; analyzed = false; reportText = '';
-    uiBus.toast(`${added} traitement(s) ajouté(s)${ended ? `, ${ended} fin(s) de traitement` : ''}.`);
-    onImported();
-  }
 
   // ── Import d'une capture ─────────────────────────────────────
 
@@ -426,64 +370,7 @@
 <svelte:window onkeydown={onValidationKey} />
 
 <div class="col" style="gap:14px;">
-  {#if importMode === 'text'}
-    <div class="card" style="padding:12px;">
-      <p class="faint small" style="margin-bottom:8px;">Collez le « carré bleu » (ou tout compte-rendu), ou dictez-le directement ici (Dragon). J'en extrais les <strong>lignes thérapeutiques</strong> — vous validez avant d'ajouter. 100% local.</p>
-      <!-- svelte-ignore a11y_autofocus -->
-      <textarea class="report" bind:value={reportText} placeholder="Collez ou dictez ici le texte du compte-rendu…" autofocus></textarea>
-      <div class="row" style="margin-top:8px;">
-        <div class="spacer"></div>
-        <button class="primary" disabled={!reportText.trim()} onclick={analyzeText}>Analyser</button>
-      </div>
-    </div>
-
-    {#if analyzed}
-      {#if trows.length}
-        <div class="card" style="padding:12px;">
-          <div class="row" style="margin-bottom:8px;"><strong>Traitements détectés</strong><span class="faint small"> — décochez/corrigez avant d'ajouter.</span></div>
-          <div style="overflow-x:auto;">
-            <table class="grid vgrid">
-              <thead>
-                <tr><th></th><th style="text-align:left;">Traitement</th><th>Dose</th><th>Type</th><th>Date</th><th></th></tr>
-              </thead>
-              <tbody>
-                {#each trows as r, ri (ri)}
-                  <tr class:excluded={!r.include}>
-                    <td><input type="checkbox" bind:checked={r.include} /></td>
-                    <td class="name"><input class="ninp" bind:value={r.name} /></td>
-                    <td><input class="uinp" bind:value={r.dose} /></td>
-                    <td>
-                      <select bind:value={r.kind}>
-                        <option value="continuous">Continu</option>
-                        <option value="event">Événement</option>
-                      </select>
-                    </td>
-                    <td><input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" value={r.date ? formatDate(r.date) : ''}
-                      onblur={(e) => { const brut = e.currentTarget.value; if (!brut.trim()) { r.date = null; return; } const iso = parseDateSouple(brut); if (iso) { r.date = iso; e.currentTarget.value = formatDate(iso); } }}
-                      onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); } }} /></td>
-                    <td class="flags">
-                      {#if r.isStop}<span class="flag stop">arrêt</span>{/if}
-                      {#if r.taper}<span class="flag taper">↘ décroissance</span>{/if}
-                    </td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
-          </div>
-          <p class="faint" style="font-size:12px;margin-top:6px;">« arrêt X » ferme la barre du traitement X (fin). « décroissance » : ajoutez les paliers dans l'onglet Repères après l'ajout.</p>
-          <div class="row" style="margin-top:10px;">
-            <span class="faint small">{trows.filter(r => r.include).length} sélectionné(s)</span>
-            <div class="spacer"></div>
-            <button onclick={() => { trows = []; analyzed = false; }}>Annuler</button>
-            <button class="primary" onclick={commitText}>Ajouter au graphique</button>
-          </div>
-        </div>
-      {:else}
-        <div class="callout">Aucune ligne thérapeutique reconnue. Vérifiez que le texte contient des médicaments datés (ex. « Mai 2020 : CELLCEPT 3 g/jour »).</div>
-      {/if}
-    {/if}
-
-  {:else if importMode === 'dictee'}
+  {#if importMode === 'dictee'}
     <DicteeBio {onImported} />
 
   {:else}
@@ -673,11 +560,4 @@
   .vgrid tr.excluded { opacity: .45; }
   .vgrid td.thumb { padding: 2px; }
   .vgrid td.thumb img { display: block; max-height: 34px; max-width: 260px; border: 1px solid var(--border); border-radius: 3px; }
-
-  .report { width: 100%; min-height: 260px; resize: vertical; font-size: 13px; line-height: 1.5; }
-  .vgrid .flags { white-space: nowrap; }
-  .flag { font-size: 12px; padding: 1px 6px; border-radius: 9px; margin-right: 3px; }
-  .flag.stop { background: #eee; color: #666; }
-  .flag.taper { background: #e6eff8; color: #2a6fb0; }
-  .vgrid .uinp { width: 66px; }
 </style>

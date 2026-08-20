@@ -2,9 +2,10 @@
   import { store } from '../../lib/models/store.svelte';
   import { todayISO, formatDate, lireDateSouple } from '../../lib/models/types';
   import type { TreatmentKind } from '../../lib/models/types';
-  import { getKnownDrugs } from '../../lib/learn/memory';
+  import { getKnownDrugs, learnDrug } from '../../lib/learn/memory';
   import { uiBus } from '../../lib/models/ui.svelte';
   import { posologiesPour, datesDuSchema, type SchemaPosologie } from '../../lib/models/posologies';
+  import { parseReport, type ExtractedTreatment } from '../../lib/text/reportParser';
   import TreatmentEditor from './TreatmentEditor.svelte';
 
   const knownDrugs = getKnownDrugs();
@@ -60,6 +61,63 @@
     // le nom vient d'être vidé fait créer un événement sans s'en apercevoir.
     kind = 'continuous';
     openId = t.id; // ouvre l'éditeur pour préciser dose / décroissance
+  }
+
+  // ── Import depuis un compte-rendu (« carré bleu ») ──────────────
+  // La zone traitement d'un compte-rendu ne concerne QUE les traitements :
+  // ce geste vit ici, pas dans Biologie/EFR.
+  type TRow = ExtractedTreatment & { include: boolean; origName: string };
+  let showImport = $state(false);
+  let reportText = $state('');
+  let trows = $state<TRow[]>([]);
+  let analyzed = $state(false);
+
+  function analyzeText() {
+    const list = parseReport(reportText, getKnownDrugs());
+    trows = list.map(t => ({ ...t, include: true, origName: t.name }));
+    analyzed = true;
+  }
+
+  /** Fin par défaut d'une décroissance repérée dans un compte-rendu. */
+  function plusSixMois(iso: string): string {
+    const d = new Date(iso);
+    d.setMonth(d.getMonth() + 6);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function commitText() {
+    const rows = [...trows].filter(r => r.include && r.name.trim())
+      .sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999'));
+    const openByName = new Map<string, string>(); // nom normalisé → id du traitement ouvert
+    const nrm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+    let added = 0, ended = 0;
+    for (const r of rows) {
+      if (r.isStop && r.date) {
+        const id = openByName.get(nrm(r.name));
+        if (id) { store.updateTreatment(id, { end: r.date }); ended++; continue; }
+        continue; // arrêt sans traitement ouvert correspondant → ignoré
+      }
+      const t = store.addTreatment({
+        name: r.name.trim(), dose: r.dose, kind: r.kind, start: r.date ?? todayISO(),
+      });
+      // « avec décroissance progressive » dans le compte-rendu : on amorce les
+      // paliers à partir de la dose lue, plutôt que de détecter sans rien faire.
+      if (r.taper && r.kind === 'continuous') {
+        const n = (r.dose ?? '').match(/-?\d+(?:[.,]\d+)?/);
+        const depart = n ? parseFloat(n[0].replace(',', '.')) : 0;
+        if (depart > 0) {
+          store.updateTreatment(t.id, {
+            dosePoints: [{ date: t.start, dose: depart }, { date: plusSixMois(t.start), dose: 0 }],
+            doseUnit: 'mg/j',
+          });
+        }
+      }
+      added++;
+      learnDrug(r.origName, r.name); // apprentissage : retenir ce médicament
+      if (r.kind === 'continuous') openByName.set(nrm(r.name), t.id);
+    }
+    trows = []; analyzed = false; reportText = ''; showImport = false;
+    uiBus.toast(`${added} traitement(s) ajouté(s)${ended ? `, ${ended} fin(s) de traitement` : ''}.`);
   }
 
   /**
@@ -136,6 +194,65 @@
     <p class="hint">Après l'ajout, précisez la dose ou la <strong>décroissance</strong> dans l'éditeur qui s'ouvre.</p>
   </div>
 
+  {#if !showImport}
+    <button class="linklike" onclick={() => (showImport = true)}>📄 Coller un compte-rendu</button>
+  {:else}
+    <div class="card" style="padding:12px;">
+      <p class="faint small" style="margin-bottom:8px;">Collez la zone traitement d'un compte-rendu (ou dictez-la avec Dragon). J'en extrais les <strong>lignes thérapeutiques</strong> — vous validez avant d'ajouter. 100% local.</p>
+      <!-- svelte-ignore a11y_autofocus -->
+      <textarea class="report" bind:value={reportText} placeholder="Collez ou dictez ici le texte du compte-rendu…" autofocus></textarea>
+      <div class="row" style="margin-top:8px;">
+        <button onclick={() => { showImport = false; reportText = ''; trows = []; analyzed = false; }}>Annuler</button>
+        <div class="spacer"></div>
+        <button class="primary" disabled={!reportText.trim()} onclick={analyzeText}>Analyser</button>
+      </div>
+
+      {#if analyzed}
+        {#if trows.length}
+          <div style="margin-top:12px; overflow-x:auto;">
+            <table class="grid vgrid">
+              <thead>
+                <tr><th></th><th style="text-align:left;">Traitement</th><th>Dose</th><th>Type</th><th>Date</th><th></th></tr>
+              </thead>
+              <tbody>
+                {#each trows as r, ri (ri)}
+                  <tr class:excluded={!r.include}>
+                    <td><input type="checkbox" bind:checked={r.include} /></td>
+                    <td class="name"><input class="ninp" bind:value={r.name} /></td>
+                    <td><input class="uinp" bind:value={r.dose} /></td>
+                    <td>
+                      <select bind:value={r.kind}>
+                        <option value="continuous">Continu</option>
+                        <option value="event">Événement</option>
+                      </select>
+                    </td>
+                    <td><input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" value={r.date ? formatDate(r.date) : ''}
+                      onfocus={dateFocus}
+                      onkeydown={(e) => dateKeydown(e, r.date ?? '')}
+                      onblur={(e) => dateBlur(e, r.date ?? '', (iso) => (r.date = iso))} /></td>
+                    <td class="flags">
+                      {#if r.isStop}<span class="flag stop">arrêt</span>{/if}
+                      {#if r.taper}<span class="flag taper">↘ décroissance</span>{/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+          <p class="faint" style="font-size:12px;margin-top:6px;">« arrêt X » ferme la barre du traitement X (fin). « décroissance » : ajoutez les paliers dans l'éditeur après l'ajout.</p>
+          <div class="row" style="margin-top:10px;">
+            <span class="faint small">{trows.filter(r => r.include).length} sélectionné(s)</span>
+            <div class="spacer"></div>
+            <button onclick={() => { trows = []; analyzed = false; }}>Annuler la lecture</button>
+            <button class="primary" onclick={commitText}>Ajouter</button>
+          </div>
+        {:else}
+          <div class="callout" style="margin-top:12px;">Aucune ligne thérapeutique reconnue. Vérifiez que le texte contient des médicaments datés (ex. « Mai 2020 : CELLCEPT 3 g/jour »).</div>
+        {/if}
+      {/if}
+    </div>
+  {/if}
+
   {#if treatments.length}
     <div class="col" style="gap:8px;">
       {#each treatments as t (t.id)}
@@ -204,6 +321,18 @@
   .schemas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 9px; }
   .chip { border: 1px solid var(--border-strong); background: var(--panel); color: var(--ink); font-size: 12px; padding: 4px 10px; border-radius: 999px; }
   .chip:hover { background: var(--accent-weak, #eaf2fb); border-color: var(--accent); color: var(--accent); }
+
+  .linklike { align-self: flex-start; border: none; background: transparent; color: var(--accent); font-size: 13px; padding: 2px 0; }
+  .linklike:hover { text-decoration: underline; }
+  .report { width: 100%; min-height: 220px; resize: vertical; font-size: 13px; line-height: 1.5; }
+  .vgrid .ninp { width: 160px; text-align: left; }
+  .vgrid .uinp { width: 74px; }
+  .vgrid .dinp { width: 128px; }
+  .vgrid .flags { white-space: nowrap; }
+  .flag { font-size: 12px; padding: 1px 6px; border-radius: 9px; margin-right: 3px; }
+  .flag.stop { background: #eee; color: #666; }
+  .flag.taper { background: #e6eff8; color: #2a6fb0; }
+
   .trow { overflow: hidden; }
   .head { display: flex; align-items: center; gap: 9px; width: 100%; border: none; background: transparent; padding: 10px 12px; text-align: left; }
   .head:hover { background: var(--panel-2); }

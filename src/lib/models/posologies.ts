@@ -1,6 +1,6 @@
 // ──────────────────────────────────────────────────────────────
 // Schémas de posologie standards proposés au médecin au moment d'ajouter
-// un traitement (onglet Repères) : des puces cliquables (« J1, J15 : 1 g »)
+// un traitement (onglet Traitements) : des puces cliquables (« J1, J15 : 1 g »)
 // qui remplissent la dose — et, pour un schéma à plusieurs prises, créent
 // directement les événements aux bonnes dates (ex. Rituximab J1 + J15) sans
 // que le médecin ait à calculer ni saisir chaque date.
