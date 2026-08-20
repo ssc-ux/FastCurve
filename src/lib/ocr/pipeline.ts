@@ -36,7 +36,7 @@ import {
   type ColonneCandidate, type DateLue as DateEntete,
 } from './roles';
 import {
-  analyserCellule, boiteEncre, colonnesDepuisGouttieres, detecterBandes,
+  analyserCellule, boiteEncre, colonnesDepuisAncres, colonnesDepuisGouttieres, detecterBandes,
   encreDansCellule, hauteurLigne, mediane, profilBandes,
   type Bande, type CarteEncre, type Colonne, type GeometrieCellule,
 } from './structure';
@@ -127,7 +127,7 @@ export function ecartMaxInterne(carte: CarteEncre, bande: Bande): number {
 }
 
 /** Étendue horizontale de l'encre d'une bande (null si la bande est vide). */
-function etendue(carte: CarteEncre, bande: Bande): { x0: number; x1: number } | null {
+export function etendue(carte: CarteEncre, bande: Bande): { x0: number; x1: number } | null {
   const w = carte.largeur;
   const y0 = Math.max(0, bande.y0), y1 = Math.min(carte.hauteur - 1, bande.y1);
   let a = w, b = -1;
@@ -184,6 +184,29 @@ export function isolerTableau(carte: CarteEncre, bandes: Bande[], hL: number): B
     if (colle && pleineLargeur) return bandes.slice(i0 - 1, i0 + meilleureLongueur);
   }
   return bandes.slice(meilleurDebut, meilleurDebut + meilleureLongueur);
+}
+
+/**
+ * Bandes décoratives : rangées d'icônes ou de pictogrammes (rappel, info,
+ * nombre de pièces jointes…) que certains systèmes hospitaliers intercalent
+ * SOUS la ligne de dates, une rangée par colonne. Ce ne sont pas des lignes
+ * de texte : leur hauteur dépasse largement celle d'une ligne normale (des
+ * icônes carrées, pas des chiffres). Les garder est doublement néfaste :
+ * elles corrompent la découpe en colonnes (l'espacement des icônes n'a
+ * aucun rapport avec celui des chiffres — une capture à 15 colonnes en
+ * produisait 40) et, lues comme une ligne de résultats, elles fabriquent une
+ * ligne fantôme sans la moindre valeur.
+ *
+ * On ne touche jamais à la première bande : c'est l'en-tête, et un en-tête
+ * en gras sur deux graisses de police est parfois un peu plus haut qu'une
+ * ligne de données — ce n'est pas une raison de l'écarter.
+ */
+export function ecarterBandesDecoratives(bandes: Bande[], hL: number): Bande[] {
+  if (bandes.length <= 2) return bandes;
+  const hauteurs = bandes.map(b => b.y1 - b.y0 + 1);
+  const hRef = mediane(hauteurs.slice(1)) || hL;
+  const seuil = Math.max(hL * 1.8, hRef * 1.8, 6);
+  return bandes.filter((b, i) => i === 0 || b.y1 - b.y0 + 1 <= seuil);
 }
 
 /**
@@ -276,6 +299,33 @@ export function blocPourColonne(blocs: Colonne[], col: Colonne, hL: number): Col
   return recouvrement(meilleur) > 0 || distance(meilleur) <= hL * 2 ? meilleur : null;
 }
 
+/**
+ * Territoire finalement retenu pour l'en-tête d'une colonne, marge de garde
+ * incluse.
+ *
+ * Un bloc de texte un peu plus large que sa colonne de valeurs (une date au-
+ * dessus d'un nombre à trois chiffres) garde tout son débordement — c'est le
+ * cas courant, et la plage (jusqu'à mi-chemin des colonnes voisines) est
+ * justement faite pour ça.
+ *
+ * Un bloc ANORMALEMENT plus large (plus de trois fois sa colonne, et 1,5 fois
+ * sa plage) est plafonné À la plage : c'est le signe que `blocsDeBande` a
+ * fusionné plusieurs en-têtes voisins en un seul bloc (en-têtes denses qui se
+ * touchent, beaucoup de colonnes de dates peu espacées) — sans ce plafond,
+ * CHAQUE colonne se voyait attribuer la ligne entière, et une seule date
+ * envahissait tous les rôles (plus de colonne de noms du tout).
+ */
+export function retenirBlocEntete(bloc: Colonne | null, col: Colonne, plage: Colonne, marge: number): Colonne {
+  if (!bloc) return plage;
+  const largeurCol = Math.max(1, col.x1 - col.x0 + 1);
+  const largeurBloc = bloc.x1 - bloc.x0 + 1;
+  const largeurPlage = plage.x1 - plage.x0 + 1;
+  const enorme = largeurBloc > largeurCol * 3 && largeurBloc > largeurPlage * 1.5;
+  return enorme
+    ? { x0: Math.max(bloc.x0, plage.x0), x1: Math.min(bloc.x1, plage.x1) }
+    : { x0: bloc.x0 - marge, x1: bloc.x1 + marge };
+}
+
 /** Découpe en colonnes, tolérante à une bande débordante (titre resté collé). */
 export function decouperTableau(carte: CarteEncre, bandes: Bande[], hL: number): Colonne[] {
   const profil = profilBandes(carte, bandes);
@@ -346,14 +396,22 @@ export async function reconnaitreTableau(
     return echec('Je n’ai trouvé aucun tableau dans cette image.');
   }
   const hL = hauteurLigne(toutes) || 12;
-  const bandes = isolerTableau(carte, toutes, hL);
+  const bandesIsolees = isolerTableau(carte, toutes, hL);
+  const bandes = ecarterBandesDecoratives(bandesIsolees, hL);
   if (bandes.length < 2) {
     return echec('Je n’ai trouvé qu’une seule ligne de texte : ce n’est pas un tableau.');
   }
+  // Bandes écartées comme décoratives (rangées d'icônes) : une partie de
+  // l'en-tête (les colonnes SANS icône — « Unité », « Normes » — n'ayant rien
+  // sous elles, leur libellé peut être centré verticalement à la même hauteur
+  // que la rangée d'icônes des colonnes de dates voisines). Gardées de côté
+  // pour l'ancrage de l'en-tête ci-dessous, jamais pour la découpe en
+  // colonnes ni pour la lecture des lignes.
+  const bandesDecoratives = bandesIsolees.filter(b => !bandes.includes(b));
   // Les colonnes sont établies sur les LIGNES DE DONNÉES seulement : la ligne
   // d'en-tête, plus large (une date au-dessus d'un nombre à trois chiffres) et
   // parfois posée sur un fond plein, boucherait toutes les gouttières.
-  const colonnes = decouperTableau(carte, bandes.slice(1), hL);
+  let colonnes = decouperTableau(carte, bandes.slice(1), hL);
   if (colonnes.length < 2) {
     return echec(
       'Je n’ai pas su séparer les colonnes de cette capture. ' +
@@ -390,8 +448,19 @@ export async function reconnaitreTableau(
     // Les valeurs étant alignées à droite et l'en-tête centré, le bloc déborde
     // très souvent la colonne vers la gauche : on le suit tel quel. La plage
     // ne sert que si aucun bloc ne se rattache à la colonne.
+    //
+    // Un bloc ANORMALEMENT plus large que sa colonne de données ne doit pas
+    // déborder au-delà de la plage : quand des en-têtes denses (beaucoup de
+    // colonnes de dates, peu de place) se touchent, `blocsDeBande` les
+    // fusionne en un seul bloc qui couvre toute la ligne — sans ce plafond,
+    // CHAQUE colonne se voyait attribuer la ligne entière, et la même date
+    // envahissait tous les rôles (plus de colonne de noms du tout). On ne
+    // plafonne que ce cas net (bloc bien plus large que trois colonnes) : un
+    // en-tête simplement un peu plus large que sa colonne de valeurs — le cas
+    // courant, une date au-dessus d'un nombre à trois chiffres — garde tout
+    // son débordement, c'est justement ce que la plage lui accorde.
     const marge = Math.max(2, Math.round(hL * 0.2));
-    const retenu = bloc ? { x0: bloc.x0 - marge, x1: bloc.x1 + marge } : plage;
+    const retenu = retenirBlocEntete(bloc, col, plage, marge);
     return {
       boite: {
         x0: retenu.x0, y0: bandes[bi].y0 - marge,
@@ -435,8 +504,121 @@ export async function reconnaitreTableau(
   }
   if (annule()) return echec('Lecture interrompue.');
 
+  // — Ancrage des colonnes sur l'en-tête, quand les gouttières ne suffisent
+  //   pas. —
+  //
+  // La découpe en colonnes ci-dessus (`decouperTableau`) est fondée sur
+  // l'encre des LIGNES DE DONNÉES : elle suppose qu'à peu près toutes les
+  // colonnes portent une valeur sur à peu près toutes les lignes. C'est vrai
+  // des bilans compacts du banc de test, mais c'est faux d'un bilan CUMULÉ
+  // réel, où chaque analyte n'est mesuré qu'à certaines dates — une colonne
+  // de date sans AUCUNE valeur sur les quelques lignes lues n'a alors aucune
+  // encre du tout, et se dissout dans la gouttière voisine : deux dates
+  // fusionnent en une, silencieusement.
+  //
+  // La ligne d'en-tête, elle, a TOUJOURS quelque chose sous chaque date. On
+  // la segmente donc indépendamment (comme pour un bandeau de couleur), et si
+  // elle donne plus de dates valides que la découpe par gouttières, on
+  // reconstruit les colonnes ANCRÉES sur ces dates : chaque frontière se pose
+  // au milieu de la plus large gouttière entre deux dates voisines, ou à
+  // mi-chemin à défaut. Le texte de chaque bloc, déjà lu, devient l'en-tête
+  // de la colonne correspondante — aucun OCR supplémentaire.
+  // Une bande décorative écartée juste après l'en-tête peut malgré tout
+  // porter le libellé DES COLONNES QUI N'ONT PAS D'ICÔNE (« Unité », « Normes »
+  // sont vides sur la ligne d'icônes, alors le moteur qui a produit la page
+  // centre leur libellé sur toute la hauteur de l'en-tête, à la hauteur des
+  // icônes). On la mêle donc à l'en-tête pour l'ancrage — mais seulement là où
+  // elle ajoute une colonne, jamais là où elle ne fait que répéter (en
+  // charabia) ce qu'une icône dit déjà sous une date déjà trouvée.
+  const bandeIcones = bandesDecoratives.find(
+    b => b.y0 > bandes[iEntete].y1 && b.y0 - bandes[iEntete].y1 < hL * 3,
+  );
+  const blocsDate = (blocsEntete.get(iEntete) ?? blocsDeBande(gris, bandes[iEntete], hL, bornesTable))
+    .map(b => ({ ...b, bande: bandes[iEntete] }));
+  const chevauche = (a: Colonne, b: Colonne) => a.x0 <= b.x1 && b.x0 <= a.x1;
+  const blocsIcones = bandeIcones
+    ? blocsDeBande(gris, bandeIcones, hL, bornesTable)
+        .filter(bi => !blocsDate.some(bt => chevauche(bi, bt)))
+        .map(b => ({ ...b, bande: bandeIcones }))
+    : [];
+  const blocsAncrage = [...blocsDate, ...blocsIcones].sort((a, b) => a.x0 - b.x0);
+  if (blocsAncrage.length >= 2) {
+    const margeAncrage = Math.max(2, Math.round(hL * 0.2));
+    const casAncrage: Cellule[] = blocsAncrage.map(b => ({
+      boite: { x0: b.x0 - margeAncrage, y0: b.bande.y0 - margeAncrage, x1: b.x1 + margeAncrage, y1: b.bande.y1 + margeAncrage },
+      encre: Math.max(1, encreDansCellule(carte, b.bande, b)),
+      inverse: celluleDe(carte, polarite, b.bande, b, hL).inverse,
+    }));
+    const textesAncrage = (await lire(casAncrage, 'texte', 'En-tête (ancrage)')).map(r => r.texte);
+    if (annule()) return echec('Lecture interrompue.');
+    // Relecture chiffrée systématique : à cette densité (beaucoup de colonnes,
+    // petite police), le mode « texte » libre confond parfois un chiffre du
+    // jour ou du mois (08 lu 18, 13 lu 03…) — un jour VALIDE mais FAUX, qui ne
+    // se signale à personne. La liste blanche « date » (chiffres et
+    // séparateurs seulement) n'a pas ce problème ; on la préfère chaque fois
+    // qu'elle donne, elle aussi, une date reconnaissable.
+    const relecturesDate = await lire(casAncrage, 'date', 'En-tête (ancrage, dates)');
+    if (annule()) return echec('Lecture interrompue.');
+    relecturesDate.forEach((r, i) => { if (lireDate(r.texte)) textesAncrage[i] = r.texte; });
+    const nDatesAncrage = textesAncrage.filter(t => !!lireDate(t)).length;
+    const nDatesGouttieres = entetes.filter(t => !!lireDate(t)).length;
+    const datesAncrage = blocsAncrage
+      .map((b, i) => ({ b, t: textesAncrage[i] }))
+      .filter(x => !!lireDate(x.t));
+    if (nDatesAncrage > nDatesGouttieres && datesAncrage.length >= 2) {
+      // On ne remplace QUE le territoire des dates, jamais les colonnes de
+      // noms / unité / normes : leur libellé d'en-tête est presque toujours
+      // bien plus étroit que leur contenu (« Analyte » contre
+      // « Anticorps anti-DNA », « Unite » contre une valeur d'unité longue),
+      // et ancrer sur ce libellé leur donnerait une largeur de bloc-en-tête,
+      // pas de colonne — un nom de deux caractères de trop court, tronqué à
+      // gauche. Les colonnes gouttières qui ne sont pas des dates restent
+      // donc telles quelles ; seules les dates sont reconstruites, ancrées.
+      const colonnesGardees = colonnes
+        .map((c, ci) => ({ c, ci }))
+        .filter(({ ci }) => !lireDate(entetes[ci]));
+      const xMinDate = Math.min(...datesAncrage.map(({ b }) => b.x0));
+      const xMaxDate = Math.max(...datesAncrage.map(({ b }) => b.x1));
+      const avantDates = colonnesGardees.filter(({ c }) => c.x1 < xMinDate);
+      const apresDates = colonnesGardees.filter(({ c }) => c.x0 > xMaxDate);
+      const borneGauche = avantDates.length ? Math.max(...avantDates.map(({ c }) => c.x1)) + 1 : bornesTable.gauche;
+      const borneDroite = apresDates.length ? Math.min(...apresDates.map(({ c }) => c.x0)) - 1 : bornesTable.droite;
+      const ancresDates = datesAncrage.map(({ b }) => (b.x0 + b.x1) / 2);
+      const minGouttiereAncrage = Math.max(5, Math.round(hL * 0.5));
+      const colonnesDates = colonnesDepuisAncres(
+        profilBandes(carte, bandes.slice(1)), ancresDates,
+        { gauche: borneGauche, droite: borneDroite }, minGouttiereAncrage,
+      );
+      const fusion = [
+        ...avantDates.map(({ c, ci }) => ({ colonne: c, entete: entetes[ci] })),
+        ...colonnesDates.map((c, i) => ({ colonne: c, entete: datesAncrage[i].t })),
+        ...apresDates.map(({ c, ci }) => ({ colonne: c, entete: entetes[ci] })),
+      ].sort((a, b) => a.colonne.x0 - b.colonne.x0);
+      colonnes = fusion.map(f => f.colonne);
+      entetes = fusion.map(f => f.entete);
+    }
+  }
+
+  // Certains systèmes hospitaliers intercalent, ENTRE les lignes d'un même
+  // tableau, une ligne de titre de section (« BIOCHIMIE (2 analyses) »),
+  // repliable, posée sur un bandeau gris. Ce n'est pas une ligne de résultats :
+  // son encre ne dépasse jamais la colonne des noms (rien en face, dans les
+  // colonnes de dates), alors qu'une vraie ligne d'analyte — même très
+  // incomplète — a toujours au moins une valeur quelque part sur sa largeur.
+  // Sans ce tri, elle devenait une ligne fantôme (un nom, aucune valeur) qui
+  // gonflait le nombre de lignes attendues et faisait chuter le taux de
+  // lecture en dessous du seuil d'échec.
+  const nomDroite = colonnes[0].x1;
+  const margeTitre = Math.round(hL * 0.6);
+  const estTitreDeSection = (bi: number): boolean => {
+    const e = etendue(carte, bandes[bi]);
+    return !!e && e.x1 <= nomDroite + margeTitre;
+  };
+
   const iDonnees: number[] = [];
-  for (let i = iEntete + 1; i < bandes.length; i++) iDonnees.push(i);
+  for (let i = iEntete + 1; i < bandes.length; i++) {
+    if (!estTitreDeSection(i)) iDonnees.push(i);
+  }
   if (!iDonnees.length) return echec('Le tableau ne contient aucune ligne de résultats.');
 
   // — Relecture chiffrée des en-têtes indécis : une date mal lue en mode texte
@@ -522,6 +704,20 @@ export async function reconnaitreTableau(
   for (const g of geos) for (const c of g) if (c.encre > 0) encres.push(c.encre);
   const encreTypique = encres.length ? mediane(encres) : 0;
 
+  // — Colonnes de dates anormalement larges : le signe qu'elles ont
+  //   probablement avalé deux dates voisines (gouttière non détectée entre
+  //   deux dates toutes deux peu remplies). On ne le corrige pas — on ne
+  //   SAIT pas où recouper — on le signale, sur CHAQUE case de la colonne,
+  //   même celles qui semblent parfaitement lisibles : c'est justement le cas
+  //   le plus trompeur (deux chiffres proprement recollés en un seul nombre
+  //   crédible). Comparaison à la MÉDIANE des largeurs de colonnes de dates,
+  //   pas à une constante : une capture dense a des colonnes bien plus
+  //   étroites qu'une capture aérée, et ce sont leurs largeurs mutuelles qui
+  //   comptent.
+  const largeursDates = colDates.map(d => colonnes[d.index].x1 - colonnes[d.index].x0 + 1);
+  const largeurMedianeDate = mediane(largeursDates) || 1;
+  const colonneAnormale = largeursDates.map(l => l > largeurMedianeDate * 1.7 && l > largeurMedianeDate + hL);
+
   // — Dates de colonnes —
   const dates: DateLue[] = colDates.map(d => {
     const v = jugerDate(d.date as DateEntete | null, 100);
@@ -565,6 +761,7 @@ export async function reconnaitreTableau(
         autresDeLaLigne: valeurs.filter((_, k) => k !== c).map(o => o.texte),
         glyphes: v.glyphes,
         caracteresLus: v.lus,
+        colonneAnormale: colonneAnormale[c],
       });
       return { texte: v.texte, douteux: verdict.douteux, motifs: verdict.motifs };
     });
