@@ -21,11 +21,33 @@
 import { matchCatalog } from '../models/catalog';
 import { decimalePerdue, ordreDeGrandeurSuspect, valeurDe } from './correction';
 import type { DateLue } from './roles';
+import { mediane } from './structure';
 
-/** En dessous de cette confiance Tesseract, on n'engage pas la lecture. */
-export const SEUIL_CONFIANCE_VALEUR = 72;
+/**
+ * En dessous de cette confiance Tesseract (bornes INCLUSES — une lecture
+ * pile au seuil n'est pas plus sûre qu'une lecture juste en dessous), on
+ * n'engage pas la lecture.
+ */
+export const SEUIL_CONFIANCE_VALEUR = 74;
 export const SEUIL_CONFIANCE_NOM = 70;
 export const SEUIL_CONFIANCE_DATE = 70;
+
+/**
+ * Écart de confiance, par rapport aux autres résultats de la MÊME ligne, en
+ * dessous duquel une lecture par ailleurs « acceptable » (au-dessus du seuil
+ * absolu) est quand même signalée.
+ *
+ * Une confusion de chiffres à risque (« 5 » lu « 9 », ou l'inverse — une
+ * capture réelle du CHU l'a montré : confiance 72 quand les cinq autres
+ * valeurs de la même ligne CPK étaient toutes à 95-96) ne donne pas
+ * forcément une confiance BASSE dans l'absolu : Tesseract « hésite un peu »,
+ * pas « refuse de lire ». C'est justement ce léger flottement, invisible à
+ * un seuil absolu unique, qui trahit la case à vérifier — quand ses voisines
+ * de ligne, elles, sont lues sans la moindre hésitation.
+ */
+const ECART_CONFIANCE_LIGNE = 15;
+/** Confiance en dessous de laquelle l'écart relatif n'est plus pertinent : au-delà, une lecture est de toute façon excellente, l'écart ne trahit plus rien. */
+const PLAFOND_CONFIANCE_RELATIVE = 90;
 
 export interface Verdict {
   douteux: boolean;
@@ -80,10 +102,29 @@ export interface ContexteValeur {
   nomAnalyte: string;
   /** Textes des autres cases de résultat de la même ligne. */
   autresDeLaLigne: string[];
+  /**
+   * Confiances Tesseract des autres cases de résultat de la même ligne
+   * (0 ou absentes = case vide, ignorées). Sert à repérer une case dont la
+   * lecture, sans être franchement mauvaise, est nettement moins sûre que
+   * ses voisines — le signe d'une confusion de chiffres (« 5 »/« 9 »…) que
+   * le seuil absolu, à lui seul, ne voit pas.
+   */
+  confiancesAutresDeLaLigne?: number[];
   /** Signes comptés dans l'encre par l'analyse géométrique. */
   glyphes?: number;
   /** Signes effectivement rendus par la reconnaissance (texte brut). */
   caracteresLus?: number;
+  /**
+   * La colonne de cette case est anormalement large par rapport aux autres
+   * colonnes de dates — signe qu'elle a probablement avalé deux dates
+   * voisines faute de gouttière détectée entre elles (un bilan cumulé réel,
+   * où chaque analyte n'a pas de résultat à chaque date, laisse des colonnes
+   * de dates sans AUCUNE encre sur les quelques lignes lues, qui se
+   * dissolvent alors dans la colonne voisine). Toute case de cette colonne
+   * est signalée, MÊME quand elle a l'air parfaitement lisible : une lecture
+   * nette de deux chiffres recollés est le plus trompeur des cas.
+   */
+  colonneAnormale?: boolean;
 }
 
 /**
@@ -106,10 +147,28 @@ export function jugerValeur(ctx: ContexteValeur): Verdict {
     if (ctx.encre >= Math.max(6, ctx.encreTypique * 0.35)) {
       return verdict(['une valeur semble présente sur l’image mais n’a pas pu être lue']);
     }
-    return SUR;
+    return ctx.colonneAnormale
+      ? verdict(['colonne anormalement large — peut mélanger deux dates voisines'])
+      : SUR;
   }
 
-  if (ctx.confiance > 0 && ctx.confiance < SEUIL_CONFIANCE_VALEUR) motifs.push('lecture peu sûre');
+  if (ctx.colonneAnormale) motifs.push('colonne anormalement large — peut mélanger deux dates voisines');
+
+  if (ctx.confiance > 0 && ctx.confiance <= SEUIL_CONFIANCE_VALEUR) motifs.push('lecture peu sûre');
+  else if (ctx.confiance > 0 && ctx.confiance < PLAFOND_CONFIANCE_RELATIVE) {
+    // Un seuil ABSOLU unique ne voit pas la case qui « hésite un peu » quand
+    // tout le reste de sa ligne est lu sans la moindre hésitation : c'est
+    // justement la signature d'une confusion de chiffres à risque (5/9,
+    // 3/8, 1/7…), pas d'une image globalement difficile — auquel cas TOUTE
+    // la ligne aurait une confiance médiocre, et l'écart ne se verrait pas.
+    const autres = (ctx.confiancesAutresDeLaLigne ?? []).filter(c => c > 0);
+    if (autres.length >= 2) {
+      const med = mediane(autres);
+      if (med - ctx.confiance >= ECART_CONFIANCE_LIGNE) {
+        motifs.push('lecture nettement moins sûre que le reste de la ligne');
+      }
+    }
+  }
   if (ctx.desaccordRelecture) motifs.push('deux lectures ont donné des résultats différents');
   // Virgule rétablie d'après l'encre : on ne dérange le médecin que si le
   // résultat ne colle pas avec le reste de sa ligne. « 7,4 · 9,1 · 12,2 » se

@@ -14,7 +14,10 @@ import {
 } from './roles';
 import { decimalePerdue, ordreDeGrandeurSuspect, reparerNombre } from './correction';
 import { jugerDate, jugerNom, jugerValeur, type ContexteValeur } from './confiance';
-import { blocPourColonne, blocsDeBande, ecartMaxInterne, isolerTableau, plageEntete } from './pipeline';
+import {
+  blocPourColonne, blocsDeBande, ecartMaxInterne, ecarterBandesDecoratives, etendue,
+  isolerTableau, plageEntete, retenirBlocEntete,
+} from './pipeline';
 import { seuilDeBruit, type CarteEncre } from './structure';
 
 // ── Outils : fabriquer une carte d'encre à la main ──────────────
@@ -208,6 +211,45 @@ describe('le jaune ne signale que le doute de LECTURE', () => {
     expect(jugerValeur({ ...base, texte: '104', confiance: 40 }).douteux).toBe(true);
   });
 
+  it('signale une lecture pile au seuil, pas seulement en dessous (confusion « 5 »/« 9 » du CHU : confiance 72, seuil 74)', () => {
+    // Cas réel : CPK à 53 lu « 93 » avec une confiance de 72 — la borne
+    // stricte « < seuil » laissait passer une lecture exactement AU seuil
+    // sans la signaler. Le seuil est désormais inclusif des deux côtés.
+    expect(jugerValeur({ ...base, texte: '93', confiance: 74 }).douteux).toBe(true);
+    expect(jugerValeur({ ...base, texte: '93', confiance: 72 }).douteux).toBe(true);
+    expect(jugerValeur({ ...base, texte: '93', confiance: 75 }).douteux).toBe(false);
+  });
+
+  it('signale une case nettement moins sûre que le reste de sa ligne, même au-dessus du seuil absolu', () => {
+    // La ligne CPK du CHU : cinq valeurs à 95-96 de confiance, une à 72
+    // (« 93 » pour un vrai 53). Le seuil absolu, seul, ne verrait rien si le
+    // seuil était plus bas — c'est l'ÉCART avec ses voisines qui trahit la
+    // confusion de chiffres, pas la confiance dans l'absolu.
+    const ligneReelle: ContexteValeur = {
+      ...base, texte: '93', confiance: 80,
+      confiancesAutresDeLaLigne: [96, 96, 95, 96, 96],
+    };
+    expect(jugerValeur(ligneReelle).douteux).toBe(true);
+    expect(jugerValeur(ligneReelle).motifs).toContain('lecture nettement moins sûre que le reste de la ligne');
+  });
+
+  it('ne signale rien pour un écart normal, ou quand toute la ligne est également peu sûre', () => {
+    // Écart minime (4 points) : variation normale de Tesseract, pas un signal.
+    expect(jugerValeur({
+      ...base, texte: '92', confiance: 92, confiancesAutresDeLaLigne: [96, 96, 95],
+    }).douteux).toBe(false);
+    // Toute la ligne est à ~80 : ce n'est pas cette case qui « hésite »,
+    // c'est l'image entière qui est difficile à lire — l'écart ne le dit pas.
+    expect(jugerValeur({
+      ...base, texte: '93', confiance: 80, confiancesAutresDeLaLigne: [82, 79, 81],
+    }).douteux).toBe(false);
+    // Une confiance déjà excellente (≥ 90) n'a plus besoin d'être comparée :
+    // au-delà, l'écart ne trahit plus rien.
+    expect(jugerValeur({
+      ...base, texte: '93', confiance: 90, confiancesAutresDeLaLigne: [99, 99, 99],
+    }).douteux).toBe(false);
+  });
+
   it('signale une case encrée dont rien n’a été lu', () => {
     expect(jugerValeur({ ...base, texte: '', encre: 90 }).douteux).toBe(true);
     // Une case réellement vide ne demande aucune vérification.
@@ -296,5 +338,120 @@ describe('structure — séparer le tableau du reste de la page', () => {
     expect(blocPourColonne(blocs, { x0: 45, x1: 60 }, 10)).toEqual({ x0: 30, x1: 60 });
     expect(blocPourColonne(blocs, { x0: 95, x1: 110 }, 10)).toEqual({ x0: 80, x1: 110 });
     expect(blocPourColonne([], { x0: 0, x1: 10 }, 10)).toBeNull();
+  });
+});
+
+// ── Grilles denses : beaucoup de colonnes de dates, beaucoup de lignes ─
+//
+// Trois défaillances distinctes, chacune observée sur une vraie capture
+// hospitalière dense (extranet CHRUL, fragment recadré) :
+//  A. une rangée d'icônes (rappel, info, pièces jointes) intercalée sous
+//     l'en-tête corrompt la découpe en colonnes si on la traite comme une
+//     ligne de plus — `ecarterBandesDecoratives` l'écarte à sa hauteur ;
+//  B. des en-têtes de dates denses qui se touchent fusionnent en un seul
+//     bloc de texte — `retenirBlocEntete` plafonne ce bloc à la plage de sa
+//     colonne, sans jamais rogner un en-tête simplement un peu large ;
+//  C. une ligne de titre de section (« BIOCHIMIE (2 analyses) ») intercalée
+//     entre des lignes de résultats n'a d'encre que sous la colonne des
+//     noms — le test documente le calcul qui la distingue d'une ligne de
+//     données réelle, même incomplète.
+describe('grilles denses — trois défaillances de la vraie capture hospitalière', () => {
+  it('écarte une bande décorative bien plus haute que les lignes de texte (rangée d’icônes)', () => {
+    const hL = 9;
+    const bandes = [
+      { y0: 0, y1: 8 },     // en-tête (date) — jamais écartée, même haute
+      { y0: 12, y1: 38 },   // rangée d'icônes : 27 px, 3x la hauteur de ligne
+      { y0: 45, y1: 53 },   // ligne de données normale
+      { y0: 60, y1: 68 },   // ligne de données normale
+    ];
+    const gardees = ecarterBandesDecoratives(bandes, hL);
+    expect(gardees).toEqual([bandes[0], bandes[2], bandes[3]]);
+  });
+
+  it('ne touche jamais à l’en-tête (bande 0), même anormalement haute', () => {
+    const hL = 9;
+    const bandes = [
+      { y0: 0, y1: 30 },  // en-tête haut (deux graisses de police, par ex.)
+      { y0: 40, y1: 48 },
+      { y0: 55, y1: 63 },
+    ];
+    expect(ecarterBandesDecoratives(bandes, hL)).toEqual(bandes);
+  });
+
+  it('garde toutes les bandes quand aucune n’est anormale', () => {
+    const hL = 10;
+    const bandes = [{ y0: 0, y1: 9 }, { y0: 15, y1: 24 }, { y0: 30, y1: 39 }];
+    expect(ecarterBandesDecoratives(bandes, hL)).toEqual(bandes);
+  });
+
+  it('plafonne un bloc d’en-tête ÉNORME (en-têtes denses fusionnés) à la plage de sa colonne', () => {
+    // Une ligne d'en-têtes entière (« 10/01/2023 14/02/2023 … Unite Normes »)
+    // fusionnée par blocsDeBande en un seul bloc de 900 px, pour une colonne
+    // de valeurs de 30 px et une plage de 60 px.
+    const bloc = { x0: 10, x1: 910 };
+    const col = { x0: 400, x1: 430 };
+    const plage = { x0: 370, x1: 460 };
+    expect(retenirBlocEntete(bloc, col, plage, 5)).toEqual({ x0: 370, x1: 460 });
+  });
+
+  it('garde tout le débordement d’un bloc d’en-tête simplement un peu plus large que sa colonne', () => {
+    // Le cas courant et voulu : une date (« 15/01/2024 ») au-dessus d'un
+    // nombre à trois chiffres. Le bloc déborde la colonne mais reste dans
+    // l'ordre de grandeur de la plage — jamais plafonné.
+    const bloc = { x0: 390, x1: 445 };
+    const col = { x0: 400, x1: 430 };
+    const plage = { x0: 370, x1: 460 };
+    expect(retenirBlocEntete(bloc, col, plage, 5)).toEqual({ x0: 385, x1: 450 });
+  });
+
+  it('retombe sur la plage quand aucun bloc ne se rattache à la colonne', () => {
+    const col = { x0: 400, x1: 430 };
+    const plage = { x0: 370, x1: 460 };
+    expect(retenirBlocEntete(null, col, plage, 5)).toEqual(plage);
+  });
+
+  it('distingue une ligne de titre de section (encre confinée à la colonne des noms) d’une ligne de données réelle', () => {
+    // « BIOCHIMIE (2 analyses) » : rien sous les colonnes de dates.
+    const carteTitre: CarteEncre = carte([
+      '####..####........................',
+    ]);
+    // Une ligne de données réelle, même clairsemée (CPK n'a un résultat qu'à
+    // deux dates sur cinq) : de l'encre APRÈS la colonne des noms.
+    const carteDonnees: CarteEncre = carte([
+      '####...........###..........###...',
+    ]);
+    const bande = { y0: 0, y1: 0 };
+    const nomDroite = 8; // fin de la colonne des noms
+    const margeTitre = 3;
+
+    const eTitre = etendue(carteTitre, bande)!;
+    const eDonnees = etendue(carteDonnees, bande)!;
+    expect(eTitre.x1).toBeLessThanOrEqual(nomDroite + margeTitre);
+    expect(eDonnees.x1).toBeGreaterThan(nomDroite + margeTitre);
+  });
+});
+
+// ── Le jaune protège aussi contre une colonne mal ancrée ────────────────
+describe('grilles denses — une colonne anormalement large est toujours signalée', () => {
+  const base: ContexteValeur = {
+    texte: '', confiance: 92, encre: 100, encreTypique: 100,
+    separateurGeometrique: false, separateurRetabli: false, desaccordRelecture: false,
+    nomAnalyte: 'Hemoglobine', autresDeLaLigne: [],
+  };
+
+  it('signale une valeur d’une colonne anormale même si elle a l’air parfaitement lue', () => {
+    // Deux dates fondues en une donnent souvent un nombre propre et crédible
+    // (« 9,6101 », deux valeurs recollées) — c'est le cas le plus trompeur,
+    // et c'est justement celui-là qu'il faut signaler.
+    expect(jugerValeur({ ...base, texte: '9.6101', colonneAnormale: true }).douteux).toBe(true);
+  });
+
+  it('ne signale rien de plus pour une colonne normale', () => {
+    expect(jugerValeur({ ...base, texte: '9.6', colonneAnormale: false }).douteux).toBe(false);
+  });
+
+  it('signale aussi une case VIDE d’une colonne anormale (aucune valeur n’est fiable dans cette colonne)', () => {
+    expect(jugerValeur({ ...base, texte: '', encre: 0, colonneAnormale: true }).douteux).toBe(true);
+    expect(jugerValeur({ ...base, texte: '', encre: 0, colonneAnormale: false }).douteux).toBe(false);
   });
 });
