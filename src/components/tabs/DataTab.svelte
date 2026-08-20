@@ -10,10 +10,10 @@
 
   let selectedId = $state<string | null>(null);
 
-  // Vue « Saisir » (grille) ou « Importer » (capture / compte-rendu)
+  // Vue « Saisir » (grille) ou « Importer » (capture / dictée biologique)
   let mode = $state<'saisir' | 'importer'>('saisir');
-  let importInitial = $state<'photo' | 'text' | 'dictee'>('photo');
-  function openImport(kind: 'photo' | 'text' | 'dictee') { importInitial = kind; mode = 'importer'; }
+  let importInitial = $state<'photo' | 'dictee'>('photo');
+  function openImport(kind: 'photo' | 'dictee') { importInitial = kind; mode = 'importer'; }
 
   // Collage global d'image → bascule automatiquement en import
   $effect(() => {
@@ -744,16 +744,13 @@
   {/if}
 
   {#if params.length === 0 && columns.length === 0 && !pasteReview}
-    <!-- Écran de départ tenu en trois lignes : la grille doit rester visible et
-         utilisable tout de suite, pas être poussée hors de l'écran. -->
+    <!-- Écran de départ : la grille doit rester visible et utilisable tout de
+         suite, pas être poussée hors de l'écran. Les autres façons d'entrer
+         des résultats (capture, dictée) sont déjà juste au-dessus, dans la
+         barre Saisir/Importer/Dicter — pas la peine de les répéter ici. -->
     <div class="depart">
       <p class="depart-t">Tapez directement dans le tableau : le nom de l'analyte à gauche, la date en haut.</p>
-      <div class="depart-b">
-        <button class="qs" onclick={() => openImport('photo')}>📷 Coller une capture</button>
-        <button class="qs" onclick={() => openImport('text')}>📄 Coller un compte-rendu</button>
-        <button class="qs" onclick={() => openImport('dictee')}>🎙️ Dicter les résultats</button>
-        <span class="astuce"><kbd>Ctrl</kbd>+<kbd>V</kbd> fonctionne aussi depuis n'importe où.</span>
-      </div>
+      <p class="astuce"><kbd>Ctrl</kbd>+<kbd>V</kbd> colle une capture depuis n'importe où.</p>
     </div>
   {/if}
 
@@ -907,12 +904,9 @@
      sont pas un : un formulaire étiré sur 1600 px est illisible. */
   .aux { max-width: 880px; }
 
-  /* Écran de départ : trois lignes, au-dessus d'une grille déjà utilisable. */
-  .depart { display: flex; flex-direction: column; gap: 8px; }
+  /* Écran de départ : au-dessus d'une grille déjà utilisable. */
+  .depart { display: flex; flex-direction: column; gap: 6px; }
   .depart-t { font-size: 13.5px; color: var(--muted); margin: 0; }
-  .depart-b { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .qs { border: 1px solid var(--border); background: var(--panel); border-radius: 9px; padding: 7px 12px; font-size: 13px; }
-  .qs:hover { border-color: var(--accent); color: var(--accent); }
 
   .tablecard { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
   /* Grille de saisie : défile dans les deux sens, en-tête de dates et colonne
@@ -942,7 +936,7 @@
   /* Les commandes de colonne sont sur leur propre ligne, à l'écart du champ de
      date : viser la date ne doit jamais pouvoir supprimer la colonne. */
   .colbar { display: flex; justify-content: flex-end; align-items: center; gap: 2px; height: 24px; }
-  .dateinput { border: none; background: transparent; font-size: 12px; color: var(--muted); width: 84px; padding: 2px 3px; text-align: center; font-variant-numeric: tabular-nums; }
+  .dateinput { border: none; background: transparent; font-size: 13px; color: var(--muted); width: 90px; padding: 3px; text-align: center; font-variant-numeric: tabular-nums; }
   .dateinput:focus { background: #fff; border-radius: 5px; box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); color: var(--ink); }
   .dateinput.neuve { color: var(--faint); }
   .dateinput.neuve:focus { color: var(--ink); }
@@ -972,16 +966,16 @@
 
   .rowname { text-align: left; border-bottom: 1px solid var(--panel-2); border-right: 1px solid var(--border); position: relative; }
   tr.sel .rowname { background: #eef4fb; }
-  .namebtn { display: flex; align-items: center; gap: 7px; border: none; background: transparent; padding: 7px 12px; width: 100%; cursor: pointer; }
+  .namebtn { display: flex; align-items: center; gap: 8px; border: none; background: transparent; padding: 9px 12px; width: 100%; cursor: pointer; }
   .namebtn:hover { background: var(--panel-2); }
-  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-  .pname { font-weight: 600; font-size: 13px; white-space: nowrap; }
-  .punit { font-size: 12px; color: var(--faint); white-space: nowrap; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .pname { font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .punit { font-size: 12.5px; color: var(--faint); white-space: nowrap; }
 
   /* Ligne vide permanente : elle doit se voir comme une invitation, pas comme
      une ligne de données. */
   .newrow .rowname { border-bottom: none; }
-  .newrow-inp { border: none; background: transparent; font-size: 13px; color: var(--faint); padding: 7px 12px; width: 150px; }
+  .newrow-inp { border: none; background: transparent; font-size: 14px; color: var(--faint); padding: 9px 12px; width: 150px; }
   .newrow-inp:focus { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); border-radius: 4px; }
   .suggest {
     position: absolute; top: 100%; left: 6px; z-index: 8; min-width: 210px;
@@ -994,9 +988,9 @@
   .sg-u { font-size: 11.5px; color: var(--faint); }
 
   .dgrid td { border-bottom: 1px solid var(--panel-2); }
-  .cell { width: 74px; text-align: center; border: none; background: transparent; padding: 7px 4px; font-size: 13px; }
+  .cell { width: 80px; text-align: center; border: none; background: transparent; padding: 9px 4px; font-size: 14px; }
   .cell:focus { background: #fff; box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); border-radius: 4px; }
-  .ghostcell { min-width: 84px; }
+  .ghostcell { min-width: 90px; }
   .pad { width: 100%; }
 
   /* Panneau en bas d'écran (mobile) : la grille ne doit pas manger toute la hauteur. */
