@@ -1,4 +1,5 @@
 import { matchCatalog, normalize, type CatalogEntry } from '../models/catalog';
+import { parseDate, parseDateSouple } from '../models/types';
 
 // ──────────────────────────────────────────────────────────────
 // DICTÉE VOCALE (Dragon ou saisie manuelle) → analytes + valeurs.
@@ -15,6 +16,15 @@ import { matchCatalog, normalize, type CatalogEntry } from '../models/catalog';
 // frappe, donc un nombre en train de s'écrire (« créatinine 9 » qui va
 // devenir « créatinine 90 ») ne doit jamais être proposé comme définitif tant
 // que rien ne prouve qu'il a fini de s'écrire. Voir `estOuvert` plus bas.
+//
+// DATE PAR VALEUR (optionnelle) : une valeur peut être suivie d'une date
+// dictée (« le 28/06/2026 », « le 28 06 2026 », « le 28 juin 2026 »). Quand
+// c'est le cas, `ItemDicte.date` porte cette date ISO ; sinon elle reste
+// `null` et l'appelant retombe sur la date globale du champ au-dessus du
+// tableau — c'est ce qui garde le cas simple (une seule date pour tout le
+// lot) strictement identique à avant. Une date mal dictée ou incomplète
+// (encore en train de s'écrire) ne casse rien : elle est simplement ignorée,
+// exactement comme un mot inconnu isolé l'était déjà.
 // ──────────────────────────────────────────────────────────────
 
 export interface ItemDicte {
@@ -26,6 +36,13 @@ export interface ItemDicte {
   valeurTexte: string;
   /** Valeur numérique (point décimal), ou null si aucune valeur n'a encore été dictée pour ce nom. */
   valeur: number | null;
+  /**
+   * Date ISO ('AAAA-MM-JJ') dictée juste après cette valeur (« le
+   * 28/06/2026 »), ou `null` si aucune date locale n'a été reconnue — dans ce
+   * cas l'appelant doit utiliser la date globale du champ au-dessus du
+   * tableau, exactement comme avant l'ajout de cette fonctionnalité.
+   */
+  date: string | null;
   /**
    * Faux tant que le nom ou la valeur touche encore le tout dernier mot du
    * texte ET que ce mot n'est pas encore refermé par un espace : il peut
@@ -58,7 +75,8 @@ const MOTS_VIDES = new Set([
   'a', 'de', 'du', 'des', 'le', 'la', 'les', 'est', 'sont', 'et', 'donc',
   'egale', 'egal', 'environ', 'vaut', 'valeur', 'soit', 'aujourdhui',
   'micromol', 'micromoles', 'mmol', 'mmoles', 'mol', 'moles', 'nmol', 'nmoles',
-  'pmol', 'pmoles', 'mg', 'g', 'gramme', 'grammes', 'microgramme', 'microgrammes',
+  'pmol', 'pmoles', 'mg', 'g', 'gramme', 'grammes', 'milligramme', 'milligrammes',
+  'microgramme', 'microgrammes',
   'ug', 'kg', 'ml', 'dl', 'litre', 'litres', 'par', 'pour', 'pourcent', 'pourcentage',
   'unite', 'unites', 'ui', ':', '=', '-', ',', ';',
 ]);
@@ -133,6 +151,85 @@ function sauterLiaison(jetons: Jeton[], i: number, n: number): number {
   return j;
 }
 
+// ── Date dictée après une valeur (« le 28/06/2026 », « le 28 06 2026 »,
+// « le 28 juin 2026 ») ────────────────────────────────────────────
+//
+// Dragon colle souvent de la ponctuation en fin de mot (« 2026, »), d'où le
+// nettoyage systématique avant tout test numérique/alphabétique.
+function depouiller(tok: string): string {
+  return tok.replace(/[.,;:]+$/, '');
+}
+
+interface DateTrouvee { iso: string; finIdx: number; }
+
+/**
+ * Tente de lire une date à partir du jeton `p` (juste après le mot « le »),
+ * sous l'une des trois formes que Dragon produit : un jeton déjà complet
+ * (« 28/06/2026 »), trois jetons numériques séparés par des espaces
+ * (« 28 06 2026 ») ou jour + mois en lettres + année (« 28 juin 2026 »).
+ * Retourne `null` sans rien consommer si la forme ne matche pas — c'est ce
+ * qui garantit qu'un « le » qui n'introduit pas de date (« par le litre »)
+ * ne casse rien : l'appelant continue simplement sa recherche plus loin.
+ */
+function essaieDateApres(jetons: Jeton[], p: number, n: number): DateTrouvee | null {
+  if (p >= n) return null;
+
+  // Un seul jeton déjà séparé par / - . (ex. « 28/06/2026 »).
+  const direct = parseDate(depouiller(jetons[p].texte));
+  if (direct) return { iso: direct, finIdx: p };
+
+  if (p + 2 < n) {
+    const a = depouiller(jetons[p].texte);
+    const b = depouiller(jetons[p + 1].texte);
+    const c = depouiller(jetons[p + 2].texte);
+
+    // Trois jetons numériques séparés par des espaces (« 28 06 2026 »).
+    if (/^\d{1,2}$/.test(a) && /^\d{1,2}$/.test(b) && /^\d{2,4}$/.test(c)) {
+      const iso = parseDate(`${a}/${b}/${c}`);
+      if (iso) return { iso, finIdx: p + 2 };
+    }
+
+    // Jour + mois en lettres + année (« 28 juin 2026 »).
+    if (/^\d{1,2}$/.test(a) && /^[A-Za-zÀ-ÿ]{3,10}$/.test(b) && /^\d{2,4}$/.test(c)) {
+      const iso = parseDateSouple(`${a} ${b} ${c}`);
+      if (iso) return { iso, finIdx: p + 2 };
+    }
+  }
+
+  return null;
+}
+
+/** Combien de mots de liaison/unité on tolère avant de trouver (ou pas) le « le » d'une date. */
+const MAX_MOTS_AVANT_DATE = 10;
+
+/**
+ * Cherche une date dictée à partir de la position `depart` (juste après une
+ * valeur). Ne s'aventure qu'à travers des mots de liaison/unité déjà connus
+ * (« unités », « par », « le », « litre »…) : dès qu'un mot qui n'en est pas
+ * un apparaît, on arrête — ça ne peut être qu'un nouveau nom d'analyte ou du
+ * texte de contexte, jamais une date. Une date encore en train de s'écrire
+ * (touche le dernier mot ouvert du texte) n'est jamais retenue : elle
+ * réapparaîtra, complète, à la frappe suivante — même logique que pour une
+ * valeur en cours de dictée.
+ */
+function essaieDateLocale(jetons: Jeton[], depart: number, n: number, idxOuvert: number): DateTrouvee | null {
+  let k = depart, vus = 0;
+  while (k < n && vus < MAX_MOTS_AVANT_DATE) {
+    const tok = jetons[k].texte;
+    if (normalize(depouiller(tok)) === 'le') {
+      const hit = essaieDateApres(jetons, k + 1, n);
+      if (hit && hit.finIdx !== idxOuvert) return hit;
+    } else if (!estMotVide(depouiller(tok))) {
+      // Un mot de liaison/unité peut porter une virgule collée (« litre, »),
+      // fréquente en dictée : elle ne doit pas faire échouer la recherche.
+      return null;
+    }
+    if (k === idxOuvert) return null; // dernier mot du texte, encore ouvert : rien de plus à tenter
+    k++; vus++;
+  }
+  return null;
+}
+
 /**
  * Analyse le texte dicté et en extrait les paires analyte → valeur.
  *
@@ -167,15 +264,17 @@ export function parseDicteeBio(texte: string): ResultatDictee {
       let j = sauterLiaison(jetons, i + m.longueur, n);
       if (j < n && estNombre(jetons[j].texte)) {
         const v = extraireValeur(jetons[j].texte)!;
+        const dateHit = essaieDateLocale(jetons, j + 1, n, idxOuvert);
         const item: ItemDicte = {
           nom: m.entree.name, catalogue: m.entree, valeurTexte: v.texte, valeur: v.valeur,
-          complet: j !== idxOuvert, debut: debutNom, fin: jetons[j].fin,
+          date: dateHit?.iso ?? null,
+          complet: j !== idxOuvert, debut: debutNom, fin: dateHit ? jetons[dateHit.finIdx].fin : jetons[j].fin,
         };
         reconnus.set(normalize(m.entree.name), item);
-        i = j + 1;
+        i = (dateHit?.finIdx ?? j) + 1;
       } else {
         const item: ItemDicte = {
-          nom: m.entree.name, catalogue: m.entree, valeurTexte: '', valeur: null,
+          nom: m.entree.name, catalogue: m.entree, valeurTexte: '', valeur: null, date: null,
           complet: finNomIdx !== idxOuvert, debut: debutNom, fin: jetons[finNomIdx].fin,
         };
         reconnus.set(normalize(m.entree.name), item);
@@ -200,12 +299,14 @@ export function parseDicteeBio(texte: string): ResultatDictee {
     if (j < n && estNombre(jetons[j].texte)) {
       const v = extraireValeur(jetons[j].texte)!;
       const nomTexte = jetons.slice(i, runEnd + 1).map(t => t.texte).join(' ');
+      const dateHit = essaieDateLocale(jetons, j + 1, n, idxOuvert);
       const item: ItemDicte = {
         nom: nomTexte, catalogue: null, valeurTexte: v.texte, valeur: v.valeur,
-        complet: j !== idxOuvert, debut: jetons[i].debut, fin: jetons[j].fin,
+        date: dateHit?.iso ?? null,
+        complet: j !== idxOuvert, debut: jetons[i].debut, fin: dateHit ? jetons[dateHit.finIdx].fin : jetons[j].fin,
       };
       inconnus.set(normalize(nomTexte), item);
-      i = j + 1;
+      i = (dateHit?.finIdx ?? j) + 1;
     } else {
       // Pas de valeur trouvée. On ne signale une bribe SANS valeur que si
       // elle est encore en train de s'écrire (le dernier mot du texte) —
@@ -214,7 +315,7 @@ export function parseDicteeBio(texte: string): ResultatDictee {
       if (runEnd === idxOuvert) {
         const nomTexte = jetons.slice(i, runEnd + 1).map(t => t.texte).join(' ');
         const item: ItemDicte = {
-          nom: nomTexte, catalogue: null, valeurTexte: '', valeur: null,
+          nom: nomTexte, catalogue: null, valeurTexte: '', valeur: null, date: null,
           complet: false, debut: jetons[i].debut, fin: jetons[runEnd].fin,
         };
         inconnus.set(normalize(nomTexte), item);
