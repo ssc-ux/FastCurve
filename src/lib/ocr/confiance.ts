@@ -84,6 +84,17 @@ export interface ContexteValeur {
   glyphes?: number;
   /** Signes effectivement rendus par la reconnaissance (texte brut). */
   caracteresLus?: number;
+  /**
+   * La colonne de cette case est anormalement large par rapport aux autres
+   * colonnes de dates — signe qu'elle a probablement avalé deux dates
+   * voisines faute de gouttière détectée entre elles (un bilan cumulé réel,
+   * où chaque analyte n'a pas de résultat à chaque date, laisse des colonnes
+   * de dates sans AUCUNE encre sur les quelques lignes lues, qui se
+   * dissolvent alors dans la colonne voisine). Toute case de cette colonne
+   * est signalée, MÊME quand elle a l'air parfaitement lisible : une lecture
+   * nette de deux chiffres recollés est le plus trompeur des cas.
+   */
+  colonneAnormale?: boolean;
 }
 
 /**
@@ -106,8 +117,12 @@ export function jugerValeur(ctx: ContexteValeur): Verdict {
     if (ctx.encre >= Math.max(6, ctx.encreTypique * 0.35)) {
       return verdict(['une valeur semble présente sur l’image mais n’a pas pu être lue']);
     }
-    return SUR;
+    return ctx.colonneAnormale
+      ? verdict(['colonne anormalement large — peut mélanger deux dates voisines'])
+      : SUR;
   }
+
+  if (ctx.colonneAnormale) motifs.push('colonne anormalement large — peut mélanger deux dates voisines');
 
   if (ctx.confiance > 0 && ctx.confiance < SEUIL_CONFIANCE_VALEUR) motifs.push('lecture peu sûre');
   if (ctx.desaccordRelecture) motifs.push('deux lectures ont donné des résultats différents');
