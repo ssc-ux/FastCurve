@@ -759,6 +759,7 @@ export async function reconnaitreTableau(
         desaccordRelecture: false,
         nomAnalyte: nom,
         autresDeLaLigne: valeurs.filter((_, k) => k !== c).map(o => o.texte),
+        confiancesAutresDeLaLigne: valeurs.filter((_, k) => k !== c).map(o => o.conf),
         glyphes: v.glyphes,
         caracteresLus: v.lus,
         colonneAnormale: colonneAnormale[c],

@@ -211,6 +211,45 @@ describe('le jaune ne signale que le doute de LECTURE', () => {
     expect(jugerValeur({ ...base, texte: '104', confiance: 40 }).douteux).toBe(true);
   });
 
+  it('signale une lecture pile au seuil, pas seulement en dessous (confusion « 5 »/« 9 » du CHU : confiance 72, seuil 74)', () => {
+    // Cas réel : CPK à 53 lu « 93 » avec une confiance de 72 — la borne
+    // stricte « < seuil » laissait passer une lecture exactement AU seuil
+    // sans la signaler. Le seuil est désormais inclusif des deux côtés.
+    expect(jugerValeur({ ...base, texte: '93', confiance: 74 }).douteux).toBe(true);
+    expect(jugerValeur({ ...base, texte: '93', confiance: 72 }).douteux).toBe(true);
+    expect(jugerValeur({ ...base, texte: '93', confiance: 75 }).douteux).toBe(false);
+  });
+
+  it('signale une case nettement moins sûre que le reste de sa ligne, même au-dessus du seuil absolu', () => {
+    // La ligne CPK du CHU : cinq valeurs à 95-96 de confiance, une à 72
+    // (« 93 » pour un vrai 53). Le seuil absolu, seul, ne verrait rien si le
+    // seuil était plus bas — c'est l'ÉCART avec ses voisines qui trahit la
+    // confusion de chiffres, pas la confiance dans l'absolu.
+    const ligneReelle: ContexteValeur = {
+      ...base, texte: '93', confiance: 80,
+      confiancesAutresDeLaLigne: [96, 96, 95, 96, 96],
+    };
+    expect(jugerValeur(ligneReelle).douteux).toBe(true);
+    expect(jugerValeur(ligneReelle).motifs).toContain('lecture nettement moins sûre que le reste de la ligne');
+  });
+
+  it('ne signale rien pour un écart normal, ou quand toute la ligne est également peu sûre', () => {
+    // Écart minime (4 points) : variation normale de Tesseract, pas un signal.
+    expect(jugerValeur({
+      ...base, texte: '92', confiance: 92, confiancesAutresDeLaLigne: [96, 96, 95],
+    }).douteux).toBe(false);
+    // Toute la ligne est à ~80 : ce n'est pas cette case qui « hésite »,
+    // c'est l'image entière qui est difficile à lire — l'écart ne le dit pas.
+    expect(jugerValeur({
+      ...base, texte: '93', confiance: 80, confiancesAutresDeLaLigne: [82, 79, 81],
+    }).douteux).toBe(false);
+    // Une confiance déjà excellente (≥ 90) n'a plus besoin d'être comparée :
+    // au-delà, l'écart ne trahit plus rien.
+    expect(jugerValeur({
+      ...base, texte: '93', confiance: 90, confiancesAutresDeLaLigne: [99, 99, 99],
+    }).douteux).toBe(false);
+  });
+
   it('signale une case encrée dont rien n’a été lu', () => {
     expect(jugerValeur({ ...base, texte: '', encre: 90 }).douteux).toBe(true);
     // Une case réellement vide ne demande aucune vérification.
