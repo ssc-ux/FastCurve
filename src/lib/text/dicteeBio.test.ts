@@ -116,6 +116,87 @@ describe('parseDicteeBio — analyte non reconnu par le catalogue', () => {
   });
 });
 
+describe('parseDicteeBio — date dictée après une valeur', () => {
+  it('sans date dictée : `date` reste null pour chaque item (comportement identique à avant)', () => {
+    const r = parseDicteeBio('CRP 45 créatinine 90 ');
+    expect(r.reconnus.map(it => it.date)).toEqual([null, null]);
+  });
+
+  it('cas réel du médecin : « CPK 28 unité par le litre le 28 06 2026, CRP 45 milligrammes par litre le 15 05 2020 »', () => {
+    const texte = 'CPK 28 unité par le litre le 28 06 2026, CRP 45 milligrammes par litre le 15 05 2020 ';
+    const r = parseDicteeBio(texte);
+    const cpk = r.reconnus.find(it => it.nom === 'CPK')!;
+    const crp = r.reconnus.find(it => it.nom === 'CRP')!;
+    expect(cpk.valeur).toBe(28);
+    expect(cpk.date).toBe('2026-06-28');
+    expect(cpk.complet).toBe(true);
+    expect(crp.valeur).toBe(45);
+    expect(crp.date).toBe('2020-05-15');
+    expect(crp.complet).toBe(true);
+  });
+
+  it('« le 28/06/2026 » (un seul jeton avec slashs)', () => {
+    const r = parseDicteeBio('CPK 24 unités le 28/06/2026 ');
+    expect(r.reconnus[0].date).toBe('2026-06-28');
+  });
+
+  it('« le 28 juin 2026 » (mois en toutes lettres)', () => {
+    const r = parseDicteeBio('CPK 24 le 28 juin 2026 ');
+    expect(r.reconnus[0].date).toBe('2026-06-28');
+  });
+
+  it('cas simple déjà validé par le médecin : « CPK 24 unités le 19/08/2026, CRP 24 le 19/08/2026 » — même date pour les deux', () => {
+    const texte = 'CPK 24 unités le 19/08/2026, CRP 24 le 19/08/2026 ';
+    const r = parseDicteeBio(texte);
+    const cpk = r.reconnus.find(it => it.nom === 'CPK')!;
+    const crp = r.reconnus.find(it => it.nom === 'CRP')!;
+    expect(cpk.valeur).toBe(24);
+    expect(cpk.date).toBe('2026-08-19');
+    expect(crp.valeur).toBe(24);
+    expect(crp.date).toBe('2026-08-19');
+  });
+
+  it('valeurs datées et non datées mélangées : celles sans date restent à null (la date globale s’appliquera)', () => {
+    const texte = 'CPK 28 le 28 06 2026, CRP 45 hémoglobine 12,3 ';
+    const r = parseDicteeBio(texte);
+    expect(r.reconnus.find(it => it.nom === 'CPK')?.date).toBe('2026-06-28');
+    expect(r.reconnus.find(it => it.nom === 'CRP')?.date).toBeNull();
+    expect(r.reconnus.find(it => it.nom === 'Hémoglobine')?.date).toBeNull();
+  });
+
+  it('date mal formée (jour hors calendrier) : ignorée proprement, pas de date locale, pas de bribe parasite', () => {
+    const r = parseDicteeBio('CPK 28 le 31 04 2026 ');
+    expect(r.reconnus[0].valeur).toBe(28);
+    expect(r.reconnus[0].date).toBeNull();
+    expect(r.inconnus).toEqual([]);
+  });
+
+  it('« le » qui n’introduit pas de date (« par le litre ») ne casse rien et ne devient pas une bribe', () => {
+    const r = parseDicteeBio('CPK 28 unité par le litre ');
+    expect(r.reconnus[0].valeur).toBe(28);
+    expect(r.reconnus[0].date).toBeNull();
+    expect(r.inconnus).toEqual([]);
+  });
+
+  it('date encore en train de s’écrire (dernier mot ouvert du texte) : pas encore retenue', () => {
+    const r = parseDicteeBio('CPK 28 le 28 06 202'); // année pas terminée, pas d'espace final
+    expect(r.reconnus[0].valeur).toBe(28);
+    expect(r.reconnus[0].date).toBeNull();
+  });
+
+  it('la même date, une fois complétée par un espace final, est bien retenue à la frappe suivante', () => {
+    const r = parseDicteeBio('CPK 28 le 28 06 2026 ');
+    expect(r.reconnus[0].date).toBe('2026-06-28');
+  });
+
+  it('analyte non reconnu (inconnu) suivi d’une date : la date est aussi reconnue', () => {
+    const r = parseDicteeBio('truc bidule 42 le 28 06 2026 ');
+    expect(r.inconnus).toHaveLength(1);
+    expect(r.inconnus[0].valeur).toBe(42);
+    expect(r.inconnus[0].date).toBe('2026-06-28');
+  });
+});
+
 describe('parseDicteeBio — robustesse', () => {
   it('deux analytes consécutifs sans valeur entre les deux : le second n’est pas avalé par le premier', () => {
     const r = parseDicteeBio('CRP créatinine 90 ');
