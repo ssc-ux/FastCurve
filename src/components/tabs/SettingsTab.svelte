@@ -56,7 +56,7 @@
 
 <div class="col" style="gap:14px;">
   <div class="card" style="padding:12px;">
-    <div class="row" style="margin-bottom:8px;"><strong>Titre & légende du graphique</strong></div>
+    <div class="section-label">Titre & légende du graphique</div>
     <div class="col" style="gap:8px;">
       <label class="col" style="gap:3px;">Titre
         <input value={s().title} onchange={(e) => store.updateSettings({ title: e.currentTarget.value })} />
@@ -71,7 +71,7 @@
   </div>
 
   <div class="card" style="padding:12px;">
-    <div class="row" style="margin-bottom:8px;"><strong>Modèles de suivi</strong></div>
+    <div class="section-label">Modèles de suivi</div>
     <p class="faint small" style="margin-bottom:8px;">Enregistrez un jeu de paramètres (ex. « suivi vascularite ») pour le recharger en un clic sur un nouveau suivi.</p>
     <div class="row wrap" style="margin-bottom:8px;">
       <input class="grow" placeholder="Nom du modèle" bind:value={tplName} onkeydown={(e) => e.key === 'Enter' && saveTemplate()} />
@@ -93,7 +93,7 @@
   </div>
 
   <div class="card" style="padding:12px;">
-    <div class="row" style="margin-bottom:8px;"><strong>Apprentissage</strong></div>
+    <div class="section-label">Apprentissage</div>
     <p class="faint small" style="margin-bottom:8px;">
       À chaque import, quand vous corrigez un nom lu (variable) ou confirmez un médicament, l'outil le <strong>retient</strong> sur ce poste et le réapplique la prochaine fois. Un <strong>dictionnaire intégré</strong> à l'app est déjà partagé par tous les postes. 100% local, aucune donnée patient.
     </p>
@@ -112,7 +112,7 @@
   </div>
 
   <div class="card" style="padding:12px;">
-    <div class="row" style="margin-bottom:8px;"><strong>Sauvegarde</strong></div>
+    <div class="section-label">Sauvegarde</div>
     <p class="faint small" style="margin-bottom:8px;">Votre suivi est enregistré automatiquement dans ce navigateur : vous le retrouvez à la réouverture. Pour le garder durablement ou le reprendre sur un autre poste, enregistrez un fichier.</p>
     <div class="row wrap">
       <button onclick={exportFile}>⬇ Enregistrer le fichier (.json)</button>
@@ -121,7 +121,7 @@
   </div>
 
   <div class="card" style="padding:12px;">
-    <div class="row" style="margin-bottom:8px;"><strong>Confidentialité</strong></div>
+    <div class="section-label">Confidentialité</div>
     <p class="faint small" style="margin-bottom:8px; line-height:1.5;">
       🔒 Tout reste dans <strong>ce navigateur</strong> : aucune donnée patient n'est envoyée. Avant de partager un graphique, vérifiez qu'aucun <strong>identifiant patient</strong> n'apparaît (nom, date de naissance, IPP). Utilisez le sous-titre pour un libellé anonymisé (« Cas n°12 »).
     </p>
@@ -132,7 +132,7 @@
   </div>
 
   <div class="card" style="padding:12px;">
-    <div class="row" style="margin-bottom:8px;"><strong>Démarrage rapide</strong></div>
+    <div class="section-label">Démarrage rapide</div>
     <div class="row wrap">
       <button onclick={() => loadSample()}>Charger un exemple</button>
       <button class="danger" title="Vide les valeurs, dates et traitements ; garde les paramètres (variables) et le titre du graphique."
@@ -143,7 +143,7 @@
   </div>
 
   <div class="card" style="padding:12px;">
-    <div class="row" style="margin-bottom:8px;"><strong>À propos</strong></div>
+    <div class="section-label">À propos</div>
     <p class="small" style="margin-bottom:8px; line-height:1.5;">
       <strong>FastCurve</strong> — version bêta. Créé par <strong>Quentin Astouati</strong>.<br/>
       🔒 100% local : aucune donnée envoyée, aucun cloud, aucune IA en ligne.
