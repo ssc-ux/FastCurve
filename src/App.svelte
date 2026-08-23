@@ -120,8 +120,11 @@
    * point de la date N. En colonne étroite, seules deux dates tiennent.
    */
   type Sens = 'horizontal' | 'vertical';
+  // Choix du médecin : « en colonnes » par défaut à l'ouverture (la courbe
+  // garde toute sa hauteur dès le premier écran, même sur un document vide) —
+  // sauf écran étroit, où « en bandes » reste plus lisible.
   const sensParDefaut = (): Sens =>
-    (typeof window !== 'undefined' && window.innerWidth >= 1200) ? 'horizontal' : 'vertical';
+    (typeof window !== 'undefined' && window.innerWidth < 900) ? 'horizontal' : 'vertical';
   let sens = $state<Sens>(savedUi.sens === 'vertical' || savedUi.sens === 'horizontal' ? savedUi.sens : sensParDefaut());
   let sidebarH = $state<number>(typeof savedUi.h === 'number' ? savedUi.h : 330);
 
