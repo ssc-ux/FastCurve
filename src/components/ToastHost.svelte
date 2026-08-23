@@ -42,4 +42,12 @@
   }
   .x:hover { background: rgba(255,255,255,.15); color: #fff; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* Téléphone : la barre de navigation du bas (voir App.svelte, ~56-72px
+     selon la zone d'encoche) occuperait sinon le même espace que les
+     notifications — un toast qui recouvre la navigation la rend
+     inutilisable tant qu'il est affiché. */
+  @media (max-width: 640px) {
+    .host { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); max-width: 94vw; }
+  }
 </style>
