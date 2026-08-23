@@ -121,6 +121,44 @@
   const params = $derived([...store.study.parameters].sort((a, b) => a.order - b.order));
   const selected = $derived(params.find(p => p.id === selectedId) ?? null);
 
+  /**
+   * Mise en évidence hors-norme de la grille : réutilise exactement la
+   * bascule et les bornes déjà exposées par le store/catalog (voir le menu
+   * « Affichage ▾ » du graphique, `settings.markOutOfRange`, et
+   * `Parameter.refLow/refHigh`) — aucune nouvelle logique métier, seulement
+   * la lecture de ce qui existe déjà. Désactivée par défaut, comme sur le
+   * graphique.
+   *
+   * ROUGE : valeur hors des bornes de normale.
+   * VERT : valeur dans la norme dont la mesure précédente (chronologique,
+   * même paramètre) était hors-norme — ce second signal n'existe nulle part
+   * ailleurs dans le code : il est dérivé ici en comparant deux mesures
+   * consécutives aux mêmes bornes déjà utilisées pour le rouge, rien de plus.
+   */
+  const outOfRangeMap = $derived.by(() => {
+    const map = new Map<string, 'hi' | 'ok'>();
+    if (!store.study.settings.markOutOfRange) return map;
+    for (const p of params) {
+      if (p.refLow == null && p.refHigh == null) continue;
+      const isPct = p.category === 'efr' && p.display === 'percent';
+      if (isPct) continue; // même exclusion que le graphique (render.ts collectPoints)
+      const ms = store.study.measurements
+        .filter(m => m.parameterId === p.id)
+        .sort((a, b) => a.date.localeCompare(b.date));
+      let precedentHorsNorme = false;
+      for (const m of ms) {
+        const oor = (p.refLow != null && m.value < p.refLow) || (p.refHigh != null && m.value > p.refHigh);
+        if (oor) map.set(`${p.id}|${m.date}`, 'hi');
+        else if (precedentHorsNorme) map.set(`${p.id}|${m.date}`, 'ok');
+        precedentHorsNorme = oor;
+      }
+    }
+    return map;
+  });
+  function celluleStatut(pId: string, date: string): 'hi' | 'ok' | undefined {
+    return outOfRangeMap.get(`${pId}|${date}`);
+  }
+
   // ── Identité stable des colonnes ──────────────────────────────
   // La date d'une colonne CHANGE pendant qu'on la saisit ; elle ne peut donc pas
   // servir de clé `{#each}`. Keyée par la date, la colonne était détruite puis
@@ -836,7 +874,7 @@
                 </button>
               </th>
               {#each colonnes as c, ci (c.cle)}
-                <td>
+                <td class={celluleStatut(p.id, c.date)}>
                   <input class="cell" type="text" inputmode="decimal"
                     data-r={ri} data-c={ci} data-cle={c.cle}
                     aria-label="{p.name} au {formatDate(c.date)}"
@@ -904,9 +942,9 @@
      n'a rien à remplir, sa hauteur restant celle de son contenu. */
   :global(.tab-content.centrer) .data { flex: 1; min-height: 0; }
 
-  .modeseg { display: inline-flex; background: #eef1f5; border-radius: 10px; padding: 3px; align-self: flex-start; }
-  .modeseg button { border: none; background: transparent; border-radius: 7px; padding: 6px 16px; font-size: 13px; color: var(--muted); }
-  .modeseg button.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(16,24,32,.12); }
+  .modeseg { display: inline-flex; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 7px; padding: 3px; align-self: flex-start; }
+  .modeseg button { border: none; background: transparent; border-radius: 5px; padding: 5px 14px; font-size: 12.5px; color: var(--muted); }
+  .modeseg button.on { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 
   /* En bandes, la grille prend toute la largeur — mais pas les blocs qui n'en
      sont pas un : un formulaire étiré sur 1600 px est illisible. */
@@ -920,7 +958,7 @@
      (App.svelte) est ce qui donne à `.data`/`.corps` une hauteur à remplir. */
   .corps.centrer { flex: 1; min-height: 0; justify-content: center; }
 
-  .tablecard { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  .tablecard { background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius); box-shadow: none; overflow: hidden; }
   /* Suivi vide : c'est LE tableau à remplir, et il doit se voir tout de suite —
      pas se fondre dans le blanc de la barre latérale. Rien d'inventé : même
      anneau bleu que celui posé sur un champ actif au focus (`--accent` +
@@ -944,8 +982,10 @@
   .pcell { text-align: center; font-size: 13px; color: var(--muted); padding: 6px 10px; white-space: nowrap; }
   tr.excluded { opacity: .45; }
   /* `separate` (et non `collapse`) : sinon les bordures des cellules figées
-     défilent avec le contenu au lieu de rester collées à la colonne. */
-  table.dgrid { border-collapse: separate; border-spacing: 0; width: 100%; }
+     défilent avec le contenu au lieu de rester collées à la colonne.
+     Grille dense : bordures fines complètes (verticales comprises), pas
+     seulement horizontales — voir `.datecol`/`.dgrid td` plus bas. */
+  table.dgrid { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12.5px; }
   .dgrid th, .dgrid td { padding: 0; background: var(--panel); }
 
   /* Cellules figées : en-tête (haut) et noms de paramètres (gauche). */
@@ -954,14 +994,21 @@
   .dgrid .rowname { box-shadow: 5px 0 7px -6px rgba(16, 24, 32, .35); }
   .dgrid thead .corner { z-index: 4; box-shadow: 5px 0 7px -6px rgba(16, 24, 32, .35); }
 
-  .corner { width: 1%; }
-  .datecol { padding: 2px 4px 6px 8px; position: relative; white-space: nowrap; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .corner { width: 1%; background: var(--panel-2); border-bottom: 1px solid var(--border-strong); border-right: 1px solid var(--border); }
+  /* En-tête de colonne (date) : fond gris très clair et bordures fines
+     complètes, comme les en-têtes de la maquette « Console clinique dense »
+     — seule différence, la date elle-même reste éditable (input), donc pas
+     de petites capitales dessus (ça rendrait la saisie illisible). */
+  .datecol {
+    padding: 2px 4px 6px 8px; position: relative; white-space: nowrap; vertical-align: top;
+    background: var(--panel-2); border-bottom: 1px solid var(--border-strong); border-right: 1px solid var(--border);
+  }
   /* Les commandes de colonne sont sur leur propre ligne, à l'écart du champ de
      date : viser la date ne doit jamais pouvoir supprimer la colonne. */
-  .colbar { display: flex; justify-content: flex-end; align-items: center; gap: 2px; height: 24px; }
-  .dateinput { border: none; background: transparent; font-size: 13px; color: var(--muted); width: 90px; padding: 3px; text-align: center; font-variant-numeric: tabular-nums; }
+  .colbar { display: flex; justify-content: flex-end; align-items: center; gap: 2px; height: 22px; }
+  .dateinput { border: none; background: transparent; font-size: 12px; font-weight: 700; color: #57657f; width: 88px; padding: 3px; text-align: center; font-variant-numeric: tabular-nums; }
   .dateinput:focus { background: #fff; border-radius: 5px; box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); color: var(--ink); }
-  .dateinput.neuve { color: var(--faint); }
+  .dateinput.neuve { color: var(--faint); font-weight: 500; }
   .dateinput.neuve:focus { color: var(--ink); }
   .neuvecol { border-left: 1px dashed var(--border); }
   /* Le champ date natif ne sert qu'à ouvrir le calendrier du système : il reste
@@ -987,18 +1034,18 @@
   .serie .nb { width: 62px; }
   .serie-date { width: 100px; text-align: center; font-variant-numeric: tabular-nums; }
 
-  .rowname { text-align: left; border-bottom: 1px solid var(--panel-2); border-right: 1px solid var(--border); position: relative; }
-  tr.sel .rowname { background: #eef4fb; }
-  .namebtn { display: flex; align-items: center; gap: 8px; border: none; background: transparent; padding: 9px 12px; width: 100%; cursor: pointer; }
+  .rowname { text-align: left; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border-strong); position: relative; }
+  tr.sel .rowname { background: var(--accent-soft); }
+  .namebtn { display: flex; align-items: center; gap: 7px; border: none; background: transparent; padding: 7px 10px; width: 100%; cursor: pointer; }
   .namebtn:hover { background: var(--panel-2); }
-  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .pname { font-weight: 600; font-size: 14px; white-space: nowrap; }
-  .punit { font-size: 12.5px; color: var(--faint); white-space: nowrap; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .pname { font-weight: 700; font-size: 12.5px; white-space: nowrap; }
+  .punit { font-size: 10.5px; color: var(--faint); white-space: nowrap; }
 
   /* Ligne vide permanente : elle doit se voir comme une invitation, pas comme
      une ligne de données. */
   .newrow .rowname { border-bottom: none; }
-  .newrow-inp { border: none; background: transparent; font-size: 14px; color: var(--faint); padding: 9px 12px; width: 150px; }
+  .newrow-inp { border: none; background: transparent; font-size: 12.5px; color: var(--faint); padding: 7px 10px; width: 150px; }
   .newrow-inp:focus { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); border-radius: 4px; }
   .suggest {
     position: absolute; top: 100%; left: 6px; z-index: 8; min-width: 210px;
@@ -1010,9 +1057,17 @@
   .sg-n { font-size: 13px; font-weight: 500; }
   .sg-u { font-size: 11.5px; color: var(--faint); }
 
-  .dgrid td { border-bottom: 1px solid var(--panel-2); }
-  .cell { width: 80px; text-align: center; border: none; background: transparent; padding: 9px 4px; font-size: 14px; }
+  /* Bordures fines complètes (verticales comprises), pas seulement
+     horizontales, comme dans la maquette « Console clinique dense ». */
+  .dgrid td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
+  .cell { width: 80px; text-align: center; border: none; background: transparent; padding: 7px 4px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
   .cell:focus { background: #fff; box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); border-radius: 4px; }
+
+  /* Mise en évidence hors-norme (bascule « Marquer les valeurs hors-norme »,
+     désactivée par défaut — voir celluleStatut ci-dessus). */
+  td.hi { background: var(--hi-bg); }
+  td.hi .cell { color: var(--hi-ink); font-weight: 700; }
+  td.ok .cell { color: var(--ok-ink); font-weight: 700; }
   .ghostcell { min-width: 90px; }
   .pad { width: 100%; }
 
