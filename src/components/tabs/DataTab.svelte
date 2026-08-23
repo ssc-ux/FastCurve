@@ -749,7 +749,7 @@
          des résultats (capture, dictée) sont déjà juste au-dessus, dans la
          barre Saisir/Importer/Dicter — pas la peine de les répéter ici. -->
     <div class="depart">
-      <p class="depart-t">Tapez directement dans le tableau : le nom de l'analyte à gauche, la date en haut.</p>
+      <p class="depart-t">Tapez directement dans le tableau : le nom de la variable à gauche, la date en haut.</p>
       <p class="astuce"><kbd>Ctrl</kbd>+<kbd>V</kbd> colle une capture depuis n'importe où.</p>
     </div>
   {/if}
@@ -853,7 +853,7 @@
           {/each}
           <tr class="newrow">
             <th class="rowname">
-              <input class="newrow-inp" placeholder="+ analyte" aria-label="Nouvel analyte"
+              <input class="newrow-inp" placeholder="+ variable" aria-label="Nouvelle variable"
                 bind:value={nomNeuf} oninput={() => { iSugg = 0; suggMasquees = false; }}
                 onkeydown={nouvelleLigneKey} onblur={nouvelleLigneBlur} />
               {#if suggestions.length}
