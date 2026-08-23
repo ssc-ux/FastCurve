@@ -149,7 +149,7 @@ table.grid input:focus { border-color: var(--accent); background: #fff; }
   .sidebar .tabs, .modeseg, .aux, .add-param, .pied, .serie, .empty, .quickstarts { display: none !important; }
   .tab-content { padding: 0 !important; overflow: visible !important; }
   /* Artefacts de saisie à écarter du tableau imprimé : l'icône calendrier de
-     chaque colonne, la ligne « + analyte » et la colonne « + date » toujours
+     chaque colonne, la ligne « + variable » et la colonne « + date » toujours
      vides qui permettent d'ajouter une ligne/colonne à l'écran. `visibility`
      (et non `display`) sur la colonne « + date » : elle garde sa cellule
      d'en-tête pour ne pas décaler les colonnes des lignes du tableau. */
