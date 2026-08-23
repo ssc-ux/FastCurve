@@ -49,7 +49,7 @@
 </script>
 
 <div class="editor">
-  <div class="row">
+  <div class="row head-row">
     <input class="color" type="color" value={param.color} onchange={(e) => store.updateParameter(param.id, { color: e.currentTarget.value })} title="Couleur" aria-label="Couleur du paramètre" />
     <input class="name grow" value={param.name} onchange={(e) => store.updateParameter(param.id, { name: e.currentTarget.value })} />
     <button class="icon" disabled={idx === 0} onclick={() => move(-1)} title="Monter" aria-label="Monter ce paramètre">↑</button>
@@ -97,4 +97,13 @@
   .row.end { justify-content: flex-end; }
   .del { color: var(--danger); border-color: #e3b6b0; background: transparent; font-size: 12.5px; }
   .del:hover { background: #fbecea; }
+
+  /* Téléphone : couleur + nom + 3 boutons-icônes (↑/↓/✕) ne tiennent pas
+     sur une seule ligne à 44px de cible tactile chacun — sans `wrap`, les
+     boutons ↓/✕ débordaient hors écran et devenaient inatteignables. Le nom
+     passe seul sur sa propre ligne, les boutons suivent en dessous. */
+  @media (max-width: 640px) {
+    .head-row { flex-wrap: wrap; }
+    .head-row .name { flex: 1 1 100%; order: -1; }
+  }
 </style>
