@@ -195,7 +195,7 @@ export function jugerValeur(ctx: ContexteValeur): Verdict {
     motifs.push('valeur décalée d’un facteur 10 par rapport à la ligne');
   }
   if (ordreDeGrandeurSuspect(ctx.nomAnalyte, valeurDe(ctx.texte))) {
-    motifs.push('valeur hors de tout ordre de grandeur connu pour cet analyte');
+    motifs.push('valeur hors de tout ordre de grandeur connu pour cette variable');
   }
   return verdict(motifs);
 }
@@ -204,9 +204,9 @@ export function jugerValeur(ctx: ContexteValeur): Verdict {
 export function jugerNom(nom: string, confiance: number): Verdict {
   const motifs: string[] = [];
   const t = (nom ?? '').trim();
-  if (!t) return verdict(['nom d’analyte non lu']);
+  if (!t) return verdict(['nom de variable non lu']);
   if (confiance > 0 && confiance < SEUIL_CONFIANCE_NOM) motifs.push('nom peu sûr à la lecture');
-  if (!matchCatalog(t)) motifs.push('nom d’analyte non reconnu — vérifiez l’orthographe');
+  if (!matchCatalog(t)) motifs.push('nom de variable non reconnu — vérifiez l’orthographe');
   return verdict(motifs);
 }
 
