@@ -820,7 +820,16 @@
   </div>
 
   {#if mode === 'importer'}
-    <div class="aux"><ImportTab initialMode={importInitial} onImported={() => (mode = 'saisir')} /></div>
+    <!-- `{#key importInitial}` : sans lui, cliquer « Dicter » alors que l'on
+         est déjà en mode Importer (donc « Photo ») ne change rien à l'écran —
+         `ImportTab` capture `initialMode` une seule fois à son montage
+         (`const importMode = initialMode`) et ce montage n'est pas rejoué
+         puisque `mode` lui-même ne change pas. Bug préexistant (déjà présent
+         sur desktop, indépendant du travail mobile), corrigé ici parce que
+         « Importer »/« Dicter » doivent rester deux actions fiables en un
+         geste, y compris sur téléphone où l'on bascule souvent de l'une à
+         l'autre depuis l'écran principal. -->
+    <div class="aux">{#key importInitial}<ImportTab initialMode={importInitial} onImported={() => (mode = 'saisir')} />{/key}</div>
   {:else}
 
   <!-- Suivi vide : ce bloc (tableau + « Série de dates ») est centré dans le

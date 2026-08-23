@@ -377,10 +377,25 @@
     {#if !hasValidation && !pending.length && !busy}
       <div class="drop" role="button" tabindex="0"
            ondrop={onDrop} ondragover={(e) => e.preventDefault()}>
-        <p class="drop-title"><strong>Collez une capture d'écran</strong> (Ctrl+V)</p>
-        <p class="muted small">ou glissez une image / un PDF ici · <label class="filebtn">choisir un fichier<input type="file" accept="image/*,application/pdf" capture="environment" multiple onchange={onSelect} hidden /></label></p>
+        <!-- Desktop : coller (Ctrl+V) est le geste principal, « choisir un
+             fichier » un lien secondaire. Téléphone : il n'y a pas de
+             Ctrl+V — l'action principale devient le bouton photo, seul
+             assez grand et évident pour ouvrir directement l'appareil
+             photo (`capture="environment"` sur l'input, inchangé) sans
+             passer par un sous-menu. Même `<label>`/`<input>`, seul
+             l'habillage bascule selon l'écran (`.desktop-only`/`.mobile-only`). -->
+        <p class="drop-title desktop-only"><strong>Collez une capture d'écran</strong> (Ctrl+V)</p>
+        <p class="drop-title mobile-only"><strong>Importer un bilan</strong></p>
+        <p class="muted small drop-cta">
+          <span class="desktop-only">ou glissez une image / un PDF ici · </span>
+          <label class="filebtn">
+            <span class="desktop-only">choisir un fichier</span>
+            <span class="mobile-only">📷 Photo ou fichier du bilan</span>
+            <input type="file" accept="image/*,application/pdf" capture="environment" multiple onchange={onSelect} hidden />
+          </label>
+        </p>
         <p class="local" style="margin-top:12px;">🔒 100% local — rien n'est envoyé.</p>
-        <p class="faint small" style="margin-top:4px;">Plusieurs bilans ? Collez-les à la suite : ils formeront un seul tableau.</p>
+        <p class="faint small" style="margin-top:4px;">Plusieurs bilans ? <span class="desktop-only">Collez-les</span><span class="mobile-only">Ajoutez-les</span> à la suite : ils formeront un seul tableau.</p>
       </div>
     {/if}
 
@@ -522,6 +537,23 @@
   .drop p { margin: 4px 0; }
   .drop-title { font-size: 16px; }
   .filebtn { color: var(--accent); text-decoration: underline; cursor: pointer; }
+  .mobile-only { display: none; }
+
+  @media (max-width: 640px) {
+    .desktop-only { display: none; }
+    .mobile-only { display: inline; }
+    .drop { padding: 28px 14px; }
+    .drop-cta { margin-top: 14px; }
+    /* Sur téléphone, ouvrir la photo/le fichier EST l'action principale de
+       l'écran : un bouton plein, pas un lien — même geste qu'un FAB, sans
+       en ajouter un nouveau composant. */
+    .filebtn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 52px; width: 100%; text-decoration: none;
+      background: var(--accent); color: #fff; font-weight: 700; font-size: 15px;
+      border-radius: 12px; box-shadow: 0 2px 8px rgba(47,110,237,.25);
+    }
+  }
   .local { color: var(--ok, #14683e); font-weight: 600; font-size: 13px; }
   .local.small { font-size: 12px; }
   .kbd { display: inline-block; background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; font-size: 11px; color: var(--muted); }
