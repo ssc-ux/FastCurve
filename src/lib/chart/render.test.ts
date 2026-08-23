@@ -262,7 +262,7 @@ describe('renderChart — graphe unique : axes honnêtes', () => {
 
 describe('renderChart — marge gauche et graduations', () => {
   const avecValeurs = (valeurs: number[], unite: string) => etudeSimple(
-    [{ id: 'p1', name: 'Analyte', unit: unite, category: 'biologie', color: '#2a78d6', order: 0 }],
+    [{ id: 'p1', name: 'Variable', unit: unite, category: 'biologie', color: '#2a78d6', order: 0 }],
     valeurs.map((v, i) => ({ id: 'm' + i, parameterId: 'p1', date: `2025-0${i + 1}-06`, value: v })),
   );
   const axeY = (svg: string) => +/<line x1="(\d+)" y1="[-\d.]+" x2="\1"/.exec(svg)![1];

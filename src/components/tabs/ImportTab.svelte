@@ -445,7 +445,7 @@
               <tr>
                 <th></th>
                 <th style="text-align:left;">Image</th>
-                <th style="text-align:left;">Analyte</th>
+                <th style="text-align:left;">Variable</th>
                 {#each vDates as _d, i (i)}
                   <th class:doute={vDatesDoute[i] || missingDateCols.has(i)}>
                     <input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" value={vDates[i] ? formatDate(vDates[i]) : ''}

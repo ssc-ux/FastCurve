@@ -143,7 +143,7 @@
   });
   const columns = $derived(colonnes.map(c => c.date));
 
-  /** Grille encore complètement vide (aucun analyte, aucune date) et pas en
+  /** Grille encore complètement vide (aucune variable, aucune date) et pas en
    *  train de vérifier un collage : c'est le tout premier écran du médecin. */
   const estDepart = $derived(params.length === 0 && columns.length === 0 && !pasteReview);
 
@@ -777,7 +777,7 @@
   {/if}
 
   <div class="tablecard" class:depart={estDepart}
-       title={estDepart ? "Tapez le nom de l'analyte à gauche, la date en haut. Ctrl+V colle une capture ou un tableau de résultats." : undefined}>
+       title={estDepart ? "Tapez le nom de la variable à gauche, la date en haut. Ctrl+V colle une capture ou un tableau de résultats." : undefined}>
     <div class="tablescroll">
       <table class="dgrid">
         <thead>
@@ -854,7 +854,7 @@
           {/each}
           <tr class="newrow">
             <th class="rowname">
-              <input class="newrow-inp" placeholder="+ analyte" aria-label="Nouvel analyte"
+              <input class="newrow-inp" placeholder="+ variable" aria-label="Nouvelle variable"
                 bind:value={nomNeuf} oninput={() => { iSugg = 0; suggMasquees = false; }}
                 onkeydown={nouvelleLigneKey} onblur={nouvelleLigneBlur} />
               {#if suggestions.length}

@@ -20,6 +20,13 @@
 
   let texte = $state('');
   let date = $state(todayISO());
+  let champTexte = $state<HTMLTextAreaElement>();
+
+  // L'attribut HTML `autofocus` seul est peu fiable une fois l'écran ouvert
+  // après un clic (le focus reste souvent sur le bouton cliqué) : sans ce
+  // focus explicite, ni Dragon ni la dictée système de l'OS n'ont de champ où
+  // écrire, et rien ne semble se passer quand le médecin dicte.
+  $effect(() => { champTexte?.focus(); });
 
   // Ré-analysé à chaque changement de `texte` — c'est tout le mécanisme du
   // « ça se remplit en direct » : aucune action du médecin ne le déclenche.
@@ -154,13 +161,13 @@
            onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); } }} />
   </div>
 
-  <textarea class="dictzone" bind:value={texte} placeholder="Dictez ou tapez ici les résultats…" spellcheck="false"></textarea>
+  <textarea bind:this={champTexte} class="dictzone" bind:value={texte} placeholder="Dictez ou tapez ici les résultats…" spellcheck="false"></textarea>
 
   {#if lignes.length}
     <div style="margin-top:10px; overflow-x:auto;">
       <table class="grid vgrid dtable">
         <thead>
-          <tr><th></th><th style="text-align:left;">Analyte</th><th>Valeur</th><th>Date</th><th></th></tr>
+          <tr><th></th><th style="text-align:left;">Variable</th><th>Valeur</th><th>Date</th><th></th></tr>
         </thead>
         <tbody>
           {#each lignes as l (l.id)}

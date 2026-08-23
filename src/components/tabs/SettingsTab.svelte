@@ -95,11 +95,11 @@
   <div class="card" style="padding:12px;">
     <div class="row" style="margin-bottom:8px;"><strong>Apprentissage</strong></div>
     <p class="faint small" style="margin-bottom:8px;">
-      À chaque import, quand vous corrigez un nom lu (analyte) ou confirmez un médicament, l'outil le <strong>retient</strong> sur ce poste et le réapplique la prochaine fois. Un <strong>dictionnaire intégré</strong> à l'app est déjà partagé par tous les postes. 100% local, aucune donnée patient.
+      À chaque import, quand vous corrigez un nom lu (variable) ou confirmez un médicament, l'outil le <strong>retient</strong> sur ce poste et le réapplique la prochaine fois. Un <strong>dictionnaire intégré</strong> à l'app est déjà partagé par tous les postes. 100% local, aucune donnée patient.
     </p>
     <div class="row wrap" style="margin-bottom:8px;">
       <span class="badge">{learn.builtinDrugs + learn.drugs} médicaments reconnus</span>
-      <span class="badge">{learn.analytes} correction{learn.analytes > 1 ? 's' : ''} d'analyte (ce poste)</span>
+      <span class="badge">{learn.analytes} correction{learn.analytes > 1 ? 's' : ''} de variable (ce poste)</span>
     </div>
     <p class="faint small" style="margin-bottom:8px;">Pour faire profiter <strong>tous les postes</strong> de ce que ce poste a appris : exportez, et transmettez le fichier pour l'intégrer au dictionnaire de l'app.</p>
     <div class="row wrap">
@@ -135,7 +135,7 @@
     <div class="row" style="margin-bottom:8px;"><strong>Démarrage rapide</strong></div>
     <div class="row wrap">
       <button onclick={() => loadSample()}>Charger un exemple</button>
-      <button class="danger" title="Vide les valeurs, dates et traitements ; garde les paramètres (analytes) et le titre du graphique."
+      <button class="danger" title="Vide les valeurs, dates et traitements ; garde les paramètres (variables) et le titre du graphique."
         onclick={() => { store.clearData(); uiBus.toastAction('Données effacées (mesures et traitements).', 'Annuler', () => store.undo()); }}>Effacer les données</button>
       <button class="danger" title="Repart d'un suivi entièrement vierge : paramètres, titre et traitements compris — comme au tout premier lancement."
         onclick={() => { store.clearAll(); uiBus.toastAction('Dossier réinitialisé.', 'Annuler', () => store.undo()); }}>Tout réinitialiser</button>
