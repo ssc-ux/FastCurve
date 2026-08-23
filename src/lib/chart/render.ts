@@ -45,6 +45,12 @@ export interface RenderResult {
   /** Zones interactives des points (coord SVG) pour le survol. */
   hotspots: { param: Parameter; date: string; value: number; cx: number; cy: number }[];
   /**
+   * Vrai uniquement pour le placeholder « rien à afficher » (aucun paramètre,
+   * aucune date). Sert à ChartPanel pour centrer verticalement cette petite
+   * carte dans le canvas au lieu de la laisser collée en haut d'un grand vide.
+   */
+  empty: boolean;
+  /**
    * Séries écrasées au ras de leur axe : deux échelles ne peuvent pas loger
    * des ordres de grandeur trop éloignés. La figure reste juste, mais ces
    * courbes n'y sont pas lisibles — autant le dire au médecin plutôt que de
@@ -375,6 +381,7 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
 
   let panelsSVG = '';
   let plotBottom = 0;
+  let isEmpty = false;
 
   if (s.chartMode === 'stacked' && params.length) {
     // ── Mode panneaux empilés ──
@@ -502,10 +509,21 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     panelsSVG += xAxis(xm, plotAreaBottom, layout);
     plotBottom = plotAreaBottom + xAxisH;
   } else {
-    // Rien à afficher : placeholder
-    panelsSVG += `<text x="${width / 2}" y="${availTop + 120}" text-anchor="middle" font-family="${FONT}" font-size="14" fill="${MUTED}">Ajoutez des valeurs pour générer la courbe</text>`;
-    plotAreaBottom = availTop + 200;
-    plotBottom = availTop + 240;
+    // Rien à afficher : placeholder. Repris de l'icône du logo (même tracé
+    // que `chart-spline` dans Icon.svelte) pour rester dans le même langage
+    // visuel plutôt que d'inventer une illustration — un simple ton neutre,
+    // assez clair pour ne jamais rivaliser avec une vraie courbe le jour où
+    // il y en a une.
+    isEmpty = true;
+    const iconSize = 56;
+    const iconX = width / 2 - iconSize / 2;
+    const iconY = availTop + 4;
+    panelsSVG += `<g transform="translate(${n(iconX)},${n(iconY)}) scale(${n(iconSize / 24)})" fill="none" stroke="#c7ced6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16c.5-2 1.5-7 4-7 2 0 2 3 4 3 2.5 0 4.5-5 5-7"/></g>`;
+    const titreY = iconY + iconSize + 30;
+    panelsSVG += `<text x="${width / 2}" y="${n(titreY)}" text-anchor="middle" font-family="${FONT}" font-size="15" font-weight="600" fill="${MUTED}">Ajoutez des valeurs pour générer la courbe</text>`;
+    panelsSVG += `<text x="${width / 2}" y="${n(titreY + 21)}" text-anchor="middle" font-family="${FONT}" font-size="12.5" fill="#8a929b">La courbe apparaît automatiquement, dès la première valeur saisie</text>`;
+    plotAreaBottom = titreY + 40;
+    plotBottom = titreY + 70;
   }
 
   parts.push(panelsSVG);
@@ -717,7 +735,7 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     + parts.join('')
     + `</svg>`;
 
-  return { svg, width, height, hotspots, ecrasees };
+  return { svg, width, height, hotspots, ecrasees, empty: isEmpty };
 }
 
 // ── Helpers de tracé ──────────────────────────────────────────

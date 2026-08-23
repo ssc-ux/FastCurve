@@ -143,6 +143,10 @@
   });
   const columns = $derived(colonnes.map(c => c.date));
 
+  /** Grille encore complètement vide (aucun analyte, aucune date) et pas en
+   *  train de vérifier un collage : c'est le tout premier écran du médecin. */
+  const estDepart = $derived(params.length === 0 && columns.length === 0 && !pasteReview);
+
   /** Transfère la clé d'une colonne vers sa nouvelle date, pour que le nœud DOM
    *  (et donc le focus) survive au déplacement. */
   function reporterCle(ancienne: string, nouvelle: string) {
@@ -696,6 +700,13 @@
     <div class="aux"><ImportTab initialMode={importInitial} onImported={() => (mode = 'saisir')} /></div>
   {:else}
 
+  <!-- Suivi vide : ce bloc (tableau + « Série de dates ») est centré dans le
+       reste de la hauteur disponible plutôt que collé en haut, laissant un
+       grand vide au-dessus de la poignée de redimensionnement. Le sélecteur
+       Saisir/Importer/Dicter, lui, reste ancré en haut — un repère de
+       navigation ne doit pas se déplacer selon l'état du suivi. -->
+  <div class="corps" class:centrer={estDepart}>
+
   {#if pasteReview}
     <div class="tablecard aux" style="padding:12px;">
       <div class="row" style="margin-bottom:8px; gap:6px; align-items:baseline;">
@@ -743,17 +754,6 @@
     </div>
   {/if}
 
-  {#if params.length === 0 && columns.length === 0 && !pasteReview}
-    <!-- Écran de départ : la grille doit rester visible et utilisable tout de
-         suite, pas être poussée hors de l'écran. Les autres façons d'entrer
-         des résultats (capture, dictée) sont déjà juste au-dessus, dans la
-         barre Saisir/Importer/Dicter — pas la peine de les répéter ici. -->
-    <div class="depart">
-      <p class="depart-t">Tapez directement dans le tableau : le nom de l'analyte à gauche, la date en haut.</p>
-      <p class="astuce"><kbd>Ctrl</kbd>+<kbd>V</kbd> colle une capture depuis n'importe où.</p>
-    </div>
-  {/if}
-
   {#if serieOuverte}
     <div class="card aux serie">
       <div class="row wrap">
@@ -776,7 +776,8 @@
     </div>
   {/if}
 
-  <div class="tablecard">
+  <div class="tablecard" class:depart={estDepart}
+       title={estDepart ? "Tapez le nom de l'analyte à gauche, la date en haut. Ctrl+V colle une capture ou un tableau de résultats." : undefined}>
     <div class="tablescroll">
       <table class="dgrid">
         <thead>
@@ -890,11 +891,18 @@
     {/if}
   </div>
 
+  </div>
+
   {/if}
 </div>
 
 <style>
   .data { display: flex; flex-direction: column; gap: 14px; }
+  /* Suivi vide (App.svelte pose `.tab-content.centrer`) : `.data` doit occuper
+     toute la hauteur réservée par `.tab-content` pour que `.corps.centrer`,
+     plus bas, ait un espace réel à centrer dans — sinon `flex: 1` sur `.corps`
+     n'a rien à remplir, sa hauteur restant celle de son contenu. */
+  :global(.tab-content.centrer) .data { flex: 1; min-height: 0; }
 
   .modeseg { display: inline-flex; background: #eef1f5; border-radius: 10px; padding: 3px; align-self: flex-start; }
   .modeseg button { border: none; background: transparent; border-radius: 7px; padding: 6px 16px; font-size: 13px; color: var(--muted); }
@@ -904,11 +912,26 @@
      sont pas un : un formulaire étiré sur 1600 px est illisible. */
   .aux { max-width: 880px; }
 
-  /* Écran de départ : au-dessus d'une grille déjà utilisable. */
-  .depart { display: flex; flex-direction: column; gap: 6px; }
-  .depart-t { font-size: 13.5px; color: var(--muted); margin: 0; }
+  .corps { display: flex; flex-direction: column; gap: 14px; }
+  /* Suivi vide : le tableau + « Série de dates » n'ont aucune raison de rester
+     collés en haut d'une colonne bien plus haute qu'eux — ça laissait un grand
+     vide au-dessus de la poignée de redimensionnement (grief du médecin). Le
+     bloc est centré dans la hauteur qui lui est réservée ; `.tab-content.centrer`
+     (App.svelte) est ce qui donne à `.data`/`.corps` une hauteur à remplir. */
+  .corps.centrer { flex: 1; min-height: 0; justify-content: center; }
 
   .tablecard { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  /* Suivi vide : c'est LE tableau à remplir, et il doit se voir tout de suite —
+     pas se fondre dans le blanc de la barre latérale. Rien d'inventé : même
+     anneau bleu que celui posé sur un champ actif au focus (`--accent` +
+     `0 0 0 3px var(--accent-soft)`, voir la règle globale `input:focus`) —
+     déjà, dans toute l'appli, le signal « c'est ici qu'on agit » — combiné à
+     l'ombre de la carte du graphique (ChartPanel `.svg-host`) pour la
+     détacher du blanc derrière elle. */
+  .tablecard.depart {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft), 0 6px 24px rgba(16,24,32,.10);
+  }
   /* Grille de saisie : défile dans les deux sens, en-tête de dates et colonne
      des noms restant visibles (sinon on saisit à l'aveugle dès 3-4 dates). */
   .tablescroll { overflow: auto; max-height: var(--grille-max-h, min(56vh, 460px)); }

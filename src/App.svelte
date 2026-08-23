@@ -208,7 +208,7 @@
           </button>
         {/each}
       </nav>
-      <div class="tab-content" class:forme={activeTab !== 'data'}>
+      <div class="tab-content" class:forme={activeTab !== 'data'} class:centrer={activeTab === 'data' && sansDonnees}>
         {#if activeTab === 'data'}<DataTab />
         {:else if activeTab === 'treatments'}<TreatmentsTab />
         {:else if activeTab === 'settings'}<SettingsTab />
@@ -310,6 +310,13 @@
   .tab.active { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
   .tab-icon { display: inline-flex; }
   .tab-content { flex: 1; overflow-y: auto; padding: 16px; min-height: 0; }
+  /* Suivi vide : donne à DataTab (`.data`/`.corps`) une hauteur à occuper,
+     pour qu'il puisse centrer son tableau au lieu de le laisser collé en
+     haut d'un grand vide (voir `.corps.centrer` dans DataTab.svelte). Sans
+     effet une fois des données présentes : la classe n'est posée que pour
+     ce cas précis (`sansDonnees`), et la sidebar retrouve alors sa hauteur
+     naturelle (`.body.horizontal .sidebar { height: auto }`). */
+  .tab-content.centrer { display: flex; flex-direction: column; }
 
   /* Poignée de redimensionnement */
   .body.horizontal .divider { width: auto; height: 10px; cursor: row-resize; }
