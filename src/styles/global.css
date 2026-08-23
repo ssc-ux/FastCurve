@@ -86,16 +86,19 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 button:disabled:active { transform: none; }
 
 /* Boutons de la barre du haut (fond marine) : bordure et fond clairs sur
-   sombre, jamais le style panneau blanc ci-dessus (illisible sur #0f2038). */
-button.topbtn {
+   sombre, jamais le style panneau blanc ci-dessus (illisible sur #0f2038).
+   Sélecteur de classe pur (pas `button.topbtn`) : « Ouvrir » est un `<label>`
+   qui doit porter exactement le même style que ses voisins `<button>`. */
+.topbtn {
+  display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
   background: var(--topbar-btn-bg); border: 1px solid var(--topbar-btn-border);
   color: var(--topbar-ink); font-weight: 600; font-size: 12px; padding: 6px 12px;
-  border-radius: 5px;
+  border-radius: 5px; white-space: nowrap;
 }
-button.topbtn:hover { background: var(--topbar-btn-hover); border-color: var(--topbar-btn-border); }
-button.topbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button.topbtn.primary:hover { background: var(--accent-hover); }
-button.topbtn:disabled { opacity: .4; }
+.topbtn:hover { background: var(--topbar-btn-hover); border-color: var(--topbar-btn-border); }
+.topbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.topbtn.primary:hover { background: var(--accent-hover); }
+.topbtn:disabled { opacity: .4; cursor: not-allowed; }
 
 input, select, textarea {
   font: inherit;
@@ -202,7 +205,7 @@ table.grid input:focus { border-color: var(--accent); background: #fff; }
      même sortir le tableau des valeurs. */
   .sidebar,
   .body.horizontal .sidebar.collapsed { display: block !important; width: 100% !important; height: auto !important; max-height: none !important; }
-  .sidebar .tabs, .modeseg, .aux, .add-param, .pied, .serie, .empty, .quickstarts { display: none !important; }
+  .rail, .modeseg, .aux, .add-param, .pied, .serie, .empty, .quickstarts { display: none !important; }
   .tab-content { padding: 0 !important; overflow: visible !important; }
   /* Artefacts de saisie à écarter du tableau imprimé : l'icône calendrier de
      chaque colonne, la ligne « + variable » et la colonne « + date » toujours

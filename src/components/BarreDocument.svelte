@@ -74,11 +74,11 @@
     </button>
   {/if}
 
-  <button class="act" onclick={nouveau} title="Repartir d’un suivi vierge">Nouveau</button>
-  <label class="act fichier" title="Ouvrir un fichier .fastcurve.json enregistré">
+  <button class="act topbtn" onclick={nouveau} title="Repartir d’un suivi vierge">Nouveau</button>
+  <label class="act topbtn fichier" title="Ouvrir un fichier .fastcurve.json enregistré">
     Ouvrir<input type="file" accept=".json,application/json" onchange={ouvrirFichier} hidden />
   </label>
-  <button class="act" onclick={enregistrerFichier} disabled={vide} title="Enregistrer ce suivi dans un fichier">Enregistrer</button>
+  <button class="act topbtn" onclick={enregistrerFichier} disabled={vide} title="Enregistrer ce suivi dans un fichier">Enregistrer</button>
 </div>
 
 <style>
@@ -88,26 +88,30 @@
      déborde silencieusement de sa propre case et se peint par-dessus le
      badge « ✓ Enregistré » à sa droite — repéré à 760px de large avec un
      suivi déjà enregistré. */
-  .doc { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; }
+  .doc {
+    display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden;
+    padding-left: 14px; margin-left: 2px; border-left: 1px solid var(--topbar-border);
+  }
   .nom {
     display: inline-flex; align-items: center; gap: 7px; max-width: 260px;
-    border: 1px solid transparent; background: transparent; border-radius: 9px;
-    padding: 5px 10px; font-size: 13px; font-weight: 600; color: var(--ink);
+    border: 1px solid transparent; background: transparent; border-radius: 6px;
+    padding: 5px 9px; font-size: 13px; font-weight: 700; color: #fff;
   }
-  .nom:hover { background: var(--panel-2); border-color: var(--border); }
+  .nom:hover { background: rgba(255,255,255,.08); border-color: var(--topbar-border); }
   .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .renom {
     width: 240px; font-size: 13px; font-weight: 600; padding: 5px 9px;
-    border-radius: 9px; border: 1px solid var(--accent);
+    border-radius: 6px; border: 1px solid var(--accent); background: #fff; color: var(--ink);
   }
+  /* Les trois actions (Nouveau/Ouvrir/Enregistrer) partagent le style
+     `.topbtn` (global.css) : boutons sombres à bordure fine, comme dans la
+     maquette « Console clinique dense ». `.act` n'ajoute plus qu'un
+     comportement de mise en page. */
   .act {
-    border: none; background: transparent; color: var(--muted);
-    font-size: 12.5px; padding: 5px 10px; border-radius: 8px; white-space: nowrap; cursor: pointer;
+    white-space: nowrap;
     /* Ne rétrécit jamais : c'est le nom du suivi (ellipsis ci-dessus) qui doit
        céder la place en premier, jamais ces trois actions. */
     flex-shrink: 0;
   }
-  .act:hover:not(:disabled) { background: var(--panel-2); color: var(--ink); }
-  .act:disabled { opacity: .45; cursor: default; }
   .fichier { display: inline-flex; align-items: center; flex-shrink: 0; }
 </style>
