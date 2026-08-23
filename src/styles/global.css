@@ -1,20 +1,25 @@
 :root {
-  --bg: #f5f6f8;
+  /* ── Console clinique dense (Direction 1) ──
+     Fond gris-bleu clair pour la zone de contenu, cartes blanches à bordure
+     fine — la densité vient du resserrement des tailles/paddings, pas d'une
+     nouvelle palette de composants : la plupart des écrans (Traitements,
+     Réglages) héritent simplement de ces jetons via .card/table.grid/button. */
+  --bg: #eef1f6;
   --canvas-bg: #eef1f5;
   --panel: #ffffff;
-  --panel-2: #f6f8fa;
-  --border: #e6e9ee;
-  --border-strong: #d3d8df;
-  --ink: #1a2430;
+  --panel-2: #f4f6fa;
+  --border: #e1e6ee;
+  --border-strong: #d7deea;
+  --ink: #16233a;
   --muted: #56616d;
   /* #78818c à l'origine : sous 4.5:1 sur fond blanc (3.95:1), illisible sur un
      portable en salle mal éclairée. Assombri pour repasser le seuil WCAG AA
      partout où le texte de l'application l'utilise. */
   --faint: #666e77;
-  /* #2f74d0 à l'origine : sous 4.5:1 une fois posé sur son propre fond teinté
-     (--accent-soft, ex. l'onglet actif) — 4.08:1 mesuré. Assombri d'environ
-     10 % ; le bleu reste reconnaissable, le contraste passe partout. */
-  --accent: #2a68bb;
+  /* Bleu d'accent de la maquette « Console clinique dense » — vérifié ≥4.5:1
+     sur fond blanc et sur --accent-soft. */
+  --accent: #2f6fed;
+  --accent-hover: #2359c9;
   --accent-soft: #eaf1fb;
   --accent-ink: #ffffff;
   /* #d0402f / #1f9d55 à l'origine : sous 4.5:1 pour du texte (le bouton
@@ -24,14 +29,32 @@
   --ok: #197e44;
   --warn-bg: #fff4d6;
   --warn-ink: #7a5b00;
-  --radius: 12px;
+  /* Mise en évidence hors-norme de la grille (bascule existante, désactivée
+     par défaut — voir DataTab/ChartPanel « Marquer les valeurs hors-norme »). */
+  --hi-ink: #c0392b;
+  --hi-bg: #fdecea;
+  --ok-ink: #1f8a53;
+  /* Chrome sombre : barre du haut + rail de navigation. */
+  --topbar-bg: #0f2038;
+  --topbar-border: #253a5c;
+  --topbar-ink: #dfe9ff;
+  --topbar-btn-bg: #1a3358;
+  --topbar-btn-border: #2c4d80;
+  --topbar-btn-hover: #234270;
+  --rail-bg: #16233a;
+  --rail-ink: #7f93b8;
+  --rail-ink-on: #7fa8ff;
+  --rail-bg-on: #223757;
+  --radius: 6px;
+  --radius-lg: 8px;
   --shadow: 0 1px 2px rgba(16,24,32,0.05), 0 4px 14px rgba(16,24,32,0.06);
   --shadow-sm: 0 1px 2px rgba(16,24,32,0.06);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
-  font-size: 14px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  font-size: 13px;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  font-variant-numeric: tabular-nums;
 }
 
 * { box-sizing: border-box; }
@@ -46,14 +69,15 @@ button {
   border: 1px solid var(--border-strong);
   background: var(--panel);
   color: var(--ink);
-  border-radius: 9px;
-  padding: 7px 13px;
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  font-size: 12.5px;
   transition: background .16s ease, border-color .16s ease, box-shadow .16s ease, transform .06s ease;
 }
 button:hover { background: var(--panel-2); border-color: var(--border-strong); }
 button:active { transform: scale(0.975); }
-button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: 0 1px 2px rgba(47,116,208,.25); }
-button.primary:hover { background: #2a6ac2; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: 0 1px 2px rgba(47,110,237,.25); }
+button.primary:hover { background: var(--accent-hover); }
 button.ghost { border-color: transparent; background: transparent; }
 button.ghost:hover { background: rgba(0,0,0,.045); }
 button.danger { color: var(--danger); border-color: #e6bcb5; background: var(--panel); }
@@ -61,13 +85,26 @@ button.danger:hover { background: #fbecea; }
 button:disabled { opacity: .45; cursor: not-allowed; }
 button:disabled:active { transform: none; }
 
+/* Boutons de la barre du haut (fond marine) : bordure et fond clairs sur
+   sombre, jamais le style panneau blanc ci-dessus (illisible sur #0f2038). */
+button.topbtn {
+  background: var(--topbar-btn-bg); border: 1px solid var(--topbar-btn-border);
+  color: var(--topbar-ink); font-weight: 600; font-size: 12px; padding: 6px 12px;
+  border-radius: 5px;
+}
+button.topbtn:hover { background: var(--topbar-btn-hover); border-color: var(--topbar-btn-border); }
+button.topbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.topbtn.primary:hover { background: var(--accent-hover); }
+button.topbtn:disabled { opacity: .4; }
+
 input, select, textarea {
   font: inherit;
   color: var(--ink);
   background: var(--panel);
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  padding: 7px 9px;
+  border-radius: 6px;
+  padding: 6px 9px;
+  font-size: 12.5px;
   transition: border-color .16s ease, box-shadow .16s ease;
 }
 input:focus, select:focus, textarea:focus {
@@ -77,7 +114,7 @@ input:focus, select:focus, textarea:focus {
 }
 label { font-size: 13px; color: var(--muted); }
 
-.small { font-size: 13px; }
+.small { font-size: 12.5px; }
 .muted { color: var(--muted); }
 .faint { color: var(--faint); }
 .row { display: flex; gap: 8px; align-items: center; }
@@ -88,14 +125,21 @@ label { font-size: 13px; color: var(--muted); }
 
 .card {
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: none;
+}
+
+/* Libellé de section : petites capitales, lettrage large — même langage que
+   les en-têtes de la grille dense et les titres de carte du graphique. */
+.section-label {
+  font-size: 10.5px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .05em; color: #7686a1; margin: 0 0 8px;
 }
 
 .badge {
   display: inline-block;
-  font-size: 12px;
+  font-size: 11.5px;
   padding: 2px 8px;
   border-radius: 10px;
   background: #eef2f6;
@@ -108,21 +152,33 @@ label { font-size: 13px; color: var(--muted); }
   border: 1px solid #f0d98a;
   border-radius: 6px;
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.45;
 }
 
-table.grid { border-collapse: collapse; width: 100%; }
+/* Grille dense : bordures fines complètes (pas seulement horizontales),
+   en-têtes petites capitales grasses sur fond gris très clair, cellules
+   resserrées — même langage que la grille de saisie principale (DataTab). */
+table.grid { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
 table.grid th, table.grid td {
   border: 1px solid var(--border);
-  padding: 3px 6px;
+  padding: 5px 7px;
   text-align: center;
-  font-size: 13px;
+  font-size: 12.5px;
 }
-table.grid th { background: var(--panel-2); font-weight: 600; color: var(--muted); }
+table.grid th { background: var(--panel-2); font-weight: 700; color: #57657f; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
 table.grid td.name { text-align: left; font-weight: 600; white-space: nowrap; }
 table.grid input { width: 62px; text-align: center; padding: 3px 4px; border-color: transparent; background: transparent; }
 table.grid input:focus { border-color: var(--accent); background: #fff; }
+
+/* Mise en évidence hors-norme, réutilisée par la grille de saisie et les
+   tableaux dérivés : ROUGE pour une valeur hors des bornes de normale, VERT
+   pour une valeur qui vient d'y rentrer (uniquement quand ce signal existe
+   déjà — deux mesures consécutives du même paramètre, l'une hors-norme, la
+   suivante non). Toujours soumis à la bascule existante
+   `settings.markOutOfRange`, désactivée par défaut : voir DataTab/ChartPanel. */
+.oor-hi { color: var(--hi-ink) !important; font-weight: 700; background: var(--hi-bg) !important; }
+.oor-ok { color: var(--ok-ink) !important; font-weight: 700; }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: #cbd3da; border-radius: 6px; }
