@@ -2,13 +2,24 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!-- Les assets sont versionnés (nom haché) : on peut les cacher, mais jamais
-         cette page, sinon une mise à jour ne parvient pas aux postes (cache navigateur/proxy). -->
+         cette page, sinon une mise à jour ne parvient pas aux postes (cache navigateur/proxy).
+         Le service worker (public/service-worker.js) respecte la même règle :
+         réseau d'abord pour cette page, cache d'abord uniquement pour les
+         assets hachés. -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="theme-color" content="#0f2038" />
+    <!-- Installation "Ajouter à l'écran d'accueil" en plein écran (iOS ignore
+         encore une partie de manifest.webmanifest, d'où ces balises dédiées). -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="FastCurve" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; connect-src 'self' blob: data:; img-src 'self' blob: data:; font-src 'self' data:; form-action 'none';">
     <meta name="description" content="FastCurve — générateur de courbes biologiques et EFR de qualité publication, 100% local dans le navigateur." />
     <title>FastCurve — Courbes biologiques & EFR</title>
@@ -16,5 +27,17 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
+    <script>
+      // Service worker : ne fait que mettre en cache le shell applicatif
+      // (fichiers statiques déjà servis par ce site) pour un lancement
+      // instantané depuis l'écran d'accueil et un usage hors-ligne. Aucune
+      // donnée patient n'y transite jamais (elle reste dans localStorage).
+      // Dégradation silencieuse et sans régression si non supporté.
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
