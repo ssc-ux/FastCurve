@@ -241,7 +241,7 @@
     </div>
   </div>
 
-  <div class="canvas" bind:this={container}>
+  <div class="canvas" class:vide={result.empty} bind:this={container}>
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
     <div class="svg-host" role="img" aria-label="Graphique" onmousemove={onMove} onmouseleave={() => (hover = null)} onclick={onChartClick}>
       {@html result.svg}
@@ -340,6 +340,13 @@
 
   .toolbar button { padding: 5px 12px; font-size: 12.5px; border-radius: 8px; }
   .canvas { position: relative; flex: 1; overflow: auto; padding: 24px; background: var(--canvas-bg); display: flex; justify-content: center; align-items: flex-start; }
+  /* Suivi vide : la petite carte de placeholder (juste le titre + « Ajoutez
+     des valeurs… ») ne doit pas rester collée en haut d'un grand vide gris —
+     elle est centrée dans l'espace disponible, comme une invite plutôt qu'un
+     fragment de page qui s'est chargé à moitié. Sûr ici (contrairement au cas
+     général) car ce placeholder est toujours petit : jamais de contenu coupé
+     en haut par le centrage vertical d'un conteneur `overflow: auto`. */
+  .canvas.vide { align-items: center; }
   .svg-host { position: relative; background: #fff; box-shadow: 0 6px 24px rgba(16,24,32,.10); border-radius: 12px; max-width: 100%; }
   .svg-host :global(svg) { display: block; max-width: 100%; height: auto; }
   .point-pop {
