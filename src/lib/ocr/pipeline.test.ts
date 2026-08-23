@@ -18,7 +18,7 @@ import {
   blocPourColonne, blocsDeBande, ecartMaxInterne, ecarterBandesDecoratives, etendue,
   isolerTableau, plageEntete, retenirBlocEntete,
 } from './pipeline';
-import { seuilDeBruit, type CarteEncre } from './structure';
+import { sansDecorationsCouleur, seuilDeBruit, type CarteCouleur, type CarteEncre } from './structure';
 
 // ── Outils : fabriquer une carte d'encre à la main ──────────────
 
@@ -39,6 +39,33 @@ function gris(lignes: string[], fond = 250, encre = 20) {
     for (let x = 0; x < largeur; x++) v[y * largeur + x] = l[x] === '#' ? encre : fond;
   });
   return { largeur, hauteur, v };
+}
+
+/**
+ * `lignes` : une chaîne par ligne de pixels de classification chromatique —
+ * B = bleu franc, b = bleu faible, C = chaud franc, c = chaud faible, tout
+ * le reste (dont « . » et « # ») = neutre. Longueur/hauteur alignées sur la
+ * `CarteEncre` correspondante (produite séparément par `carte()`).
+ */
+function couleur(lignes: string[]): CarteCouleur {
+  const hauteur = lignes.length, largeur = lignes[0].length;
+  const classe = new Uint8Array(largeur * hauteur);
+  const table: Record<string, number> = { B: 1, C: 2, b: 3, c: 4 };
+  lignes.forEach((l, y) => {
+    for (let x = 0; x < largeur; x++) classe[y * largeur + x] = table[l[x]] ?? 0;
+  });
+  return { largeur, hauteur, classe };
+}
+
+/** Relit une `CarteEncre` locale comme une chaîne « # »/« . », pour des assertions lisibles. */
+function texteEncre(c: CarteEncre): string[] {
+  const out: string[] = [];
+  for (let y = 0; y < c.hauteur; y++) {
+    let l = '';
+    for (let x = 0; x < c.largeur; x++) l += c.encre[y * c.largeur + x] ? '#' : '.';
+    out.push(l);
+  }
+  return out;
 }
 
 // ── Erreurs 1 & 2 : la colonne des normes n'est pas une colonne de résultats ──
@@ -261,6 +288,24 @@ describe('le jaune ne signale que le doute de LECTURE', () => {
     expect(jugerValeur({ ...base, texte: '300', glyphes: 3, caracteresLus: 3 }).douteux).toBe(false);
   });
 
+  it('signale une case où un pictogramme a été découpé et que Tesseract n’y place aucune confiance', () => {
+    // Le cas réel du CHU : un badge « i » d'information ou une flèche de
+    // tendance glués au nombre (« ⓘ17↓ ») laissent parfois, une fois
+    // découpés, un résidu qui perturbe encore la lecture — Tesseract rend
+    // alors un texte non vide mais à confiance NULLE. Le seuil ordinaire
+    // (ligne suivante) ignore ce cas précis puisqu'il exige `confiance > 0`.
+    expect(jugerValeur({ ...base, texte: '7', confiance: 0, picto: true }).douteux).toBe(true);
+    expect(jugerValeur({ ...base, texte: '7', confiance: 0, picto: true }).motifs)
+      .toContain('pictogramme repéré près du nombre — lecture à vérifier');
+    // Sans pictogramme, une confiance à 0 reste le sentinel « case non lue » :
+    // une case VIDE (le comportement déjà couvert plus haut), pas une case
+    // dont la lecture aurait échoué.
+    expect(jugerValeur({ ...base, texte: '', confiance: 0, encre: 0, picto: false }).douteux).toBe(false);
+    // Un pictogramme découpé n'est PAS un motif en soi quand la lecture,
+    // elle, est franchement bonne : pas de jaune pour rien.
+    expect(jugerValeur({ ...base, texte: '17', confiance: 87, picto: true }).douteux).toBe(false);
+  });
+
   it('signale un nom d’analyte que l’application ne reconnaît pas', () => {
     expect(jugerNom('Créatinine', 95).douteux).toBe(false);
     expect(jugerNom('19G', 95).douteux).toBe(true);
@@ -453,5 +498,111 @@ describe('grilles denses — une colonne anormalement large est toujours signal�
   it('signale aussi une case VIDE d’une colonne anormale (aucune valeur n’est fiable dans cette colonne)', () => {
     expect(jugerValeur({ ...base, texte: '', encre: 0, colonneAnormale: true }).douteux).toBe(true);
     expect(jugerValeur({ ...base, texte: '', encre: 0, colonneAnormale: false }).douteux).toBe(false);
+  });
+});
+
+// ── Icônes et flèches accolées au résultat (le signalement du médecin) ──
+//
+// Capture réelle du CHU : certains systèmes hospitaliers collent, SANS
+// ESPACE, un badge « i » d'information (bleu) et/ou une flèche de tendance
+// (orange) au résultat (« ⓘ17↓ », « ⓘ41 »). `sansDecorationsCouleur` doit
+// les écarter de l'encre AVANT l'OCR et l'analyse géométrique — sans jamais
+// mordre sur un chiffre voisin, même quand il TOUCHE le pictogramme (aucun
+// espace ne les sépare sur l'image).
+describe('icônes et flèches accolées au résultat', () => {
+  // Un vrai badge fait plusieurs dizaines de pixels francs — les grilles
+  // ci-dessous simulent une case de 7 px de haut (une hauteur de ligne
+  // plausible), pour que les blocs colorés testés franchissent le seuil de
+  // taille (`TAILLE_MIN_PICTO`) qui les distingue du bruit de lissage de
+  // police (voir le test dédié plus bas).
+  const H = 7;
+  const bande = { y0: 0, y1: H - 1 };
+  const repete = (ligne: string) => Array(H).fill(ligne);
+
+  it('retire un badge bleu qui TOUCHE le chiffre suivant, sans toucher au chiffre', () => {
+    // 7 px de badge bleu (49 px francs, un vrai badge), puis 4 px de chiffre
+    // — collés, sans le moindre espace : exactement le cas « ⓘ41 » où
+    // l'icône touche le « 4 ». Un simple découpage en composantes connexes
+    // fusionnerait les deux en un seul bloc à majorité bleue, et perdrait le
+    // chiffre avec l'icône.
+    const c = carte(repete('###########'));
+    const col = couleur(repete('BBBBBBB....'));
+    const net = sansDecorationsCouleur(c, col, bande, { x0: 0, x1: 10 });
+    expect(texteEncre(net.carte)).toEqual(repete('.......####'));
+    expect(net.picto).toBe(true);
+  });
+
+  it('étend le retrait au liséré antialiasé (faible) qui prolonge le bleu franc, mais jamais au-delà', () => {
+    // Le contour d'un badge rond fond souvent vers un bleu plus pâle avant le
+    // blanc : ce liséré doit partir avec le badge, pas survivre en résidu.
+    const c = carte(repete('############'));
+    const col = couleur(repete('BBBBBBBb....'));
+    const net = sansDecorationsCouleur(c, col, bande, { x0: 0, x1: 11 });
+    expect(texteEncre(net.carte)).toEqual(repete('........####'));
+  });
+
+  it('ne propage JAMAIS le retrait à travers un pixel réellement neutre', () => {
+    // Un pixel « faible » isolé (une teinte fortuite, ailleurs dans la case)
+    // ne touche AUCUN pixel franc — deux colonnes neutres l'en séparent.
+    // La propagation ne doit pas « sauter » par-dessus pour l'atteindre : il
+    // ne part qu'avec un badge auquel il est réellement connecté.
+    const c = carte(repete('#############'));
+    const col = couleur(repete('BBBBBBB..b...'));
+    const net = sansDecorationsCouleur(c, col, bande, { x0: 0, x1: 12 });
+    expect(texteEncre(net.carte)).toEqual(repete('.......######'));
+  });
+
+  it('ne retire JAMAIS un pixel isolé qui franchit le seuil « franc » par hasard (frange de lissage de police)', () => {
+    // Le lissage sous-pixel (ClearType et apparentés) fait parfois dépasser
+    // les seuils de chroma/dominance à un pixel ISOLÉ de contour de texte,
+    // sur n'importe quelle lettre noire — mesuré jusqu'à 140 de chroma sur
+    // les captures du banc, plus que certains pixels du vrai badge. Sans le
+    // seuil de taille, une case parfaitement normale se ferait amputer d'un
+    // bord de chiffre à chaque capture du banc.
+    const c = carte(repete('#############'));
+    const col = couleur([
+      '.............',
+      '.............',
+      '...B.........', // un seul pixel « franc » isolé, jamais un aplat
+      '.............',
+      '.............',
+      '.............',
+      '.............',
+    ]);
+    const net = sansDecorationsCouleur(c, col, bande, { x0: 0, x1: 12 });
+    expect(texteEncre(net.carte)).toEqual(repete('#############'));
+    expect(net.picto).toBe(false);
+  });
+
+  it('retire une flèche chaude quand la case porte, par ailleurs, un vrai chiffre neutre', () => {
+    // « 17↓ » : des chiffres neutres, puis une flèche orange (49 px francs),
+    // collés. La preuve que la vraie couleur du résultat est neutre (28 px,
+    // largement au-dessus du seuil 1,5×hauteur de ligne) autorise à retirer
+    // le chaud, même si — comme la vraie flèche du CHU — sa pointe élargie
+    // pourrait peser presque autant de pixels que les chiffres.
+    const c = carte(repete('###########'));
+    const col = couleur(repete('....CCCCCCC'));
+    const net = sansDecorationsCouleur(c, col, bande, { x0: 0, x1: 10 });
+    expect(texteEncre(net.carte)).toEqual(repete('####.......'));
+    expect(net.picto).toBe(true);
+  });
+
+  it('ne retire JAMAIS le chaud d’une valeur pathologique entièrement colorée (aucune encre neutre pour en attester)', () => {
+    // Certains systèmes rendent la valeur ENTIÈRE en orange quand elle est
+    // hors norme (« 104 », pas d'icône) : aucun chiffre neutre dans la case,
+    // donc rien ne prouve qu'une flèche s'y cache — on ne touche à rien.
+    const c = carte(repete('###########'));
+    const col = couleur(repete('CCCCCCCCCCC'));
+    const net = sansDecorationsCouleur(c, col, bande, { x0: 0, x1: 10 });
+    expect(texteEncre(net.carte)).toEqual(repete('###########'));
+    expect(net.picto).toBe(false);
+  });
+
+  it('ne signale aucun pictogramme quand la case n’en contient pas', () => {
+    const c = carte(repete('..####..'));
+    const col = couleur(repete('........'));
+    const net = sansDecorationsCouleur(c, col, bande, { x0: 0, x1: 7 });
+    expect(texteEncre(net.carte)).toEqual(repete('..####..'));
+    expect(net.picto).toBe(false);
   });
 });

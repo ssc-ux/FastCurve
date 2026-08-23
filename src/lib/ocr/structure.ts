@@ -388,6 +388,174 @@ export function analyserCellule(carte: CarteEncre, bande: Bande, col: Colonne): 
   return { glyphes: chiffres.length + (separateur ? 1 : 0), encre, separateur };
 }
 
+/**
+ * Classification chromatique alignée pixel à pixel sur une `CarteEncre` (voir
+ * `preparation.ts#carteCouleur`) : 0 = neutre, 1/3 = bleu (franc/léger),
+ * 2/4 = chaud (franc/léger — orange/rouge).
+ */
+export interface CarteCouleur {
+  largeur: number;
+  hauteur: number;
+  classe: Uint8Array;
+}
+
+/**
+ * Repère, dans une case de VALEUR, l'encre d'un pictogramme accolé au nombre
+ * (badge « i » d'information bleu, flèche de tendance orange) — un usage
+ * répandu des extranets hospitaliers, glué sans espace au résultat
+ * (« ⓘ17↓ »).
+ *
+ * Le repérage se fait par HYSTÉRÉSIS (comme un détecteur de contours), à
+ * l'intérieur de chaque famille de teinte séparément (le bleu ne se propage
+ * jamais dans le chaud, ni l'un ni l'autre dans le neutre) :
+ *
+ *  1. un pixel FRANCHEMENT coloré amorce un bloc ;
+ *  2. le bloc s'étend aux pixels FAIBLEMENT colorés de MÊME famille qui le
+ *     touchent — le liséré antialiasé d'un badge rond, fondu vers le blanc,
+ *     rejoint ainsi son cœur plutôt que de survivre comme résidu ;
+ *  3. jamais à un pixel NEUTRE, même adjacent — c'est ce qui protège un
+ *     chiffre qui toucherait le pictogramme par un unique pixel de contour
+ *     (l'antialiasing les fait parfois se frôler) : n'étant pas coloré, il
+ *     n'est jamais entraîné dans le bloc à retirer, à la différence d'un
+ *     découpage en composantes de l'ENCRE (bleu et chiffre voisin fusionnés
+ *     en une seule composante, retirée en bloc).
+ *
+ * Deux règles, une fois les blocs formés :
+ *
+ *  · le BLEU n'est jamais la couleur d'un résultat — c'est toujours un
+ *    pictogramme, donc systématiquement retiré ;
+ *  · le CHAUD (orange/rouge) est ambigu : c'est aussi la couleur d'une
+ *    valeur pathologique ENTIÈREMENT colorée par certains systèmes. On ne le
+ *    retire donc que si la case porte, PAR AILLEURS, une quantité d'encre
+ *    neutre comparable à un vrai chiffre (au moins 1,5 fois la hauteur de
+ *    ligne) — la preuve que la vraie couleur du résultat est neutre, et que
+ *    le chaud n'est qu'une flèche accolée. Un simple rapport de comptage
+ *    aurait laissé passer une flèche pleine, dont la pointe élargie pèse
+ *    souvent PLUS de pixels qu'un « 1 » fin.
+ *
+ * Renvoie une carte LOCALE (indices 0-based, réutilisable telle quelle par
+ * `boiteEncre`/`composantes`/`analyserCellule`), avec le décalage `dx, dy`
+ * pour reconvertir une position locale en coordonnées de l'image d'origine,
+ * et `picto` (au moins un pixel de décoration effectivement retiré) — signal
+ * repris par `confiance.ts#jugerValeur` : une case où un pictogramme a dû
+ * être découpé est structurellement plus fragile à lire, et mérite qu'on ne
+ * laisse pas passer une lecture Tesseract à confiance nulle sans un jaune.
+ */
+export function sansDecorationsCouleur(
+  carte: CarteEncre, coul: CarteCouleur, bande: Bande, col: Colonne,
+): { carte: CarteEncre; bande: Bande; col: Colonne; dx: number; dy: number; picto: boolean } {
+  const x0 = Math.max(0, col.x0), x1 = Math.min(carte.largeur - 1, col.x1);
+  const y0 = Math.max(0, bande.y0), y1 = Math.min(carte.hauteur - 1, bande.y1);
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  const local = { bande: { y0: 0, y1: Math.max(0, h - 1) }, col: { x0: 0, x1: Math.max(0, w - 1) }, dx: x0, dy: y0 };
+  if (w <= 0 || h <= 0) return { carte, ...local, picto: false };
+
+  const encre = new Uint8Array(w * h);
+  const classe = new Uint8Array(w * h);
+  let neutreTotal = 0;
+  for (let y = 0; y < h; y++) {
+    const gBase = (y0 + y) * carte.largeur;
+    for (let x = 0; x < w; x++) {
+      const li = y * w + x;
+      const v = carte.encre[gBase + (x0 + x)];
+      encre[li] = v;
+      if (!v) continue;
+      const c = coul.classe[gBase + (x0 + x)];
+      classe[li] = c;
+      if (c === 0) neutreTotal++;
+    }
+  }
+  const oteChaud = neutreTotal >= Math.max(4, h * 1.5);
+
+  // Un pixel isolé, ou presque, peut franchir les seuils « francs » sans
+  // être un pictogramme : le lissage sous-pixel des polices (ClearType et
+  // apparentés) produit, sur le contour de N'IMPORTE QUEL texte noir, des
+  // franges rouges et bleues qui dépassent largement 30 de chroma — jusqu'à
+  // 140 mesuré sur les captures du banc, plus que certains pixels du VRAI
+  // badge. Ce qui les distingue : la frange n'est qu'un liséré d'UN pixel de
+  // large, jamais un aplat ; un vrai pictogramme, lui, est une tache pleine
+  // de plusieurs dizaines de pixels francs, connectés entre eux (le cœur du
+  // badge, pas son contour). On n'amorce donc la propagation qu'à partir
+  // d'un bloc de pixels francs qui atteint cette taille — jamais depuis un
+  // pixel franc isolé.
+  const TAILLE_MIN_PICTO = 45;
+  const seedsQualifies = (franc: 1 | 2): Uint8Array => {
+    const vu = new Uint8Array(w * h);
+    const qualifie = new Uint8Array(w * h);
+    const px = new Int32Array(w * h), py = new Int32Array(w * h);
+    for (let y0l = 0; y0l < h; y0l++) {
+      for (let x0l = 0; x0l < w; x0l++) {
+        const depart = y0l * w + x0l;
+        if (classe[depart] !== franc || vu[depart]) continue;
+        const membres: number[] = [];
+        let sommet = 0;
+        px[sommet] = x0l; py[sommet] = y0l; sommet++;
+        vu[depart] = 1;
+        while (sommet > 0) {
+          sommet--;
+          const cx = px[sommet], cy = py[sommet];
+          membres.push(cy * w + cx);
+          for (let dy = -1; dy <= 1; dy++) {
+            const ny = cy + dy;
+            if (ny < 0 || ny >= h) continue;
+            for (let dx = -1; dx <= 1; dx++) {
+              const nx = cx + dx;
+              if (nx < 0 || nx >= w) continue;
+              const ni = ny * w + nx;
+              if (vu[ni] || classe[ni] !== franc) continue;
+              vu[ni] = 1;
+              px[sommet] = nx; py[sommet] = ny; sommet++;
+            }
+          }
+        }
+        if (membres.length >= TAILLE_MIN_PICTO) for (const m of membres) qualifie[m] = 1;
+      }
+    }
+    return qualifie;
+  };
+
+  // Propagation par hystérésis : un bloc franc QUALIFIÉ amorce, et le
+  // retrait gagne les pixels faibles de MÊME famille (3 avec 1, 4 avec 2)
+  // par 8-connexité — jamais au-delà.
+  const retire = new Uint8Array(w * h);
+  const pileX = new Int32Array(w * h), pileY = new Int32Array(w * h);
+  const propage = (franc: 1 | 2, faible: 3 | 4, condition: boolean) => {
+    if (!condition) return;
+    const qualifies = seedsQualifies(franc);
+    let sommet = 0;
+    for (let i = 0; i < classe.length; i++) {
+      if (qualifies[i] && !retire[i]) { retire[i] = 1; pileX[sommet] = i % w; pileY[sommet] = (i / w) | 0; sommet++; }
+    }
+    while (sommet > 0) {
+      sommet--;
+      const cx = pileX[sommet], cy = pileY[sommet];
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = cy + dy;
+        if (ny < 0 || ny >= h) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = cx + dx;
+          if (nx < 0 || nx >= w) continue;
+          const ni = ny * w + nx;
+          if (retire[ni] || !encre[ni]) continue;
+          if (classe[ni] !== franc && classe[ni] !== faible) continue;
+          retire[ni] = 1;
+          pileX[sommet] = nx; pileY[sommet] = ny; sommet++;
+        }
+      }
+    }
+  };
+  propage(1, 3, true);
+  propage(2, 4, oteChaud);
+
+  let picto = false;
+  for (let i = 0; i < encre.length; i++) {
+    if (!retire[i]) continue;
+    picto = true;
+    encre[i] = 0;
+  }
+  return { carte: { largeur: w, hauteur: h, encre }, ...local, picto };
+}
+
 /** Boîte englobante de l'encre d'une cellule (null si la cellule est vide). */
 export function boiteEncre(carte: CarteEncre, bande: Bande, col: Colonne): { x0: number; y0: number; x1: number; y1: number } | null {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;

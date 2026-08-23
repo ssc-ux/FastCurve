@@ -28,7 +28,7 @@ import { jugerDate, jugerNom, jugerValeur } from './confiance';
 import { reparerNombre } from './correction';
 import { lireCellules, type ModeCellule } from './ocr';
 import {
-  canvasSource, carteEncreLocale, grisCanalMin, rendreCellule, vignette,
+  canvasSource, carteCouleur, carteEncreLocale, grisCanalMin, rendreCellule, vignette,
   type Boite,
 } from './preparation';
 import {
@@ -37,8 +37,8 @@ import {
 } from './roles';
 import {
   analyserCellule, boiteEncre, colonnesDepuisAncres, colonnesDepuisGouttieres, detecterBandes,
-  encreDansCellule, hauteurLigne, mediane, profilBandes,
-  type Bande, type CarteEncre, type Colonne, type GeometrieCellule,
+  encreDansCellule, hauteurLigne, mediane, profilBandes, sansDecorationsCouleur,
+  type Bande, type CarteCouleur, type CarteEncre, type Colonne, type GeometrieCellule,
 } from './structure';
 
 // ── Ce que la chaîne rend ───────────────────────────────────────
@@ -352,15 +352,28 @@ interface Cellule {
  * à gauche de la plus longue valeur. Découpée à ras, cette valeur-là perd son
  * premier chiffre — « 1240 » devenait « 240 », faux d'un facteur cinq et
  * parfaitement crédible.
+ *
+ * `coul`, quand fourni (cases de VALEUR seulement), écarte d'abord l'encre
+ * d'un pictogramme accolé au nombre (badge d'information, flèche de
+ * tendance — voir `structure.ts#sansDecorationsCouleur`) avant de resserrer
+ * la boîte sur ce qui reste : sans ce tri, l'icône élargit la boîte à gauche
+ * et la flèche à droite, et Tesseract reçoit un chiffre noyé entre deux
+ * pictogrammes qu'il n'a pas le droit de nommer (liste blanche numérique).
  */
 function celluleDe(
   carte: CarteEncre, polarite: Uint8Array, bande: Bande, col: Colonne, hL: number,
-  limites?: Colonne,
+  limites?: Colonne, coul?: CarteCouleur,
 ): Cellule {
   const marge = Math.max(3, Math.round(hL * 0.45));
   const bornes = limites ?? col;
-  const encre = encreDansCellule(carte, bande, col);
-  const b = boiteEncre(carte, bande, col);
+  let carteBbox = carte, bandeBbox = bande, colBbox = col, dx = 0, dy = 0;
+  if (coul) {
+    const net = sansDecorationsCouleur(carte, coul, bande, col);
+    carteBbox = net.carte; bandeBbox = net.bande; colBbox = net.col; dx = net.dx; dy = net.dy;
+  }
+  const encre = encreDansCellule(carteBbox, bandeBbox, colBbox);
+  const bLocal = boiteEncre(carteBbox, bandeBbox, colBbox);
+  const b = bLocal ? { x0: bLocal.x0 + dx, y0: bLocal.y0 + dy, x1: bLocal.x1 + dx, y1: bLocal.y1 + dy } : null;
   const x0 = b ? Math.max(bornes.x0, b.x0 - marge) : col.x0;
   const x1 = b ? Math.min(bornes.x1, b.x1 + marge) : col.x1;
   let sombres = 0;
@@ -389,6 +402,11 @@ export async function reconnaitreTableau(
   const source = canvasSource(img);
   const gris = grisCanalMin(source);
   const { carte, polarite } = carteEncreLocale(gris);
+  // Repère le bleu et l'orange/rouge de l'image ORIGINALE (perdus par
+  // `grisCanalMin`, qui aplatit tout en niveaux de gris) : c'est ce qui
+  // permet de distinguer un pictogramme accolé à une valeur (§ « Valeurs »
+  // ci-dessous) d'une valeur pathologique entièrement colorée.
+  const coul = carteCouleur(source);
 
   // — Structure —
   const toutes = detecterBandes(carte);
@@ -689,12 +707,15 @@ export async function reconnaitreTableau(
   // — Valeurs, colonne de résultats par colonne de résultats —
   const brutes: { texte: string; confiance: number }[][] = [];
   const geos: GeometrieCellule[][] = [];
+  const pictos: boolean[][] = [];
   for (const d of colDates) {
     const col = colonnes[d.index];
     const limites = plageEntete(colonnes, d.index, carte.largeur);
-    const cases = iDonnees.map(bi => celluleDe(carte, polarite, bandes[bi], col, hL, limites));
+    const cases = iDonnees.map(bi => celluleDe(carte, polarite, bandes[bi], col, hL, limites, coul));
     brutes.push(await lire(cases, 'valeur', 'Valeurs'));
-    geos.push(iDonnees.map(bi => analyserCellule(carte, bandes[bi], col)));
+    const nets = iDonnees.map(bi => sansDecorationsCouleur(carte, coul, bandes[bi], col));
+    geos.push(nets.map(net => analyserCellule(net.carte, net.bande, net.col)));
+    pictos.push(nets.map(net => net.picto));
     if (annule()) return echec('Lecture interrompue.');
   }
 
@@ -737,7 +758,7 @@ export async function reconnaitreTableau(
       return {
         texte: rep.texte, retabli: rep.separateurRetabli,
         sepGeo: !!g.separateur, conf: brut.confiance, encre: g.encre,
-        glyphes: g.glyphes,
+        glyphes: g.glyphes, picto: pictos[c][r],
         // Une virgule rétablie compte comme lue : sans cela, la réparation
         // déclencherait elle-même l'alerte « un signe n'a pas été lu ».
         lus: (brut.texte.match(/[0-9.,<>]/g) ?? []).length + (rep.separateurRetabli ? 1 : 0),
@@ -763,6 +784,7 @@ export async function reconnaitreTableau(
         glyphes: v.glyphes,
         caracteresLus: v.lus,
         colonneAnormale: colonneAnormale[c],
+        picto: v.picto,
       });
       return { texte: v.texte, douteux: verdict.douteux, motifs: verdict.motifs };
     });
