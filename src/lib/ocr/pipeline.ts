@@ -666,7 +666,7 @@ export async function reconnaitreTableau(
   }
   if (!colNoms.length) {
     return echec(
-      'Je n’ai pas trouvé la colonne des noms d’analytes. ' +
+      'Je n’ai pas trouvé la colonne des noms de variables. ' +
       'Essayez une capture plus large, ou collez le tableau depuis Excel.',
     );
   }
@@ -677,13 +677,13 @@ export async function reconnaitreTableau(
     x0: colonnes[colNoms[0]].x0,
     x1: colonnes[colNoms[colNoms.length - 1]].x1,
   };
-  avancer(0, 1, 'Lecture des analytes…');
+  avancer(0, 1, 'Lecture des variables…');
   const limitesNom = {
     x0: plageEntete(colonnes, colNoms[0], carte.largeur).x0,
     x1: plageEntete(colonnes, colNoms[colNoms.length - 1], carte.largeur).x1,
   };
   const casNoms = iDonnees.map(bi => celluleDe(carte, polarite, bandes[bi], colNom, hL, limitesNom));
-  const lusNoms = await lire(casNoms, 'texte', 'Analytes');
+  const lusNoms = await lire(casNoms, 'texte', 'Variables');
   if (annule()) return echec('Lecture interrompue.');
 
   // — Valeurs, colonne de résultats par colonne de résultats —
