@@ -82,6 +82,9 @@
   type Tab = 'data' | 'treatments' | 'settings';
   let activeTab = $state<Tab>('data');
 
+  // Rail vertical (icônes seules, remplace l'ancienne barre d'onglets
+  // horizontale) : `label` sert de `title`/`aria-label` puisque le texte
+  // n'est plus visible en permanence.
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: 'data', label: 'Biologie/EFR', icon: 'table' },
     { id: 'treatments', label: 'Traitements', icon: 'pill' },
@@ -169,10 +172,6 @@
 
 <div class="app">
   <header class="topbar">
-    <button class="pill side-toggle" onclick={toggleCollapse} title={collapsed ? 'Afficher le panneau de saisie' : 'Masquer le panneau : donne toute la place à la courbe'}>
-      <Icon name="panel-left" size={15} />
-      {collapsed ? 'Afficher le panneau' : 'Plein écran courbe'}
-    </button>
     <div class="brand"><span class="logo"><Icon name="chart-spline" size={19} /></span><span class="title">FastCurve</span></div>
     <BarreDocument />
     {#if store.savedAt}
@@ -181,13 +180,17 @@
       {/key}
     {/if}
     <div class="spacer"></div>
-    <button class="pill sens-btn" onclick={basculerSens}
+    <button class="topbtn side-toggle" onclick={toggleCollapse} title={collapsed ? 'Afficher le panneau de saisie' : 'Masquer le panneau : donne toute la place à la courbe'}>
+      <Icon name="panel-left" size={14} />
+      {collapsed ? 'Afficher le panneau' : 'Plein écran courbe'}
+    </button>
+    <button class="topbtn sens-btn" onclick={basculerSens}
             title={sens === 'horizontal' ? 'Passer en colonnes : saisie à gauche, courbe à droite' : 'Passer en bandes : saisie en haut sur toute la largeur, courbe dessous'}>
-      <Icon name={sens === 'horizontal' ? 'panel-left' : 'table'} size={15} />
+      <Icon name={sens === 'horizontal' ? 'panel-left' : 'table'} size={14} />
       {sens === 'horizontal' ? 'En colonnes' : 'En bandes'}
     </button>
-    <button class="pill" disabled={!store.canUndo} onclick={() => store.undo()} title="Annuler (Ctrl+Z)"><Icon name="undo" size={15} /> Annuler</button>
-    <button class="pill" disabled={!store.canRedo} onclick={() => store.redo()} title="Rétablir (Ctrl+Maj+Z)"><Icon name="redo" size={15} /> Rétablir</button>
+    <button class="topbtn" disabled={!store.canUndo} onclick={() => store.undo()} title="Annuler (Ctrl+Z)"><Icon name="undo" size={14} /> Annuler</button>
+    <button class="topbtn" disabled={!store.canRedo} onclick={() => store.redo()} title="Rétablir (Ctrl+Maj+Z)"><Icon name="redo" size={14} /> Rétablir</button>
   </header>
 
   {#if store.saveError}
@@ -199,36 +202,40 @@
     </div>
   {/if}
 
-  <div class="body" class:dragging class:horizontal={sens === 'horizontal'} class:vide={sansDonnees && !collapsed}>
-    <aside class="sidebar" class:collapsed
-           style={sens === 'horizontal'
-             ? `max-height:${collapsed ? 0 : sidebarH}px`
-             : `width:${collapsed ? 0 : sidebarW}px`}>
-      <nav class="tabs">
-        {#each tabs as t (t.id)}
-          <button class="tab" class:active={activeTab === t.id} onclick={() => (activeTab = t.id)}>
-            <span class="tab-icon"><Icon name={t.icon} size={16} /></span><span class="tab-label">{t.label}</span>
-          </button>
-        {/each}
-      </nav>
-      <div class="tab-content" class:forme={activeTab !== 'data'} class:centrer={activeTab === 'data' && sansDonnees}>
-        {#if activeTab === 'data'}<DataTab />
-        {:else if activeTab === 'treatments'}<TreatmentsTab />
-        {:else if activeTab === 'settings'}<SettingsTab />
-        {/if}
-      </div>
-    </aside>
+  <div class="shell">
+    <nav class="rail" aria-label="Navigation entre les écrans">
+      {#each tabs as t (t.id)}
+        <button class="rbtn" class:on={activeTab === t.id} onclick={() => (activeTab = t.id)}
+                title={t.label} aria-label={t.label} aria-current={activeTab === t.id ? 'page' : undefined}>
+          <Icon name={t.icon} size={19} />
+        </button>
+      {/each}
+    </nav>
 
-    {#if !collapsed}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="divider" onpointerdown={startDrag} ondblclick={toggleCollapse} title="Glisser pour redimensionner · double-clic pour masquer">
-        <span class="grip"></span>
-      </div>
-    {/if}
+    <div class="body" class:dragging class:horizontal={sens === 'horizontal'} class:vide={sansDonnees && !collapsed}>
+      <aside class="sidebar" class:collapsed
+             style={sens === 'horizontal'
+               ? `max-height:${collapsed ? 0 : sidebarH}px`
+               : `width:${collapsed ? 0 : sidebarW}px`}>
+        <div class="tab-content" class:forme={activeTab !== 'data'} class:centrer={activeTab === 'data' && sansDonnees}>
+          {#if activeTab === 'data'}<DataTab />
+          {:else if activeTab === 'treatments'}<TreatmentsTab />
+          {:else if activeTab === 'settings'}<SettingsTab />
+          {/if}
+        </div>
+      </aside>
 
-    <main class="chart-area">
-      <ChartPanel />
-    </main>
+      {#if !collapsed}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="divider" onpointerdown={startDrag} ondblclick={toggleCollapse} title="Glisser pour redimensionner · double-clic pour masquer">
+          <span class="grip"></span>
+        </div>
+      {/if}
+
+      <main class="chart-area">
+        <ChartPanel />
+      </main>
+    </div>
   </div>
 </div>
 
@@ -241,17 +248,21 @@
 <style>
   .app { display: flex; flex-direction: column; height: 100vh; }
 
+  /* Barre supérieure sombre (Console clinique dense) : logo, document, actions —
+     texte clair sur marine, boutons `.topbtn` (voir global.css) plutôt que le
+     style « pilule » clair de l'ancienne barre blanche. */
   .topbar {
     display: flex; align-items: center; gap: 10px;
-    padding: 9px 14px; background: var(--panel);
-    border-bottom: 1px solid var(--border);
+    padding: 0 14px; height: 52px; flex: 0 0 auto;
+    background: var(--topbar-bg); color: var(--topbar-ink);
+    border-bottom: 1px solid var(--topbar-border);
+    font-size: 12.5px;
   }
-  .brand { display: flex; align-items: center; gap: 8px; }
-  .logo { display: inline-flex; color: var(--accent); }
-  .title { font-weight: 650; font-size: 15px; letter-spacing: .2px; }
-  .pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 6px 13px; font-size: 12.5px; }
+  .brand { display: flex; align-items: center; gap: 8px; padding-right: 4px; }
+  .logo { display: inline-flex; color: var(--rail-ink-on); }
+  .title { font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--rail-ink-on); }
 
-  .saved { font-size: 12px; color: var(--ok); font-weight: 600; white-space: nowrap; animation: savedpulse 1.4s ease-out; }
+  .saved { font-size: 12px; color: #7fe0ab; font-weight: 600; white-space: nowrap; animation: savedpulse 1.4s ease-out; }
   @keyframes savedpulse {
     0% { opacity: 0; transform: translateY(-1px); }
     18% { opacity: 1; }
@@ -271,14 +282,32 @@
   .sb-close { border: none; background: transparent; color: #8a1c12; font-size: 14px; padding: 2px 6px; border-radius: 6px; }
   .sb-close:hover { background: rgba(138,28,18,.12); }
 
-  .body { flex: 1; display: flex; min-height: 0; }
+  /* Rail vertical étroit (icônes seules) + plan de travail. Le rail est un
+     élément de chrome permanent — il ne fait pas partie du panneau
+     repliable/redimensionnable (`Plein écran courbe` ne le masque pas). */
+  .shell { flex: 1; display: flex; min-height: 0; }
+  .rail {
+    flex: 0 0 auto; width: 56px; background: var(--rail-bg);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 12px 0; gap: 4px;
+  }
+  .rbtn {
+    width: 40px; height: 40px; border: none; background: transparent;
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    color: var(--rail-ink); padding: 0;
+  }
+  .rbtn:hover { background: rgba(255,255,255,.05); color: var(--rail-ink-on); }
+  .rbtn.on { background: var(--rail-bg-on); color: var(--rail-ink-on); }
+  .rbtn:active { transform: none; }
+
+  .body { flex: 1; display: flex; min-height: 0; min-width: 0; }
   /* Plan de travail en bandes : la grille prend toute la largeur, la courbe
      est dessous et partage visuellement l'axe du temps avec les colonnes. */
   .body.horizontal { flex-direction: column; --grille-max-h: none; }
   .sidebar {
     flex: 0 0 auto; overflow: hidden;
     display: flex; flex-direction: column;
-    background: var(--panel); min-height: 0;
+    background: var(--bg); min-height: 0;
     transition: width .3s cubic-bezier(.4, 0, .2, 1);
   }
   .body.dragging .sidebar { transition: none; }
@@ -303,15 +332,6 @@
      largeur ils deviennent illisibles. On les garde dans une colonne confortable. */
   .body.horizontal .tab-content.forme { max-width: 760px; }
 
-  .tabs { display: flex; gap: 2px; padding: 10px 12px 0; background: var(--panel); flex-wrap: wrap; }
-  .tab {
-    display: inline-flex; align-items: center; gap: 6px; border: none; background: transparent;
-    border-radius: 9px; padding: 8px 12px; font-size: 13px; color: var(--muted);
-    transition: background .15s, color .15s; white-space: nowrap;
-  }
-  .tab:hover { background: var(--panel-2); }
-  .tab.active { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
-  .tab-icon { display: inline-flex; }
   .tab-content { flex: 1; overflow-y: auto; padding: 16px; min-height: 0; }
   /* Suivi vide : donne à DataTab (`.data`/`.corps`) une hauteur à occuper,
      pour qu'il puisse centrer son tableau au lieu de le laisser collé en
