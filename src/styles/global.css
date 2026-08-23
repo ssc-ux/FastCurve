@@ -187,6 +187,46 @@ table.grid input:focus { border-color: var(--accent); background: #fff; }
 ::-webkit-scrollbar-thumb { background: #cbd3da; border-radius: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
+/* ────────────────────────────────────────────────────────────────
+   Téléphone (≤640px) : cibles tactiles ≥44px et texte ≥16px sur les
+   champs (sinon Safari iOS zoome automatiquement à la prise de focus,
+   ce qui déboîte toute la mise en page tant qu'on n'a pas dézoomé à la
+   main). Règles globales — les écrans dont l'interaction change
+   vraiment (grille de saisie) ont leur propre mise en page mobile
+   dans leur composant ; ici on ne fait que garantir un gabarit minimal
+   partout ailleurs (Traitements, Réglages, écrans de vérification).
+   ──────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  button {
+    min-height: 44px;
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+  /* Boutons-icônes serrés dans une ligne dense (✕ de suppression, croix
+     d'un palier…) : agrandir leur cadre casserait l'alignement de la
+     ligne. On élargit leur zone de frappe par un padding généreux tout
+     en gardant l'icône/le glyphe petit — la même logique que les
+     `.colicon`/`.colx` de la grille dense, jamais pensés pour le doigt. */
+  button.icon, button.danger.small, .colx, .colicon {
+    min-height: 40px; min-width: 40px; padding: 8px;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 16px;
+    padding: 9px 10px;
+  }
+  input[type="color"] { min-height: 40px; min-width: 40px; }
+  /* Case à cocher : le carré natif reste petit, mais son étiquette (quand
+     elle l'enveloppe, ce qui est le cas partout dans l'appli) porte la
+     cible tactile réelle à 44px de haut. */
+  input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; }
+  label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) {
+    min-height: 44px; display: inline-flex; align-items: center;
+  }
+}
+
 /* Impression : uniquement le graphique, mis en page A4 paysage */
 @media print {
   @page { size: A4 landscape; margin: 12mm; }
