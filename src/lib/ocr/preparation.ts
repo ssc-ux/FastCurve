@@ -76,6 +76,61 @@ export function grisCanalMin(canvas: HTMLCanvasElement): ImageGris {
   return { largeur: canvas.width, hauteur: canvas.height, v };
 }
 
+/**
+ * Classe de couleur d'un pixel, pour repérer les DÉCORATIONS gluées aux
+ * valeurs par certains systèmes hospitaliers (badge « i » d'information,
+ * flèche de tendance) :
+ *
+ *   0 = neutre (noir/gris — texte normal, y compris une valeur pathologique
+ *       rendue tout entière en orange/rouge)
+ *   1 = bleu franc, 2 = chaud franc (orange/rouge)
+ *   3 = bleu léger, 4 = chaud léger — une teinte trop faible pour trancher
+ *       seule (le liséré antialiasé d'un badge, fondu vers le blanc), mais
+ *       qui compte quand elle TOUCHE un pixel franc de la même famille : voir
+ *       `structure.ts#sansDecorationsCouleur`, qui étend le retrait au liséré
+ *       sans jamais franchir un pixel réellement neutre (le chiffre voisin,
+ *       même collé).
+ *
+ * Deux seuils (hystérésis, comme un détecteur de contours) : le seuil FORT
+ * suffit à lui seul à qualifier un pixel ; le seuil FAIBLE ne compte que
+ * connecté à du FORT de même famille.
+ */
+export type ClasseCouleur = 0 | 1 | 2 | 3 | 4;
+
+export interface CarteCouleur {
+  largeur: number;
+  hauteur: number;
+  classe: Uint8Array;
+}
+
+const SEUIL_CHROMA_FORT = 30;
+const SEUIL_DOMINANCE_FORT = 12;
+const SEUIL_CHROMA_FAIBLE = 10;
+const SEUIL_DOMINANCE_FAIBLE = 4;
+
+/**
+ * Carte de classification chromatique de l'image, calculée une seule fois
+ * sur le même canvas que `grisCanalMin` (mêmes dimensions, alignement pixel à
+ * pixel garanti).
+ */
+export function carteCouleur(canvas: HTMLCanvasElement): CarteCouleur {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+  const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const classe = new Uint8Array(canvas.width * canvas.height);
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    const chroma = mx - mn;
+    const domBleu = b - Math.max(r, g);
+    const domChaud = r - b;
+    if (chroma >= SEUIL_CHROMA_FORT && domBleu > SEUIL_DOMINANCE_FORT) classe[p] = 1;
+    else if (chroma >= SEUIL_CHROMA_FORT && domChaud > SEUIL_DOMINANCE_FORT) classe[p] = 2;
+    else if (chroma >= SEUIL_CHROMA_FAIBLE && domBleu > SEUIL_DOMINANCE_FAIBLE) classe[p] = 3;
+    else if (chroma >= SEUIL_CHROMA_FAIBLE && domChaud > SEUIL_DOMINANCE_FAIBLE) classe[p] = 4;
+  }
+  return { largeur: canvas.width, hauteur: canvas.height, classe };
+}
+
 interface Integrales { s: Float64Array; s2: Float64Array; largeur: number; hauteur: number; }
 
 function integrales(g: ImageGris): Integrales {

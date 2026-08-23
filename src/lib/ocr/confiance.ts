@@ -125,6 +125,17 @@ export interface ContexteValeur {
    * nette de deux chiffres recollés est le plus trompeur des cas.
    */
   colonneAnormale?: boolean;
+  /**
+   * Un pictogramme (badge d'information, flèche de tendance) a dû être
+   * découpé de cette case avant lecture — voir `structure.ts#sansDecorationsCouleur`.
+   * Une case ainsi retouchée est structurellement plus fragile : Tesseract y
+   * renvoie parfois un texte non vide à confiance NULLE (un résidu d'icône
+   * mal découpé, lu comme un signe parasite) — un cas que le seuil de
+   * confiance ordinaire ne voit pas, puisqu'il traite justement 0 comme
+   * « case non lue » plutôt que « lecture ratée ». Ici, 0 redevient un
+   * signal : la case porte du texte, mais Tesseract ne s'y fie pas du tout.
+   */
+  picto?: boolean;
 }
 
 /**
@@ -153,6 +164,14 @@ export function jugerValeur(ctx: ContexteValeur): Verdict {
   }
 
   if (ctx.colonneAnormale) motifs.push('colonne anormalement large — peut mélanger deux dates voisines');
+
+  // Un pictogramme a été découpé de cette case ET Tesseract n'y a placé
+  // AUCUNE confiance (0, alors que le texte n'est pas vide) : le seuil
+  // ordinaire ci-dessous ignore ce cas précis (il traite 0 comme « non
+  // lue », pas comme « lecture ratée ») — à tort ici, puisqu'une lecture a
+  // bel et bien eu lieu. Un résidu d'icône mal découpé produit exactement
+  // ce symptôme.
+  if (ctx.picto && ctx.confiance <= 0) motifs.push('pictogramme repéré près du nombre — lecture à vérifier');
 
   if (ctx.confiance > 0 && ctx.confiance <= SEUIL_CONFIANCE_VALEUR) motifs.push('lecture peu sûre');
   else if (ctx.confiance > 0 && ctx.confiance < PLAFOND_CONFIANCE_RELATIVE) {
