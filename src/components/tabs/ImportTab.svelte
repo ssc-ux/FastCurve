@@ -516,7 +516,7 @@
 
 <style>
   .drop {
-    border: 2px dashed var(--border-strong); border-radius: 12px; padding: 40px 16px;
+    border: 2px dashed var(--border-strong); border-radius: var(--radius); padding: 40px 16px;
     text-align: center; color: var(--muted); background: var(--panel-2);
   }
   .drop p { margin: 4px 0; }

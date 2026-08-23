@@ -86,7 +86,7 @@
 </div>
 
 <style>
-  .editor { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .editor { background: var(--panel-2); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
   .color { width: 30px; height: 30px; padding: 2px; border-radius: 8px; }
   .name { font-weight: 600; }
   .fields { display: flex; flex-wrap: wrap; gap: 10px; }
