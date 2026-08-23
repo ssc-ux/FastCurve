@@ -139,7 +139,7 @@ describe('renderChart — bande de normale bornée au panneau', () => {
 
   it('ne peint aucune bande de normale hors du panneau qui la porte', () => {
     const svg = renderChart(etude, 920).svg;
-    const bandes = rects(svg).filter(r => r.reste.includes('#f0f4f8'));
+    const bandes = rects(svg).filter(r => r.reste.includes('#e8f6ee'));
     // Une seule bande légitime : celle de la créatinine (45–90 est dans son
     // échelle). Celle de la CRP est hors échelle, donc rien.
     expect(bandes).toHaveLength(1);

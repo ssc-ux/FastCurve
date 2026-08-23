@@ -7,12 +7,17 @@ import { niceScale, fmtNum, fmtTick } from './scale';
 // Fonction pure : StudyState → chaîne SVG. Aucune dépendance DOM.
 // ──────────────────────────────────────────────────────────────
 
-const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
-const INK = '#111111';
-const AXIS = '#333333';
-const GRID = '#e6e6e6';
-const MUTED = '#666666';
-const REF_FILL = '#f0f4f8';
+// Palette et typographie alignées sur les jetons CSS de la « Console clinique
+// dense » (voir src/styles/global.css) — un SVG exporté ne peut pas lire les
+// variables CSS de la page, les valeurs sont donc dupliquées ici en dur.
+// AUCUN changement de mise en page/axes : uniquement couleurs, graisses et
+// tailles de police.
+const FONT = "'Inter', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif";
+const INK = '#16233a';
+const AXIS = '#3c4a63';
+const GRID = '#e4e9f1';
+const MUTED = '#8592a8';
+const REF_FILL = '#e8f6ee';
 
 const MARKER_SHAPES = ['circle', 'square', 'triangle', 'diamond', 'circle-open', 'square-open'] as const;
 type MarkerShape = typeof MARKER_SHAPES[number];
@@ -891,7 +896,7 @@ function panel(
   // Étiquette du panneau (nom + unité) au dessus à gauche
   const ul = unitLabel(p);
   const title = ul ? `${p.name} (${ul})` : p.name;
-  out += `<text x="${marginLeft}" y="${n(y0 - 4)}" font-family="${FONT}" font-size="11.5" font-weight="600" fill="${INK}">${esc(title)}</text>`;
+  out += `<text x="${marginLeft}" y="${n(y0 - 4)}" font-family="${FONT}" font-size="11.5" font-weight="800" fill="#3c4a63">${esc(title)}</text>`;
 
   out += series(p, pi, pts, yOf, s, hotspots, y0, y1);
   return out;
@@ -1115,7 +1120,7 @@ function series(
       let ly = placeDessous ? cy + 15 : cy - 8;
       if (fleche > 0 && placeDessous) ly = Math.min(cy + decale + 10, botY - 2);
       if (fleche < 0 && !placeDessous) ly = Math.max(cy - decale - 4, topY + 9);
-      out += `<text x="${n(pt.x)}" y="${n(ly)}" text-anchor="middle" font-family="${FONT}" font-size="9.5" fill="${INK}">${lbl}</text>`;
+      out += `<text x="${n(pt.x)}" y="${n(ly)}" text-anchor="middle" font-family="${FONT}" font-size="10" font-weight="700" fill="${INK}">${lbl}</text>`;
     }
     hotspots.push({ param: p, date: pt.date, value: pt.value, cx: pt.x, cy });
   });
@@ -1127,7 +1132,7 @@ function xAxis(xm: ReturnType<typeof buildXMapper>, y: number, layout: Layout): 
   let out = `<line x1="${marginLeft}" y1="${n(y)}" x2="${marginLeft + plotWidth}" y2="${n(y)}" stroke="${AXIS}" stroke-width="1.2"/>`;
   xm.ticks.forEach(t => {
     out += `<line x1="${n(t.x)}" y1="${n(y)}" x2="${n(t.x)}" y2="${n(y + 4)}" stroke="${AXIS}" stroke-width="1"/>`;
-    out += `<text x="${n(t.x)}" y="${n(y + 16)}" text-anchor="middle" font-family="${FONT}" font-size="10" fill="${MUTED}">${esc(t.label)}</text>`;
+    out += `<text x="${n(t.x)}" y="${n(y + 16)}" text-anchor="middle" font-family="${FONT}" font-size="9.5" fill="${MUTED}">${esc(t.label)}</text>`;
   });
   return out;
 }
