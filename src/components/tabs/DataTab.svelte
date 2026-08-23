@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { tick, onDestroy } from 'svelte';
   import { store } from '../../lib/models/store.svelte';
   import { CATALOG, type CatalogEntry, normalize } from '../../lib/models/catalog';
   import { formatDate, lireDateSouple, todayISO, type DateLue } from '../../lib/models/types';
@@ -9,6 +9,29 @@
   import ImportTab from './ImportTab.svelte';
 
   let selectedId = $state<string | null>(null);
+
+  /**
+   * Téléphone : la grille (paramètres en lignes × dates en colonnes) devient
+   * illisible dès qu'on manque de largeur — trop de colonnes pour l'écran
+   * (voir maquette « Direction 9 — Mobile »). En dessous de 640px, on affiche
+   * à la place une LISTE d'une date à la fois (chips de dates en défilement
+   * horizontal pour changer de date, une ligne par paramètre avec un grand
+   * champ de saisie tactile). C'est la seule vue de l'appli qui justifie
+   * deux balisages distincts plutôt qu'une media query sur le même
+   * balisage : la façon d'interagir change vraiment (une date active plutôt
+   * qu'un tableau), pas seulement la taille. Les DEUX vues appellent les
+   * mêmes fonctions du store (`ecrireCellule`, `setCell`, `addDateColumn`
+   * via `validerNeuve`…) : aucune logique n'est dupliquée, seul le
+   * balisage l'est.
+   */
+  let isMobile = $state(false);
+  if (typeof window !== 'undefined') {
+    const mq = window.matchMedia('(max-width: 640px)');
+    isMobile = mq.matches;
+    const onMqChange = (e: MediaQueryListEvent) => { isMobile = e.matches; };
+    mq.addEventListener('change', onMqChange);
+    onDestroy(() => mq.removeEventListener('change', onMqChange));
+  }
 
   // Vue « Saisir » (grille) ou « Importer » (capture / dictée biologique)
   let mode = $state<'saisir' | 'importer'>('saisir');
@@ -713,6 +736,68 @@
     }
   }
 
+  // ── Vue mobile (liste verticale) ────────────────────────────────
+  // Une seule date « active » à la fois, choisie parmi des chips en
+  // défilement horizontal. `activeCle` retombe automatiquement sur la
+  // dernière colonne (le dernier bilan saisi, ce qui intéresse le plus)
+  // dès qu'elle est absente/obsolète (colonne supprimée, tout premier
+  // rendu…) — pas d'effet à synchroniser, juste un `$derived` avec repli.
+  let activeCle = $state<string | null>(null);
+  const activeCol = $derived(colonnes.find(c => c.cle === activeCle) ?? colonnes[colonnes.length - 1] ?? null);
+
+  /** Chip « + date » : même validation que la colonne vide du tableau
+   *  (`validerNeuve`), la nouvelle colonne devient simplement la date active. */
+  function mobileAjouterDate(input: HTMLInputElement) {
+    const cle = validerNeuve(input);
+    if (cle) activeCle = cle;
+  }
+  function mNeuveKey(e: KeyboardEvent) {
+    const t = e.currentTarget as HTMLInputElement;
+    if (e.key === 'Enter') { e.preventDefault(); t.blur(); }
+    else if (e.key === 'Escape') { e.preventDefault(); t.value = ''; t.blur(); }
+  }
+
+  /** Ligne « + variable » de la liste mobile : crée le paramètre puis pose le
+   *  focus sur son champ de valeur pour la date active (équivalent mobile de
+   *  `creerPuisFocus`, qui vise une cellule de grille inexistante ici). */
+  async function mobileCreerLigne(choix?: CatalogEntry) {
+    const id = creerLigne(choix);
+    if (!id) return;
+    await tick();
+    const el = document.querySelector<HTMLInputElement>(`.mval[data-pid="${id}"]`);
+    if (el) { el.focus(); el.select(); }
+  }
+  function mNouvelleLigneKey(e: KeyboardEvent) {
+    const t = e.currentTarget as HTMLInputElement;
+    if (e.key === 'ArrowDown' && suggestions.length) { e.preventDefault(); iSugg = Math.min(iSugg + 1, suggestions.length - 1); }
+    else if (e.key === 'ArrowUp' && suggestions.length) { e.preventDefault(); iSugg = Math.max(iSugg - 1, 0); }
+    else if (e.key === 'Escape') {
+      e.preventDefault();
+      if (suggestions.length) suggMasquees = true;
+      else { nomNeuf = ''; t.value = ''; }
+    } else if (e.key === 'Enter') { e.preventDefault(); mobileCreerLigne(); }
+  }
+
+  /** Champ de valeur d'une ligne (liste mobile) : Entrée passe au paramètre
+   *  suivant pour la même date (façon « tabulateur » d'un formulaire simple) ;
+   *  Échap annule la frappe en cours — même geste que dans la grille. */
+  function mValKey(e: KeyboardEvent, pId: string, date: string) {
+    const t = e.currentTarget as HTMLInputElement;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      const texte = avantEdition && avantEdition.pId === pId && avantEdition.date === date ? avantEdition.texte : '';
+      ecrireCellule(pId, date, texte);
+      t.value = texte;
+      t.blur();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      t.blur();
+      const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('.mval'));
+      const i = inputs.indexOf(t);
+      if (i >= 0 && i + 1 < inputs.length) { inputs[i + 1].focus(); inputs[i + 1].select(); }
+    }
+  }
+
   // Date affichée dans l'écran de vérification (toujours JJ/MM/AAAA)
   function majDateCollee(i: number, brut: string, input: HTMLInputElement) {
     const t = brut.trim();
@@ -814,6 +899,83 @@
     </div>
   {/if}
 
+  {#if isMobile}
+    <!-- ── Vue mobile : liste verticale, une date active à la fois ── -->
+    <div class="mobilegrid">
+      <div class="mchips" role="tablist" aria-label="Dates">
+        {#each colonnes as c (c.cle)}
+          <button class="mchip" class:on={activeCol?.cle === c.cle} role="tab"
+                  aria-selected={activeCol?.cle === c.cle} onclick={() => (activeCle = c.cle)}>
+            {formatDate(c.date)}
+          </button>
+        {/each}
+        <input class="mchip madd" type="text" inputmode="numeric" placeholder="+ date"
+               aria-label="Ajouter une date" title="Tapez une date (JJ/MM/AAAA) pour ajouter une colonne"
+               onkeydown={mNeuveKey}
+               onblur={(e) => mobileAjouterDate(e.currentTarget)} />
+      </div>
+
+      {#if !activeCol}
+        <p class="mempty">Ajoutez une date (« + date » ci-dessus) pour commencer la saisie.</p>
+      {:else}
+        <div class="mdatebar">
+          <span class="mdate-label">{formatDate(activeCol.date)}</span>
+          <div class="spacer"></div>
+          <button class="micon" title="Choisir dans un calendrier" aria-label="Choisir la date dans un calendrier"
+                  onclick={() => ouvrirCalendrier(activeCol.cle)}>📅</button>
+          <button class="micon" title="Supprimer cette date" aria-label="Supprimer la date du {formatDate(activeCol.date)}"
+                  onclick={() => demanderSuppr(activeCol.cle, activeCol.date)}>✕</button>
+        </div>
+        <input class="datepick" type="date" tabindex="-1" aria-hidden="true"
+               value={activeCol.date} onchange={(e) => { const v = e.currentTarget.value; if (v) changeDate(activeCol.date, v); }} />
+        {#if confirmSuppr === activeCol.cle}
+          <div class="mconfirm">
+            <span>Supprimer {valeursDe(activeCol.date)} valeur(s) du {formatDate(activeCol.date)} ?</span>
+            <button class="danger-btn" onclick={() => removeDate(activeCol.date)}>Supprimer</button>
+            <button onclick={() => (confirmSuppr = null)}>Annuler</button>
+          </div>
+        {/if}
+
+        <div class="mlist">
+          {#each params as p (p.id)}
+            <div class="mrow">
+              <button class="mname" onclick={() => selectParam(p.id)} aria-expanded={selectedId === p.id}>
+                <span class="dot" style="background:{p.color}"></span>
+                <span class="mn">{p.name}</span>
+                <span class="mu">{unitOf(p)}</span>
+              </button>
+              <input class="mval {celluleStatut(p.id, activeCol.date) ?? ''}" type="text" inputmode="decimal" data-pid={p.id}
+                     aria-label="{p.name} au {formatDate(activeCol.date)}"
+                     value={cellValue(p.id, activeCol.date)}
+                     onfocus={(e) => cellFocus(e, p.id, activeCol.date)}
+                     oninput={(e) => cellInput(p.id, activeCol.date, e.currentTarget.value)}
+                     onchange={(e) => setCell(p.id, activeCol.date, e.currentTarget.value)}
+                     onkeydown={(e) => mValKey(e, p.id, activeCol.date)} />
+            </div>
+            {#if selected && selected.id === p.id}
+              <div class="aux mparamed"><ParamEditor param={selected} onClose={() => (selectedId = null)} /></div>
+            {/if}
+          {/each}
+
+          <div class="mrow madd-row">
+            <input class="mnew" placeholder="+ variable" aria-label="Nouvelle variable"
+                   bind:value={nomNeuf} oninput={() => { iSugg = 0; suggMasquees = false; }}
+                   onkeydown={mNouvelleLigneKey} onblur={nouvelleLigneBlur} />
+            {#if suggestions.length}
+              <div class="suggest mobile-suggest">
+                {#each suggestions as s, i (s.name)}
+                  <button class="sg" class:on={i === iSugg}
+                          onmousedown={(e) => { e.preventDefault(); mobileCreerLigne(s); }}>
+                    <span class="sg-n">{s.name}</span><span class="sg-u">{s.unit}</span>
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        </div>
+      {/if}
+    </div>
+  {:else}
   <div class="tablecard" class:depart={estDepart}
        title={estDepart ? "Tapez le nom de la variable à gauche, la date en haut. Ctrl+V colle une capture ou un tableau de résultats." : undefined}>
     <div class="tablescroll">
@@ -916,8 +1078,9 @@
       </table>
     </div>
   </div>
+  {/if}
 
-  {#if selected}
+  {#if selected && !isMobile}
     <div class="aux"><ParamEditor param={selected} onClose={() => (selectedId = null)} /></div>
   {/if}
 
@@ -1083,5 +1246,85 @@
   .astuce kbd {
     font-family: inherit; font-size: 10.5px; background: var(--panel-2);
     border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px;
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     Vue mobile (liste verticale) — voir `isMobile` dans le script.
+     Chips de dates en défilement horizontal, une ligne par paramètre avec
+     un grand champ de saisie tactile (`min-height: 44px`, 16px pour ne pas
+     déclencher le zoom automatique de Safari iOS à la prise de focus).
+     ──────────────────────────────────────────────────────────────── */
+  .mobilegrid { display: flex; flex-direction: column; gap: 10px; }
+  .mchips {
+    display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mchip {
+    flex: 0 0 auto; min-height: 44px; padding: 0 16px; border-radius: 999px;
+    background: var(--panel-2); border: 1px solid var(--border-strong); color: var(--muted);
+    font-size: 13.5px; font-weight: 700; display: flex; align-items: center;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .mchip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input.mchip.madd {
+    color: var(--faint); font-weight: 600; text-align: center; width: 96px;
+    font-variant-numeric: initial;
+  }
+  input.mchip.madd:focus { color: var(--ink); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .mdatebar { display: flex; align-items: center; gap: 6px; padding: 0 2px; }
+  .mdate-label { font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .micon {
+    min-width: 44px; min-height: 44px; border: none; background: transparent; color: var(--faint);
+    font-size: 15px; display: inline-flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .micon:hover { color: var(--accent); background: var(--panel-2); }
+
+  .mconfirm {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    background: var(--warn-bg); color: var(--warn-ink); border: 1px solid #f0d9a8;
+    border-radius: 8px; padding: 10px 12px; font-size: 13px;
+  }
+
+  .mempty { color: var(--faint); font-size: 13.5px; padding: 20px 4px; text-align: center; }
+
+  .mlist { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
+  .mrow {
+    display: flex; align-items: center; gap: 10px; padding: 4px 12px;
+    border-bottom: 1px solid var(--border); min-height: 60px;
+  }
+  .mrow:last-child { border-bottom: none; }
+  .mname {
+    flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px;
+    border: none; background: transparent; padding: 8px 4px; text-align: left; min-height: 44px;
+  }
+  .mname:hover { background: var(--panel-2); }
+  .mn { font-size: 14.5px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mu { font-size: 11.5px; color: var(--faint); white-space: nowrap; }
+  .mval {
+    width: 108px; flex: 0 0 auto; text-align: right; font-size: 16px;
+    min-height: 44px; padding: 8px 12px; font-variant-numeric: tabular-nums;
+  }
+  /* Mise en évidence hors-norme (même bascule/logique que la grille desktop —
+     `celluleStatut`), portée directement par le champ ici (pas de `<td>`
+     séparé dans une liste). */
+  .mval.hi { background: var(--hi-bg); color: var(--hi-ink); font-weight: 700; border-color: #e3b6b0; }
+  .mval.ok { color: var(--ok-ink); font-weight: 700; }
+
+  .madd-row { position: relative; padding: 8px 12px 12px; }
+  .mnew { width: 100%; min-height: 44px; font-size: 15px; color: var(--faint); }
+  .mnew:focus { color: var(--ink); }
+  .mobile-suggest { position: absolute; top: 100%; left: 12px; right: 12px; }
+  .mobile-suggest .sg { min-height: 44px; }
+  .mparamed { margin: 0 0 4px; }
+
+  /* L'astuce Ctrl+V n'a pas de sens au doigt : le collage de tableau reste
+     accessible (long-appui → coller, selon le clavier du téléphone), mais
+     l'indice visuel ne concerne que le clavier physique. */
+  @media (max-width: 640px) {
+    .astuce { display: none; }
+    .modeseg { align-self: stretch; width: 100%; }
+    .modeseg button { flex: 1; min-height: 44px; font-size: 13.5px; }
+    .add-serie { min-height: 44px; padding: 8px 14px; }
   }
 </style>
