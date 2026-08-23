@@ -278,16 +278,16 @@
 <style>
   .chart-wrap { display: flex; flex-direction: column; height: 100%; min-width: 0; }
   .toolbar {
-    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-    padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--panel);
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 8px 14px; border-bottom: 1px solid var(--border-strong); background: var(--panel);
   }
-  .seg { display: inline-flex; background: #eef1f4; border-radius: 8px; padding: 2px; }
-  .seg button { border: none; border-radius: 6px; padding: 5px 13px; background: transparent; font-size: 12.5px; color: var(--muted); }
+  .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 7px; padding: 2px; }
+  .seg button { border: none; border-radius: 5px; padding: 5px 12px; background: transparent; font-size: 12px; color: var(--muted); }
   .seg button:hover { background: rgba(0,0,0,.04); }
-  .seg button.active { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .seg button.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 
   .menu-wrap { position: relative; }
-  .menu-btn { padding: 5px 12px; font-size: 12.5px; border-radius: 8px; }
+  .menu-btn { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
   .menu {
     position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
     background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
@@ -338,8 +338,8 @@
   .te-sub { font-size: 12.5px; }
   .te-ok { align-self: flex-end; }
 
-  .toolbar button { padding: 5px 12px; font-size: 12.5px; border-radius: 8px; }
-  .canvas { position: relative; flex: 1; overflow: auto; padding: 24px; background: var(--canvas-bg); display: flex; justify-content: center; align-items: flex-start; }
+  .toolbar button { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+  .canvas { position: relative; flex: 1; overflow: auto; padding: 18px; background: var(--canvas-bg); display: flex; justify-content: center; align-items: flex-start; }
   /* Suivi vide : la petite carte de placeholder (juste le titre + « Ajoutez
      des valeurs… ») ne doit pas rester collée en haut d'un grand vide gris —
      elle est centrée dans l'espace disponible, comme une invite plutôt qu'un
@@ -347,7 +347,7 @@
      général) car ce placeholder est toujours petit : jamais de contenu coupé
      en haut par le centrage vertical d'un conteneur `overflow: auto`. */
   .canvas.vide { align-items: center; }
-  .svg-host { position: relative; background: #fff; box-shadow: 0 6px 24px rgba(16,24,32,.10); border-radius: 12px; max-width: 100%; }
+  .svg-host { position: relative; background: #fff; border: 1px solid var(--border-strong); box-shadow: none; border-radius: var(--radius); max-width: 100%; }
   .svg-host :global(svg) { display: block; max-width: 100%; height: auto; }
   .point-pop {
     position: absolute; transform: translate(-50%, calc(-100% - 12px)); z-index: 25;
