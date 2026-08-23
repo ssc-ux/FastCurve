@@ -92,6 +92,19 @@
   ];
 
   /**
+   * Téléphone : le rail + panneau redimensionnable côte à côte n'a plus de
+   * sens sur ~380px de large (voir maquette « Direction 9 — Mobile ») — un
+   * seul plan de travail à la fois, choisi au pouce depuis une barre de
+   * navigation en bas d'écran (rail latéral remplacé, pas dupliqué : même
+   * `activeTab`, seule la présentation change en media query CSS). La
+   * courbe devient une 4e destination plutôt qu'un panneau toujours visible
+   * à côté de la saisie — il n'y a tout simplement plus la largeur pour les
+   * deux en même temps.
+   */
+  let mobileChart = $state(false);
+  function allerTab(id: Tab) { activeTab = id; mobileChart = false; }
+
+  /**
    * Tant qu'aucune valeur n'a été saisie, il n'y a rien à montrer sur la
    * courbe — juste « Ajoutez des valeurs… » sur les deux tiers de l'écran,
    * pendant que la saisie, ce qu'il y a effectivement à faire, est reléguée au
@@ -189,8 +202,8 @@
       <Icon name={sens === 'horizontal' ? 'panel-left' : 'table'} size={14} />
       {sens === 'horizontal' ? 'En colonnes' : 'En bandes'}
     </button>
-    <button class="topbtn" disabled={!store.canUndo} onclick={() => store.undo()} title="Annuler (Ctrl+Z)"><Icon name="undo" size={14} /> Annuler</button>
-    <button class="topbtn" disabled={!store.canRedo} onclick={() => store.redo()} title="Rétablir (Ctrl+Maj+Z)"><Icon name="redo" size={14} /> Rétablir</button>
+    <button class="topbtn uz-btn" disabled={!store.canUndo} onclick={() => store.undo()} title="Annuler (Ctrl+Z)"><Icon name="undo" size={14} /><span class="txt"> Annuler</span></button>
+    <button class="topbtn uz-btn" disabled={!store.canRedo} onclick={() => store.redo()} title="Rétablir (Ctrl+Maj+Z)"><Icon name="redo" size={14} /><span class="txt"> Rétablir</span></button>
   </header>
 
   {#if store.saveError}
@@ -212,7 +225,7 @@
       {/each}
     </nav>
 
-    <div class="body" class:dragging class:horizontal={sens === 'horizontal'} class:vide={sansDonnees && !collapsed}>
+    <div class="body" class:dragging class:horizontal={sens === 'horizontal'} class:vide={sansDonnees && !collapsed} class:mob-chart={mobileChart}>
       <aside class="sidebar" class:collapsed
              style={sens === 'horizontal'
                ? `max-height:${collapsed ? 0 : sidebarH}px`
@@ -237,6 +250,23 @@
       </main>
     </div>
   </div>
+
+  <!-- Barre de navigation du bas (téléphone uniquement — voir media query
+       CSS ; masquée sur tablette/desktop où le rail latéral reste en place). -->
+  <nav class="bottomnav" aria-label="Navigation">
+    {#each tabs as t (t.id)}
+      <button class="bnav-btn" class:on={!mobileChart && activeTab === t.id}
+              onclick={() => allerTab(t.id)} aria-current={!mobileChart && activeTab === t.id ? 'page' : undefined}>
+        <Icon name={t.icon} size={20} />
+        <span>{t.id === 'data' ? 'Biologie' : t.label}</span>
+      </button>
+    {/each}
+    <button class="bnav-btn" class:on={mobileChart} onclick={() => (mobileChart = true)}
+            aria-current={mobileChart ? 'page' : undefined}>
+      <Icon name="chart-spline" size={20} />
+      <span>Courbe</span>
+    </button>
+  </nav>
 </div>
 
 {#if uiBus.welcomeOpen}
@@ -372,5 +402,58 @@
        occuper le même espace, l'un peint par-dessus l'autre. Le badge est le
        moins utile des deux — la sauvegarde reste automatique sans lui. */
     .saved { display: none; }
+  }
+
+  /* ── Barre de navigation du bas (masquée hors mobile) ── */
+  .bottomnav { display: none; }
+
+  /* ────────────────────────────────────────────────────────────────
+     Téléphone (≤640px) — voir Direction 9 « Mobile » : plus de rail
+     latéral ni de panneau redimensionnable côte à côte, un seul plan de
+     travail plein écran à la fois (saisie/traitements/réglages, OU la
+     courbe), choisi au pouce dans la barre du bas. `.sidebar`/`.chart-area`
+     restent les MÊMES éléments qu'en desktop (juste affichage/masquage en
+     CSS) : aucune logique dupliquée, aucun état de plus que `mobileChart`.
+     ──────────────────────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .topbar { padding: 0 10px; gap: 8px; }
+    /* Le libellé « FASTCURVE » cède la place en premier : le logo suffit à
+       identifier l'appli, et Document/Annuler/Rétablir doivent rester
+       lisibles plutôt que collés les uns aux autres. Annuler/Rétablir
+       perdent leur texte pour la même raison (icône + `title` conservés :
+       rien n'est perdu pour un lecteur d'écran). */
+    .title { display: none; }
+    .uz-btn .txt { display: none; }
+    .uz-btn { padding: 8px 10px; }
+    .rail { display: none; }
+    .shell { flex-direction: column; }
+    .body, .body.horizontal { flex-direction: column; }
+    .divider { display: none; }
+    /* La sidebar (saisie/traitements/réglages) occupe tout l'écran restant
+       — plus de hauteur figée à 52% (c'était pour la tablette, où les deux
+       plans restent visibles). */
+    .sidebar, .body.horizontal .sidebar {
+      width: 100% !important; height: auto !important; max-height: none !important;
+      flex: 1 1 auto !important; display: flex !important;
+    }
+    .chart-area { display: none; height: auto; flex: 1 1 auto; }
+    /* Bascule vers la courbe (bouton « Courbe » de la barre du bas) :
+       l'inverse — la courbe prend tout l'écran, la saisie disparaît. */
+    .body.mob-chart .sidebar { display: none !important; }
+    .body.mob-chart .chart-area { display: flex; }
+
+    .bottomnav {
+      display: flex; flex: 0 0 auto;
+      background: var(--rail-bg); border-top: 1px solid var(--topbar-border);
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    .bnav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px; min-height: 56px; border: none; background: transparent; color: var(--rail-ink);
+      border-radius: 0; padding: 6px 2px; font-size: 10.5px; font-weight: 700;
+    }
+    .bnav-btn.on { color: var(--rail-ink-on); }
+    .bnav-btn:active { transform: none; }
+    .bnav-btn:hover { background: rgba(255,255,255,.05); }
   }
 </style>

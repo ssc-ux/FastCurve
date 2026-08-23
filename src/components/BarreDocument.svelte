@@ -74,11 +74,16 @@
     </button>
   {/if}
 
-  <button class="act topbtn" onclick={nouveau} title="Repartir d’un suivi vierge">Nouveau</button>
-  <label class="act topbtn fichier" title="Ouvrir un fichier .fastcurve.json enregistré">
-    Ouvrir<input type="file" accept=".json,application/json" onchange={ouvrirFichier} hidden />
+  <button class="act topbtn" onclick={nouveau} title="Repartir d’un suivi vierge" aria-label="Nouveau suivi">
+    <Icon name="file-plus" size={14} /><span class="txt">Nouveau</span>
+  </button>
+  <label class="act topbtn fichier" title="Ouvrir un fichier .fastcurve.json enregistré" aria-label="Ouvrir un fichier">
+    <Icon name="upload" size={14} /><span class="txt">Ouvrir</span>
+    <input type="file" accept=".json,application/json" onchange={ouvrirFichier} hidden />
   </label>
-  <button class="act topbtn" onclick={enregistrerFichier} disabled={vide} title="Enregistrer ce suivi dans un fichier">Enregistrer</button>
+  <button class="act topbtn" onclick={enregistrerFichier} disabled={vide} title="Enregistrer ce suivi dans un fichier" aria-label="Enregistrer le fichier">
+    <Icon name="save" size={14} /><span class="txt">Enregistrer</span>
+  </button>
 </div>
 
 <style>
@@ -114,4 +119,19 @@
     flex-shrink: 0;
   }
   .fichier { display: inline-flex; align-items: center; flex-shrink: 0; }
+
+  /* Téléphone : plus de place pour trois libellés + le nom du suivi + les
+     boutons Annuler/Rétablir de la barre du haut. Les trois actions
+     deviennent des boutons-icônes (icône + `title`/`aria-label` déjà posés
+     plus haut, rien n'est perdu pour un lecteur d'écran) ; le nom du suivi
+     s'efface pour leur laisser la place — il reste lisible dans l'écran
+     Réglages et au clic sur l'icône dossier qui l'ouvre toujours pour le
+     renommer. */
+  @media (max-width: 640px) {
+    .doc { gap: 4px; padding-left: 8px; }
+    .act .txt { display: none; }
+    .act { padding: 8px 10px; }
+    .nom .txt { display: none; }
+    .nom { padding: 8px; }
+  }
 </style>
