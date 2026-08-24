@@ -19,7 +19,12 @@
   let { onImported = () => {} }: { onImported?: () => void } = $props();
 
   let texte = $state('');
-  let date = $state(todayISO());
+  // Plus de champ « Date des résultats » visible : la date vient de ce qui
+  // est dicté avec chaque valeur (« CRP 45 le 15/05/2020 »). Sans date
+  // dictée pour une ligne, elle prend implicitement la date du jour — toujours
+  // visible et modifiable dans la colonne Date du tableau, donc jamais une
+  // hypothèse cachée.
+  const dateParDefaut = todayISO();
   let champTexte = $state<HTMLTextAreaElement>();
 
   // L'attribut HTML `autofocus` seul est peu fiable une fois l'écran ouvert
@@ -42,7 +47,7 @@
     connu: boolean;
     include: boolean;
     /** Date ISO effectivement utilisée pour cette ligne : dictée localement,
-     * corrigée à la main, ou — le cas par défaut — la date globale ci-dessus. */
+     * corrigée à la main, ou — le cas par défaut — la date du jour. */
     date: string;
     /** Vrai quand `date` vient d'une date dictée avec la valeur (« le 28/06/2026 »),
      * pour l'indiquer discrètement sans imposer de geste supplémentaire. */
@@ -68,7 +73,7 @@
         id, nom: it.nom, unite: it.catalogue?.unit ?? '',
         valeurTexte: it.valeurTexte, valeur: it.valeur, complet: it.complet,
         connu: true, include: !exclus.has(id),
-        date: manuelle ?? it.date ?? date,
+        date: manuelle ?? it.date ?? dateParDefaut,
         dateDictee: manuelle == null && it.date != null,
       });
     }
@@ -79,7 +84,7 @@
         id, nom: it.nom, unite: '',
         valeurTexte: it.valeurTexte, valeur: it.valeur, complet: it.complet,
         connu: false, include: !exclus.has(id),
-        date: manuelle ?? it.date ?? date,
+        date: manuelle ?? it.date ?? dateParDefaut,
         dateDictee: manuelle == null && it.date != null,
       });
     }
@@ -108,15 +113,6 @@
     datesManuelles = new Map();
     uiBus.toast(`${added} valeur(s) ajoutée(s) au graphique.`);
     onImported();
-  }
-
-  function majDate(e: Event) {
-    const input = e.currentTarget as HTMLInputElement;
-    const brut = input.value.trim();
-    if (!brut) { input.value = date ? formatDate(date) : ''; return; }
-    const iso = parseDateSouple(brut);
-    if (iso) { date = iso; input.value = formatDate(iso); }
-    else { uiBus.toast(`Date « ${brut} » non comprise : tapez par exemple 12/03/2024.`, 'error'); input.value = formatDate(date); }
   }
 
   // Correction manuelle de la date d'UNE ligne (dictée mal comprise, ou pour
@@ -148,18 +144,10 @@
 
   <p class="faint small" style="margin-bottom:6px;">
     Activez Dragon (ou tout logiciel de dictée) sur ce champ, ou tapez directement.
-    Exemple : « CRP 45 créatinine 90 hémoglobine 12,3 ». Par défaut, tout va à la date ci-dessous.
-    Pour dicter plusieurs dates dans la même série, faites suivre chaque valeur de sa date
-    (« CPK 28 le 28/06/2026, CRP 45 le 15/05/2020 ») : la date propre à chaque ligne apparaît
-    dans le tableau, et reste modifiable à la main.
+    Exemple : « CRP 45 créatinine 90 » — sans date dictée, la date du jour est utilisée. Pour une
+    autre date, faites suivre la valeur de sa date (« CPK 28 le 28/06/2026, CRP 45 le 15/05/2020 »)
+    : elle apparaît dans la colonne Date du tableau, toujours modifiable à la main.
   </p>
-
-  <div class="row" style="margin-bottom:8px; gap:10px;">
-    <label class="dlabel" for="dictee-date">Date des résultats</label>
-    <input id="dictee-date" class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA"
-           value={formatDate(date)} onblur={majDate}
-           onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); } }} />
-  </div>
 
   <textarea bind:this={champTexte} class="dictzone" bind:value={texte} placeholder="Dictez ou tapez ici les résultats…" spellcheck="false"></textarea>
 
@@ -187,7 +175,7 @@
               <td class="date">
                 <input class="dinp2" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA"
                        value={formatDate(l.date)}
-                       title={l.dateDictee ? 'Date dictée avec cette valeur — modifiable.' : 'Date du champ « Date des résultats » ci-dessus — modifiable pour cette ligne seule.'}
+                       title={l.dateDictee ? 'Date dictée avec cette valeur — modifiable.' : 'Date du jour par défaut (aucune date dictée pour cette ligne) — modifiable.'}
                        class:dictee={l.dateDictee}
                        onblur={(e) => majDateLigne(l.id, l.date, e)}
                        onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); } }} />
@@ -214,8 +202,6 @@
   .dictzone {
     width: 100%; min-height: 110px; resize: vertical; font-size: 15px; line-height: 1.6;
   }
-  .dlabel { font-size: 13px; color: var(--muted); }
-  .dinp { width: 128px; }
   .local { color: var(--ok, #14683e); font-weight: 600; font-size: 13px; }
   .local.small { font-size: 12px; }
 
