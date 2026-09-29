@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../Icon.svelte';
   // ──────────────────────────────────────────────────────────────
   // DICTÉE VOCALE (Dragon, ou tout logiciel qui tape au clavier) — un champ
   // de texte libre, analysé à CHAQUE frappe : pas de bouton « Analyser ».
@@ -139,7 +140,7 @@
     <strong>Dicter les résultats</strong>
     <span class="faint small">— parlez ou tapez, le tableau se remplit tout seul.</span>
     <div class="spacer"></div>
-    <span class="local small">🔒 100% local — rien n'est envoyé</span>
+    <span class="local small"><Icon name="lock" size={12} inline /> 100% local — rien n'est envoyé</span>
   </div>
 
   <p class="faint small" style="margin-bottom:6px;">

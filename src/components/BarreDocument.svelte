@@ -9,6 +9,7 @@
   import Icon from './Icon.svelte';
 
   let renommage = $state(false);
+  let selecteur = $state<HTMLInputElement | undefined>();
   let saisie = $state('');
 
   const nom = $derived(nomEtude(store.study));
@@ -33,8 +34,29 @@
     return `${base}.fastcurve.json`;
   }
 
+  // Filet anti-perte : le navigateur peut effacer ses données (Safari au bout
+  // de 7 jours sans visite, nettoyage manuel…). Seul le fichier .json est
+  // durable. On mémorise l'empreinte du dernier fichier enregistré pour
+  // signaler, sur le bouton, un suivi modifié depuis.
+  const CLE_EMPREINTE = 'fastcurve.empreinte-fichier.v1';
+  function empreinte(t: string): string {
+    let h = 5381;
+    for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+    return String(h);
+  }
+  function lireEmpreinte(): string {
+    try { return localStorage.getItem(CLE_EMPREINTE) ?? ''; } catch { return ''; }
+  }
+  let empreinteFichier = $state(lireEmpreinte());
+  const nonEnregistre = $derived(!vide && empreinte(store.exportJSON()) !== empreinteFichier);
+  function memoriserEmpreinte() {
+    empreinteFichier = empreinte(store.exportJSON());
+    try { localStorage.setItem(CLE_EMPREINTE, empreinteFichier); } catch { /* ignore */ }
+  }
+
   function enregistrerFichier() {
     downloadText(store.exportJSON(), nomFichier(), 'application/json');
+    memoriserEmpreinte();
     uiBus.toast('Fichier enregistré. Rouvrez-le plus tard pour reprendre ce suivi.');
   }
 
@@ -45,6 +67,7 @@
     lecteur.onload = () => {
       const avant = store.exportJSON();
       if (store.importJSON(String(lecteur.result))) {
+        memoriserEmpreinte();
         uiBus.toastAction('Fichier ouvert.', 'Revenir', () => store.importJSON(avant));
       } else {
         uiBus.toast("Ce fichier n'est pas un suivi FastCurve.", 'error');
@@ -77,16 +100,24 @@
   <button class="act topbtn" onclick={nouveau} title="Repartir d’un suivi vierge" aria-label="Nouveau suivi">
     <Icon name="file-plus" size={14} /><span class="txt">Nouveau</span>
   </button>
-  <label class="act topbtn fichier" title="Ouvrir un fichier .fastcurve.json enregistré" aria-label="Ouvrir un fichier">
+  <button class="act topbtn fichier" onclick={() => selecteur?.click()} title="Ouvrir un fichier .fastcurve.json enregistré" aria-label="Ouvrir un fichier">
     <Icon name="upload" size={14} /><span class="txt">Ouvrir</span>
-    <input type="file" accept=".json,application/json" onchange={ouvrirFichier} hidden />
-  </label>
-  <button class="act topbtn" onclick={enregistrerFichier} disabled={vide} title="Enregistrer ce suivi dans un fichier" aria-label="Enregistrer le fichier">
+  </button>
+  <input bind:this={selecteur} type="file" accept=".json,application/json" onchange={ouvrirFichier} hidden />
+  <button class="act topbtn" class:a-enregistrer={nonEnregistre} onclick={enregistrerFichier} disabled={vide}
+          title={nonEnregistre ? 'Modifications non enregistrées dans un fichier — le navigateur seul ne garantit pas leur conservation' : 'Enregistrer ce suivi dans un fichier'}
+          aria-label={nonEnregistre ? 'Enregistrer le fichier (modifications non enregistrées)' : 'Enregistrer le fichier'}>
     <Icon name="save" size={14} /><span class="txt">Enregistrer</span>
   </button>
 </div>
 
 <style>
+  /* Pastille : suivi modifié depuis le dernier fichier enregistré. */
+  .a-enregistrer { position: relative; }
+  .a-enregistrer::after {
+    content: ''; position: absolute; top: 3px; right: 3px;
+    width: 7px; height: 7px; border-radius: 50%; background: #d97706;
+  }
   /* `overflow: hidden` en secours : sans lui, si le nom du suivi est déjà
      réduit à rien et que la place manque encore, le texte des boutons
      « Nouveau / Ouvrir / Enregistrer » (en nowrap, donc non compressible)
@@ -128,10 +159,11 @@
      Réglages et au clic sur l'icône dossier qui l'ouvre toujours pour le
      renommer. */
   @media (max-width: 640px) {
-    .doc { gap: 4px; padding-left: 8px; }
-    .act .txt { display: none; }
-    .act { padding: 8px 10px; }
-    .nom .txt { display: none; }
-    .nom { padding: 8px; }
+    .doc { gap: 3px; padding-left: 6px; }
+    /* Icône + libellé court dessous : des icônes seules (dossier, fichier+,
+       flèche, disquette) laissaient deviner leur rôle. */
+    .act, .nom { flex-direction: column; gap: 2px; padding: 4px 5px; font-size: 9.5px; line-height: 1.1; }
+    .act .txt { display: block; overflow: visible; }
+    .nom .txt { display: block; max-width: 52px; }
   }
 </style>

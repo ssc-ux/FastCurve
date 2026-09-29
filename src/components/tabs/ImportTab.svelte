@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../Icon.svelte';
   // ──────────────────────────────────────────────────────────────
   // ÉCRAN D'IMPORT — il ne fait qu'une chose.
   //
@@ -190,6 +191,8 @@
       parNom.set(normName(r.name), { ...r, values: [...r.values], doutes: [...r.doutes], motifs: r.motifs.map(m => [...m]) });
     }
     let sansDate = 0;
+    let conflitsMemeJour = 0;
+    const normVal = (v: string) => v.replace(/\s+/g, '').replace(',', '.');
 
     for (const t of tableaux) {
       const local: number[] = [];
@@ -219,13 +222,31 @@
         l.cellules.forEach((c, i) => {
           const gi = local[i];
           if (gi === undefined) return;
+          const deja = (ligne!.values[gi] ?? '').trim();
+          // Deux colonnes du même jour (deux prélèvements, ou deux captures) :
+          // une case vide n'efface jamais une valeur déjà lue…
+          if (!c.texte.trim() && deja) return;
+          // … et deux valeurs différentes ne s'écrasent pas en silence : le
+          // graphique ne garde qu'une valeur par jour, le médecin choisit.
+          if (deja && normVal(deja) !== normVal(c.texte)) {
+            ligne!.doutes[gi] = true;
+            ligne!.motifs[gi] = [
+              ...(ligne!.motifs[gi] ?? []),
+              `deux prélèvements ce jour-là : ${deja} et ${c.texte} — une seule valeur par jour est conservée, gardez la bonne`,
+            ];
+            conflitsMemeJour++;
+            return;
+          }
           ligne!.values[gi] = c.texte;
-          ligne!.doutes[gi] = c.douteux;
-          ligne!.motifs[gi] = c.motifs;
+          ligne!.doutes[gi] = c.douteux || !!ligne!.doutes[gi];
+          ligne!.motifs[gi] = [...(ligne!.motifs[gi] ?? []), ...c.motifs];
         });
       }
     }
 
+    if (conflitsMemeJour) {
+      uiBus.toast(`${conflitsMemeJour} case(s) en jaune : deux prélèvements le même jour. Une seule valeur par jour est gardée — le détail est dans l’infobulle de la case.`, 'info', 8000);
+    }
     vDates = colonnes;
     vDatesDoute = douteCol;
     vDatesMotifs = motifsCol;
@@ -390,11 +411,11 @@
           <span class="desktop-only">ou glissez une image / un PDF ici · </span>
           <label class="filebtn">
             <span class="desktop-only">choisir un fichier</span>
-            <span class="mobile-only">📷 Photo ou fichier du bilan</span>
+            <span class="mobile-only"><Icon name="camera" size={18} inline /> Photo ou fichier du bilan</span>
             <input type="file" accept="image/*,application/pdf" capture="environment" multiple onchange={onSelect} hidden />
           </label>
         </p>
-        <p class="local" style="margin-top:12px;">🔒 100% local — rien n'est envoyé.</p>
+        <p class="local" style="margin-top:12px;"><Icon name="lock" size={12} inline /> 100% local — rien n'est envoyé.</p>
         <p class="faint small" style="margin-top:4px;">Plusieurs bilans ? <span class="desktop-only">Collez-les</span><span class="mobile-only">Ajoutez-les</span> à la suite : ils formeront un seul tableau.</p>
       </div>
     {/if}
@@ -405,14 +426,14 @@
           <strong>{pending.length > 1 ? `${pending.length} captures` : 'Capture'}</strong>
           <span class="faint small">— lecture automatique.</span>
           <div class="spacer"></div>
-          <span class="local small">🔒 100% local</span>
+          <span class="local small"><Icon name="lock" size={12} inline /> 100% local</span>
         </div>
         <div class="shots">
           {#each pending as sh (sh.id)}
             <div class="shot">
               <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
               <img src={sh.thumb} alt="capture" title="Cliquer pour recadrer (exclure l'en-tête patient)" onclick={() => openShotCrop(sh)} />
-              {#if sh.crop}<span class="shot-crop" title="Recadrée">✂</span>{/if}
+              {#if sh.crop}<span class="shot-crop" title="Recadrée"><Icon name="scissors" size={12} inline /></span>{/if}
               {#if !busy}<button class="shot-x" title="Retirer" onclick={() => removeShot(sh.id)}>✕</button>{/if}
             </div>
           {/each}
@@ -445,7 +466,7 @@
           <strong>Vérification</strong>
           <span class="faint small">— corrigez puis ajoutez.</span>
           <div class="spacer"></div>
-          <span class="local small">🔒 100% local — rien n'est envoyé</span>
+          <span class="local small"><Icon name="lock" size={12} inline /> 100% local — rien n'est envoyé</span>
         </div>
         <p class="consigne">
           {#if nbJaunes}
@@ -463,7 +484,7 @@
                 <th style="text-align:left;">Variable</th>
                 {#each vDates as _d, i (i)}
                   <th class:doute={vDatesDoute[i] || missingDateCols.has(i)}>
-                    <input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" value={vDates[i] ? formatDate(vDates[i]) : ''}
+                    <input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" aria-label="Date de la colonne {i + 1}" value={vDates[i] ? formatDate(vDates[i]) : ''}
                            onblur={(e) => { const brut = e.currentTarget.value; if (!brut.trim()) { vDates[i] = ''; return; } const iso = parseDateSouple(brut); if (iso) { vDates[i] = iso; e.currentTarget.value = formatDate(iso); } }}
                            onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); } }}
                            title={missingDateCols.has(i) ? 'Date manquante : renseignez-la avant d’ajouter' : infobulle(vDatesMotifs[i] ?? [])} />
@@ -474,15 +495,15 @@
             <tbody>
               {#each vRows as row, ri (ri)}
                 <tr class:excluded={!row.include}>
-                  <td><input type="checkbox" bind:checked={row.include} /></td>
+                  <td><input type="checkbox" bind:checked={row.include} aria-label="Inclure la ligne {row.name}" /></td>
                   <td class="thumb">{#if row.thumb}<img src={row.thumb} alt="ligne d'origine" />{/if}</td>
                   <td class="name" class:doute={row.nameDoute}>
-                    <input class="ninp" bind:value={row.name} title={infobulle(row.nameMotifs)} />
+                    <input class="ninp" bind:value={row.name} title={infobulle(row.nameMotifs)} aria-label="Nom de la variable" />
                     {#if catalogHint(row.name)}<div class="faint" style="font-size:12px;">{catalogHint(row.name)}</div>{/if}
                   </td>
                   {#each row.values as _v, ci (ci)}
                     <td class:doute={row.doutes[ci]}>
-                      <input bind:value={row.values[ci]} title={infobulle(row.motifs[ci] ?? [])} />
+                      <input bind:value={row.values[ci]} title={infobulle(row.motifs[ci] ?? [])} aria-label="{row.name} — {vDates[ci] ? formatDate(vDates[ci]) : 'date manquante'}" />
                     </td>
                   {/each}
                 </tr>

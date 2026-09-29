@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import { store } from '../lib/models/store.svelte';
   import { renderChart, type RenderResult } from '../lib/chart/render';
   import { svgToPngBlob, downloadBlob, downloadText, copyPngToClipboard } from '../lib/chart/export';
@@ -157,8 +158,8 @@
 <div class="chart-wrap">
   <div class="toolbar">
     <div class="seg">
-      <button class:active={s().chartMode === 'stacked'} onclick={() => store.updateSettings({ chartMode: 'stacked' })} title="Un panneau par paramètre, axe du temps commun">Panneaux</button>
-      <button class:active={s().chartMode === 'single'} onclick={() => store.updateSettings({ chartMode: 'single' })} title="Un seul graphe, 2 axes Y">Graphe unique</button>
+      <button class:active={s().chartMode === 'stacked'} onclick={() => store.updateSettings({ chartMode: 'stacked' })} title="Un panneau par paramètre, axe du temps commun" aria-label="Panneaux"><Icon name="rows" size={14} inline /><span class="txt"> Panneaux</span></button>
+      <button class:active={s().chartMode === 'single'} onclick={() => store.updateSettings({ chartMode: 'single' })} title="Un seul graphe, 2 axes Y" aria-label="Graphe unique"><Icon name="chart-spline" size={14} inline /><span class="txt"> Graphe unique</span></button>
     </div>
 
     <div class="menu-wrap">
@@ -166,7 +167,7 @@
         e.stopPropagation();
         showMenu = !showMenu;
         if (showMenu) { saisieDu = s().fromDate ? formatDate(s().fromDate!) : ''; saisieAu = s().toDate ? formatDate(s().toDate!) : ''; }
-      }}>Affichage ▾</button>
+      }} aria-label="Affichage" title="Options d'affichage"><Icon name="settings" size={14} inline /><span class="txt"> Affichage</span> ▾</button>
       {#if showMenu}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div class="menu" onclick={(e) => e.stopPropagation()}>
@@ -202,7 +203,7 @@
     {#if result.ecrasees.length && s().chartMode === 'single'}
       <button class="ecrase-badge" onclick={() => store.updateSettings({ chartMode: 'stacked' })}
               title="Sur un seul graphe, ces paramètres sont écrasés au ras de leur axe : leurs variations y sont invisibles. Cliquer pour passer en panneaux, où chacun a sa propre échelle.">
-        ⚠ {result.ecrasees.length === 1 ? `« ${result.ecrasees[0]} » est écrasé` : `${result.ecrasees.length} séries écrasées`} — voir en panneaux
+        <Icon name="alert" size={14} inline /> {result.ecrasees.length === 1 ? `« ${result.ecrasees[0]} » est écrasé` : `${result.ecrasees.length} séries écrasées`} — voir en panneaux
       </button>
     {:else if result.ecrasees.length}
       <!--
@@ -213,22 +214,22 @@
       -->
       <span class="ecrase-badge" role="status"
             title="Dans un panneau groupé, ces paramètres restent écrasés au ras de leur axe : leurs variations n'y sont pas lisibles. Séparez-les de leur groupe (éditeur du paramètre) pour leur redonner leur propre échelle.">
-        ⚠ {result.ecrasees.length === 1 ? `« ${result.ecrasees[0]} » est écrasé dans son groupe` : `${result.ecrasees.length} séries écrasées dans un groupe`}
+        <Icon name="alert" size={14} inline /> {result.ecrasees.length === 1 ? `« ${result.ecrasees[0]} » est écrasé dans son groupe` : `${result.ecrasees.length} séries écrasées dans un groupe`}
       </span>
     {/if}
 
     {#if s().fromDate || s().toDate}
       <button class="period-badge" onclick={() => store.updateSettings({ fromDate: null, toDate: null })}
               title="Un filtre de période masque une partie des données. Cliquer pour tout réafficher.">
-        📅 {s().fromDate ? formatDate(s().fromDate!) : '…'} → {s().toDate ? formatDate(s().toDate!) : '…'} <span class="pb-x">✕</span>
+        <Icon name="calendar" size={14} inline /> {s().fromDate ? formatDate(s().fromDate!) : '…'} → {s().toDate ? formatDate(s().toDate!) : '…'} <span class="pb-x">✕</span>
       </button>
     {/if}
 
     <div class="spacer"></div>
-    <button class="primary copy-btn" onclick={copyImg} title="Copier la courbe pour la coller dans PowerPoint (Ctrl+Maj+C, ou Ctrl+E)">{copied ? '✓ Copié' : '⧉ Copier'}</button>
+    <button class="primary copy-btn" onclick={copyImg} title="Copier la courbe pour la coller dans PowerPoint (Ctrl+Maj+C, ou Ctrl+E)" aria-label={copied ? 'Copié' : 'Copier la courbe'}><Icon name={copied ? 'check' : 'copy'} size={14} inline /><span class="txt"> {copied ? 'Copié' : 'Copier'}</span></button>
     <div class="menu-wrap split">
-      <button class="primary export-main" onclick={() => exportPng(4)} title="Télécharger l'image PNG (haute résolution)">Exporter</button>
-      <button class="primary export-caret" onclick={(e) => { e.stopPropagation(); showExport = !showExport; }} title="Autres formats">▾</button>
+      <button class="primary export-main" onclick={() => exportPng(4)} title="Télécharger l'image PNG (haute résolution)" aria-label="Exporter"><Icon name="download" size={14} inline /><span class="txt"> Exporter</span></button>
+      <button class="primary export-caret" onclick={(e) => { e.stopPropagation(); showExport = !showExport; }} title="Autres formats" aria-label="Autres formats d'export">▾</button>
       {#if showExport}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div class="menu export-menu" onclick={(e) => e.stopPropagation()}>
@@ -243,7 +244,7 @@
 
   <div class="canvas" class:vide={result.empty} bind:this={container}>
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-    <div class="svg-host" role="img" aria-label="Graphique" onmousemove={onMove} onmouseleave={() => (hover = null)} onclick={onChartClick}>
+    <div class="svg-host" role="figure" aria-label="Graphique" onmousemove={onMove} onmouseleave={() => (hover = null)} onclick={onChartClick}>
       {@html result.svg}
       <button class="title-hit" title="Cliquer pour modifier le titre" aria-label="Modifier le titre" onclick={(e) => { e.stopPropagation(); editingTitle = true; }}></button>
 
@@ -284,7 +285,7 @@
   .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 7px; padding: 2px; }
   .seg button { border: none; border-radius: 5px; padding: 5px 12px; background: transparent; font-size: 12px; color: var(--muted); }
   .seg button:hover { background: rgba(0,0,0,.04); }
-  .seg button.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .seg button.active { background: var(--accent-soft); color: var(--accent-text); font-weight: 700; }
 
   .menu-wrap { position: relative; }
   .menu-btn { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
@@ -338,7 +339,15 @@
   .te-sub { font-size: 12.5px; }
   .te-ok { align-self: flex-end; }
 
-  .toolbar button { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+  .toolbar button { padding: 5px 12px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; }
+  .seg button { display: inline-flex; align-items: center; gap: 5px; }
+  /* Téléphone : une seule ligne d'outils, icônes seules (libellés en
+     aria-label/title) — la courbe récupère la hauteur. */
+  @media (max-width: 700px) {
+    .toolbar { flex-wrap: nowrap; gap: 6px; }
+    .toolbar .txt { display: none; }
+    .toolbar button { min-width: 40px; min-height: 40px; padding: 6px 10px; }
+  }
   .canvas { position: relative; flex: 1; overflow: auto; padding: 18px; background: var(--canvas-bg); display: flex; justify-content: center; align-items: flex-start; }
   /* Suivi vide : la petite carte de placeholder (juste le titre + « Ajoutez
      des valeurs… ») ne doit pas rester collée en haut d'un grand vide gris —

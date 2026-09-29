@@ -23,22 +23,23 @@
 // 100% local : rien ne sort du navigateur.
 // ──────────────────────────────────────────────────────────────
 
-import { matchCatalog } from '../models/catalog';
+import { matchCatalog, matchCatalogExact } from '../models/catalog';
 import { jugerDate, jugerNom, jugerValeur } from './confiance';
 import { reparerNombre } from './correction';
+import { glyphesChiffres, ModelesChiffres, type Glyphe } from './glyphes';
 import { lireCellules, type ModeCellule } from './ocr';
 import {
   canvasSource, carteCouleur, carteEncreLocale, grisCanalMin, rendreCellule, vignette,
   type Boite,
 } from './preparation';
 import {
-  affecterRoles, lireDate, nettoyerNom, roleDepuisEntete,
+  affecterRoles, corrigerNomParCatalogue, lireDate, nettoyerNom, roleDepuisEntete,
   type ColonneCandidate, type DateLue as DateEntete,
 } from './roles';
 import {
   analyserCellule, boiteEncre, colonnesDepuisAncres, colonnesDepuisGouttieres, detecterBandes,
   encreDansCellule, hauteurLigne, mediane, profilBandes, sansDecorationsCouleur,
-  type Bande, type CarteCouleur, type CarteEncre, type Colonne, type GeometrieCellule,
+  effacerFilets, type Bande, type CarteCouleur, type CarteEncre, type Colonne, type GeometrieCellule,
 } from './structure';
 
 // ── Ce que la chaîne rend ───────────────────────────────────────
@@ -366,16 +367,21 @@ function celluleDe(
 ): Cellule {
   const marge = Math.max(3, Math.round(hL * 0.45));
   const bornes = limites ?? col;
-  let carteBbox = carte, bandeBbox = bande, colBbox = col, dx = 0, dy = 0;
+  let carteBbox = carte, bandeBbox = bande, colBbox = col, dx = 0, dy = 0, picto = false;
   if (coul) {
     const net = sansDecorationsCouleur(carte, coul, bande, col);
-    carteBbox = net.carte; bandeBbox = net.bande; colBbox = net.col; dx = net.dx; dy = net.dy;
+    carteBbox = net.carte; bandeBbox = net.bande; colBbox = net.col; dx = net.dx; dy = net.dy; picto = net.picto;
   }
   const encre = encreDansCellule(carteBbox, bandeBbox, colBbox);
   const bLocal = boiteEncre(carteBbox, bandeBbox, colBbox);
   const b = bLocal ? { x0: bLocal.x0 + dx, y0: bLocal.y0 + dy, x1: bLocal.x1 + dx, y1: bLocal.y1 + dy } : null;
-  const x0 = b ? Math.max(bornes.x0, b.x0 - marge) : col.x0;
-  const x1 = b ? Math.min(bornes.x1, b.x1 + marge) : col.x1;
+  // Pictogramme accolé (ⓘ, flèche ↑) : la marge horizontale en rattraperait
+  // un morceau, que Tesseract lirait comme un chiffre (« 24↑ » → « 241 »).
+  // On découpe alors au ras de l'encre du texte — `rendreCellule` ajoute de
+  // toute façon sa propre marge blanche.
+  const margeH = picto ? 1 : marge;
+  const x0 = b ? Math.max(bornes.x0, b.x0 - margeH) : col.x0;
+  const x1 = b ? Math.min(bornes.x1, b.x1 + margeH) : col.x1;
   let sombres = 0;
   for (let y = Math.max(0, bande.y0); y <= Math.min(polarite.length - 1, bande.y1); y++) {
     sombres += polarite[y];
@@ -385,6 +391,49 @@ function celluleDe(
     boite: { x0, y0: bande.y0 - marge, x1, y1: bande.y1 + marge },
     encre,
     inverse: sombres > hauteur / 2,
+  };
+}
+
+// ── Lecture multiple des valeurs ─────────────────────────────────
+//
+// Une même case est lue à trois agrandissements. Tesseract confond 5/9, 8/6,
+// 3/8 selon la taille du glyphe, mais rarement de la même façon à trois
+// échelles : le vote à la majorité efface ces confusions isolées. Quand les
+// lectures ne s'accordent pas, la case est de toute façon signalée en jaune.
+
+/** Hauteurs cibles (px) du texte agrandi ; la première est la lecture de référence. */
+export const AGRANDISSEMENTS_VALEUR = [68, 44, 96];
+
+export interface LectureVotee { texte: string; confiance: number; desaccord: boolean; unanime?: boolean; }
+
+const NOMBRE_LU = /^[<>]?\d+(\.\d+)?$/;
+const normaliserLecture = (t: string) => t.replace(/\s+/g, '').replace(',', '.');
+
+/**
+ * Retient la lecture majoritaire (à égalité : la plus confiante). Une lecture
+ * vide ne vote pas, sauf si toutes le sont. `desaccord` quand aucune lecture
+ * n'obtient la majorité absolue.
+ */
+export function voter(lectures: { texte: string; confiance: number }[]): LectureVotee {
+  const nonVides = lectures.filter(l => normaliserLecture(l.texte));
+  // Seule une lecture qui forme un nombre vote (« << » n'est pas un résultat) ;
+  // à défaut d'aucune, on garde les lectures brutes pour la suite de la chaîne.
+  const valides = nonVides.filter(l => NOMBRE_LU.test(normaliserLecture(l.texte)));
+  const pleines = valides.length ? valides : nonVides;
+  if (!pleines.length) return { texte: lectures[0]?.texte ?? '', confiance: lectures[0]?.confiance ?? 0, desaccord: false };
+  const groupes = new Map<string, { n: number; conf: number; lecture: { texte: string; confiance: number } }>();
+  for (const l of pleines) {
+    const k = normaliserLecture(l.texte);
+    const g = groupes.get(k);
+    if (g) { g.n++; g.conf += l.confiance; if (l.confiance > g.lecture.confiance) g.lecture = l; }
+    else groupes.set(k, { n: 1, conf: l.confiance, lecture: l });
+  }
+  const tri = [...groupes.values()].sort((a, b) => b.n - a.n || b.conf / b.n - a.conf / a.n);
+  const gagnant = tri[0];
+  return {
+    texte: gagnant.lecture.texte, confiance: gagnant.conf / gagnant.n,
+    desaccord: pleines.length > 1 && gagnant.n * 2 <= pleines.length,
+    unanime: valides.length === lectures.length && groupes.size === 1,
   };
 }
 
@@ -414,6 +463,8 @@ export async function reconnaitreTableau(
     return echec('Je n’ai trouvé aucun tableau dans cette image.');
   }
   const hL = hauteurLigne(toutes) || 12;
+  // Au niveau des cases, les filets du tableau ne sont que du bruit.
+  const carteCases = effacerFilets(carte, hL);
   const bandesIsolees = isolerTableau(carte, toutes, hL);
   const bandes = ecarterBandesDecoratives(bandesIsolees, hL);
   if (bandes.length < 2) {
@@ -441,12 +492,12 @@ export async function reconnaitreTableau(
   }
 
   const cellule = (bi: number, ci: number) =>
-    celluleDe(carte, polarite, bandes[bi], colonnes[ci], hL, plageEntete(colonnes, ci, carte.largeur));
+    celluleDe(carteCases, polarite, bandes[bi], colonnes[ci], hL, plageEntete(colonnes, ci, carte.largeur));
   // Une case de résultat est agrandie plus fort que les autres : c'est là que
   // se joue la virgule décimale, et une virgule de deux pixels ne survit pas à
   // un agrandissement timide.
-  const rendre = (c: Cellule, mode: ModeCellule) =>
-    rendreCellule(source, c.boite, { inverse: c.inverse, hauteurCible: mode === 'valeur' ? 68 : 46 });
+  const rendre = (c: Cellule, mode: ModeCellule, hauteurCible?: number) =>
+    rendreCellule(source, c.boite, { inverse: c.inverse, hauteurCible: hauteurCible ?? (mode === 'valeur' ? 68 : 46) });
 
   const bornesTable = {
     gauche: colonnes[0].x0,
@@ -463,6 +514,21 @@ export async function reconnaitreTableau(
     const col = colonnes[ci];
     const plage = plageEntete(colonnes, ci, carte.largeur);
     const bloc = blocPourColonne(blocsEntete.get(bi)!, col, hL);
+    // Un bloc appartient à UNE colonne : celle qu'il recouvre le plus. Une
+    // colonne sans titre dans cette bande (« Normales » centré plus bas, à
+    // côté d'une date large) ne doit pas hériter du bloc de sa voisine — elle
+    // lirait « 29/1 » et deviendrait une colonne de résultats fantôme.
+    if (bloc) {
+      const recouvre = (c: Colonne) => Math.min(bloc.x1, c.x1) - Math.max(bloc.x0, c.x0);
+      const proprietaire = colonnes.reduce((m, c, k) => (recouvre(c) > recouvre(colonnes[m]) ? k : m), ci);
+      if (proprietaire !== ci) {
+        return {
+          boite: { x0: col.x0, y0: bandes[bi].y0, x1: col.x1, y1: bandes[bi].y1 },
+          encre: encreDansCellule(carte, bandes[bi], col),
+          inverse: celluleDe(carte, polarite, bandes[bi], col, hL).inverse,
+        };
+      }
+    }
     // Les valeurs étant alignées à droite et l'en-tête centré, le bloc déborde
     // très souvent la colonne vers la gauche : on le suit tel quel. La plage
     // ne sert que si aucun bloc ne se rattache à la colonne.
@@ -478,7 +544,16 @@ export async function reconnaitreTableau(
     // courant, une date au-dessus d'un nombre à trois chiffres — garde tout
     // son débordement, c'est justement ce que la plage lui accorde.
     const marge = Math.max(2, Math.round(hL * 0.2));
-    const retenu = retenirBlocEntete(bloc, col, plage, marge);
+    let retenu = retenirBlocEntete(bloc, col, plage, marge);
+    if (!bloc) {
+      // Sans bloc à elle, la colonne se rabat sur sa plage — mais jamais sur
+      // le texte d'un bloc voisin qui y déborde (une date large à droite).
+      for (const b of blocsEntete.get(bi)!) {
+        if (b.x0 > col.x1) retenu = { ...retenu, x1: Math.min(retenu.x1, b.x0 - 1) };
+        else if (b.x1 < col.x0) retenu = { ...retenu, x0: Math.max(retenu.x0, b.x1 + 1) };
+      }
+      if (retenu.x1 <= retenu.x0) retenu = { x0: col.x0, x1: col.x1 };
+    }
     return {
       boite: {
         x0: retenu.x0, y0: bandes[bi].y0 - marge,
@@ -491,12 +566,12 @@ export async function reconnaitreTableau(
 
   /** Lit un lot de cellules ; les cases sans encre ne coûtent aucun appel OCR. */
   async function lire(
-    cases: Cellule[], mode: ModeCellule, etape: string,
+    cases: Cellule[], mode: ModeCellule, etape: string, hauteurCible?: number,
   ): Promise<{ texte: string; confiance: number }[]> {
     const utiles: number[] = [];
     const canvases: HTMLCanvasElement[] = [];
     cases.forEach((c, i) => {
-      if (c.encre >= 3) { utiles.push(i); canvases.push(rendre(c, mode)); }
+      if (c.encre >= 3) { utiles.push(i); canvases.push(rendre(c, mode, hauteurCible)); }
     });
     const out = cases.map(() => ({ texte: '', confiance: 0 }));
     if (!canvases.length) return out;
@@ -673,6 +748,16 @@ export async function reconnaitreTableau(
   const roles = affecterRoles(candidates, anneeParDefaut);
 
   const colDates = roles.filter(r => r.role === 'date');
+  // Titre de section qui déborde de la colonne des noms (« HÉMATO CELLULAIRE
+  // GÉNÉRALE (1 analyse) ») : aucune encre sous AUCUNE colonne de résultats.
+  // Ce n'est pas une ligne d'analyte.
+  for (let k = iDonnees.length - 1; k >= 0; k--) {
+    const bi = iDonnees[k];
+    if (colDates.length && colDates.every(d => encreDansCellule(carteCases, bandes[bi], colonnes[d.index]) < 3)) {
+      iDonnees.splice(k, 1);
+    }
+  }
+  if (!iDonnees.length) return echec('Le tableau ne contient aucune ligne de résultats.');
   const colNoms = roles.filter(r => r.role === 'nom').map(r => r.index).sort((a, b) => a - b);
   const colUnite = roles.find(r => r.role === 'unite')?.index ?? -1;
 
@@ -700,23 +785,64 @@ export async function reconnaitreTableau(
     x0: plageEntete(colonnes, colNoms[0], carte.largeur).x0,
     x1: plageEntete(colonnes, colNoms[colNoms.length - 1], carte.largeur).x1,
   };
-  const casNoms = iDonnees.map(bi => celluleDe(carte, polarite, bandes[bi], colNom, hL, limitesNom));
+  const casNoms = iDonnees.map(bi => celluleDe(carteCases, polarite, bandes[bi], colNom, hL, limitesNom));
   const lusNoms = await lire(casNoms, 'texte', 'Variables');
   if (annule()) return echec('Lecture interrompue.');
 
   // — Valeurs, colonne de résultats par colonne de résultats —
-  const brutes: { texte: string; confiance: number }[][] = [];
+  const brutes: LectureVotee[][] = [];
+  const glyphes: Glyphe[][][] = [];
   const geos: GeometrieCellule[][] = [];
   const pictos: boolean[][] = [];
   for (const d of colDates) {
     const col = colonnes[d.index];
     const limites = plageEntete(colonnes, d.index, carte.largeur);
-    const cases = iDonnees.map(bi => celluleDe(carte, polarite, bandes[bi], col, hL, limites, coul));
-    brutes.push(await lire(cases, 'valeur', 'Valeurs'));
-    const nets = iDonnees.map(bi => sansDecorationsCouleur(carte, coul, bandes[bi], col));
+    const cases = iDonnees.map(bi => celluleDe(carteCases, polarite, bandes[bi], col, hL, limites, coul));
+    // Le worker OCR est unique : les lectures se font l'une après l'autre.
+    const lectures: { texte: string; confiance: number }[][] = [];
+    for (const h of AGRANDISSEMENTS_VALEUR) lectures.push(await lire(cases, 'valeur', 'Valeurs', h));
+    brutes.push(cases.map((_, i) => voter(lectures.map(l => l[i]))));
+    const nets = iDonnees.map(bi => sansDecorationsCouleur(carteCases, coul, bandes[bi], col));
+    glyphes.push(nets.map(net => glyphesChiffres(net.carte, net.bande, net.col)));
     geos.push(nets.map(net => analyserCellule(net.carte, net.bande, net.col)));
     pictos.push(nets.map(net => net.picto));
     if (annule()) return echec('Lecture interrompue.');
+  }
+
+  // — Cohérence des glyphes (voir glyphes.ts) : modèles appris sur les cases
+  //   lues à l'unanimité, puis chaque autre case confrontée à ces modèles. —
+  const modeles = new ModelesChiffres();
+  brutes.forEach((col, c) => col.forEach((b, r) => { if (b.unanime) modeles.apprendre(b.texte, glyphes[c][r]); }));
+  brutes.forEach((col, c) => col.forEach((b, r) => {
+    if (b.unanime || !b.texte) return;
+    const v = modeles.verifier(b.texte, glyphes[c][r]);
+    // Alerte seulement, jamais de correction : sur le banc, une flèche noire
+    // accolée suffit à fausser l'appariement glyphe ↔ chiffre.
+    if (v.corrige) b.desaccord = true;
+  }));
+
+  // — Lignes de TEXTE (« non communiquée », « Automate : … ») : aucune case
+  //   ne donne de nombre, mais il y a de l'encre. On relit une case encrée
+  //   en mode texte ; si ce sont des mots, ce n'est pas une ligne de résultats.
+  //   Une ligne de résultats illisible, elle, ne donne pas de mots et reste
+  //   (en jaune). —
+  const lignesTexte = new Set<number>();
+  const casTexte: { r: number; c: number }[] = [];
+  for (let r = 0; r < iDonnees.length; r++) {
+    // Moins de la moitié des cases encrées donnent un nombre : suspect.
+    const encrees = geos.filter(g => g[r].encre > 0).length;
+    const nombres = brutes.filter(col => NOMBRE_LU.test(normaliserLecture(col[r].texte))).length;
+    if (!encrees || nombres * 2 >= encrees) continue;
+    const c = geos.findIndex((g, k) => g[r].encre > 0 && !NOMBRE_LU.test(normaliserLecture(brutes[k][r].texte)));
+    if (c >= 0) casTexte.push({ r, c });
+  }
+  if (casTexte.length) {
+    const lus = await lire(
+      casTexte.map(({ r, c }) => celluleDe(carteCases, polarite, bandes[iDonnees[r]], colonnes[colDates[c].index], hL,
+        plageEntete(colonnes, colDates[c].index, carte.largeur))),
+      'texte', 'Lignes de texte',
+    );
+    casTexte.forEach(({ r }, k) => { if (/\p{L}{3,}/u.test(lus[k].texte)) lignesTexte.add(r); });
   }
 
   // — Encre typique d'une case pleine : sert à distinguer « case vide » de
@@ -750,14 +876,18 @@ export async function reconnaitreTableau(
   const unitesALire: { ligne: number; bande: number }[] = [];
 
   for (let r = 0; r < iDonnees.length; r++) {
-    const nom = nettoyerNom(lusNoms[r].texte);
+    if (lignesTexte.has(r)) continue;
+    const nom = corrigerNomParCatalogue(nettoyerNom(lusNoms[r].texte), n => !!matchCatalogExact(n));
     const valeurs = colDates.map((_, c) => {
       const g = geos[c][r];
       const brut = brutes[c][r];
       const rep = reparerNombre(brut.texte, g.separateur);
       return {
-        texte: rep.texte, retabli: rep.separateurRetabli,
-        sepGeo: !!g.separateur, conf: brut.confiance, encre: g.encre,
+        texte: rep.texte, retabli: rep.separateurRetabli, desaccord: brut.desaccord,
+        sepGeo: !!g.separateur,
+        // Trois agrandissements lus à l'identique : la confiance interne de
+        // Tesseract sur UNE lecture n'apporte plus rien.
+        conf: brut.unanime ? 100 : brut.confiance, encre: g.encre,
         glyphes: g.glyphes, picto: pictos[c][r],
         // Une virgule rétablie compte comme lue : sans cela, la réparation
         // déclencherait elle-même l'alerte « un signe n'a pas été lu ».
@@ -777,7 +907,7 @@ export async function reconnaitreTableau(
         encreTypique,
         separateurGeometrique: v.sepGeo,
         separateurRetabli: v.retabli,
-        desaccordRelecture: false,
+        desaccordRelecture: v.desaccord,
         nomAnalyte: nom,
         autresDeLaLigne: valeurs.filter((_, k) => k !== c).map(o => o.texte),
         confiancesAutresDeLaLigne: valeurs.filter((_, k) => k !== c).map(o => o.conf),
@@ -812,7 +942,7 @@ export async function reconnaitreTableau(
   //   pas, sinon on paierait dix reconnaissances pour rien. —
   if (unitesALire.length && colUnite >= 0) {
     const lus = await lire(
-      unitesALire.map(u => celluleDe(carte, polarite, bandes[u.bande], colonnes[colUnite], hL,
+      unitesALire.map(u => celluleDe(carteCases, polarite, bandes[u.bande], colonnes[colUnite], hL,
         plageEntete(colonnes, colUnite, carte.largeur))),
       'texte', 'Unités',
     );

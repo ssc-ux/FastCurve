@@ -19,7 +19,7 @@
 // ──────────────────────────────────────────────────────────────
 
 import { matchCatalog } from '../models/catalog';
-import { decimalePerdue, ordreDeGrandeurSuspect, valeurDe } from './correction';
+import { decimalePerdue, valeurDe } from './correction';
 import type { DateLue } from './roles';
 import { mediane } from './structure';
 
@@ -146,7 +146,6 @@ export interface ContexteValeur {
  *  4. la virgule décimale a dû être rétablie (ou l'encre en montre une que le
  *     texte n'a pas) ;
  *  5. la valeur est décalée d'un facteur 10 par rapport au reste de sa ligne ;
- *  6. la valeur est hors de tout ordre de grandeur connu pour cet analyte.
  */
 export function jugerValeur(ctx: ContexteValeur): Verdict {
   const motifs: string[] = [];
@@ -212,9 +211,6 @@ export function jugerValeur(ctx: ContexteValeur): Verdict {
 
   if (decimalePerdue(ctx.texte, ctx.autresDeLaLigne)) {
     motifs.push('valeur décalée d’un facteur 10 par rapport à la ligne');
-  }
-  if (ordreDeGrandeurSuspect(ctx.nomAnalyte, valeurDe(ctx.texte))) {
-    motifs.push('valeur hors de tout ordre de grandeur connu pour cette variable');
   }
   return verdict(motifs);
 }

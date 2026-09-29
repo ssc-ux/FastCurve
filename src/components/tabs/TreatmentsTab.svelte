@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../Icon.svelte';
   import { store } from '../../lib/models/store.svelte';
   import { todayISO, formatDate, lireDateSouple } from '../../lib/models/types';
   import type { TreatmentKind } from '../../lib/models/types';
@@ -195,7 +196,7 @@
   </div>
 
   {#if !showImport}
-    <button class="linklike" onclick={() => (showImport = true)}>📄 Coller un compte-rendu</button>
+    <button class="linklike" onclick={() => (showImport = true)}><Icon name="file-text" size={14} inline /> Coller un compte-rendu</button>
   {:else}
     <div class="card" style="padding:12px;">
       <p class="faint small" style="margin-bottom:8px;">Collez la zone traitement d'un compte-rendu (ou dictez-la avec Dragon). J'en extrais les <strong>lignes thérapeutiques</strong> — vous validez avant d'ajouter. 100% local.</p>
@@ -322,7 +323,7 @@
   .chip { border: 1px solid var(--border-strong); background: var(--panel); color: var(--ink); font-size: 12px; padding: 4px 10px; border-radius: 999px; }
   .chip:hover { background: var(--accent-weak, #eaf2fb); border-color: var(--accent); color: var(--accent); }
 
-  .linklike { align-self: flex-start; border: none; background: transparent; color: var(--accent); font-size: 13px; padding: 2px 0; }
+  .linklike { align-self: flex-start; border: none; background: transparent; color: var(--accent-text); font-size: 13px; padding: 2px 0; }
   .linklike:hover { text-decoration: underline; }
   .report { width: 100%; min-height: 220px; resize: vertical; font-size: 13px; line-height: 1.5; }
   .vgrid .ninp { width: 160px; text-align: left; }
