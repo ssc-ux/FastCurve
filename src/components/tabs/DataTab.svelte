@@ -911,13 +911,17 @@
   {#if isMobile}
     <!-- ── Vue mobile : liste verticale, une date active à la fois ── -->
     <div class="mobilegrid">
-      <div class="mchips" role="tablist" aria-label="Dates">
-        {#each colonnes as c (c.cle)}
-          <button class="mchip" class:on={activeCol?.cle === c.cle} role="tab"
-                  aria-selected={activeCol?.cle === c.cle} onclick={() => (activeCle = c.cle)}>
-            {formatDate(c.date)}
-          </button>
-        {/each}
+      <div class="mchips">
+        <!-- `display: contents` : les onglets restent des puces de la même
+             rangée, mais le champ « + date » n'est plus un enfant du tablist. -->
+        <div role={colonnes.length ? 'tablist' : undefined} aria-label="Dates" style="display: contents;">
+          {#each colonnes as c (c.cle)}
+            <button class="mchip" class:on={activeCol?.cle === c.cle} role="tab"
+                    aria-selected={activeCol?.cle === c.cle} onclick={() => (activeCle = c.cle)}>
+              {formatDate(c.date)}
+            </button>
+          {/each}
+        </div>
         <input class="mchip madd" type="text" inputmode="numeric" placeholder="+ date"
                aria-label="Ajouter une date" title="Tapez une date (JJ/MM/AAAA) pour ajouter une colonne"
                onkeydown={mNeuveKey}
@@ -1116,7 +1120,7 @@
 
   .modeseg { display: inline-flex; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 7px; padding: 3px; align-self: flex-start; }
   .modeseg button { border: none; background: transparent; border-radius: 5px; padding: 5px 14px; font-size: 12.5px; color: var(--muted); }
-  .modeseg button.on { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .modeseg button.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 700; }
 
   /* En bandes, la grille prend toute la largeur — mais pas les blocs qui n'en
      sont pas un : un formulaire étiré sur 1600 px est illisible. */

@@ -243,7 +243,7 @@
 
   <div class="canvas" class:vide={result.empty} bind:this={container}>
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-    <div class="svg-host" role="img" aria-label="Graphique" onmousemove={onMove} onmouseleave={() => (hover = null)} onclick={onChartClick}>
+    <div class="svg-host" role="figure" aria-label="Graphique" onmousemove={onMove} onmouseleave={() => (hover = null)} onclick={onChartClick}>
       {@html result.svg}
       <button class="title-hit" title="Cliquer pour modifier le titre" aria-label="Modifier le titre" onclick={(e) => { e.stopPropagation(); editingTitle = true; }}></button>
 
@@ -284,7 +284,7 @@
   .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 7px; padding: 2px; }
   .seg button { border: none; border-radius: 5px; padding: 5px 12px; background: transparent; font-size: 12px; color: var(--muted); }
   .seg button:hover { background: rgba(0,0,0,.04); }
-  .seg button.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .seg button.active { background: var(--accent-soft); color: var(--accent-text); font-weight: 700; }
 
   .menu-wrap { position: relative; }
   .menu-btn { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
