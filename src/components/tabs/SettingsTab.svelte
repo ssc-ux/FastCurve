@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../Icon.svelte';
   import { store } from '../../lib/models/store.svelte';
   import { downloadText } from '../../lib/chart/export';
   import { loadSample } from '../../lib/models/sample';
@@ -104,8 +105,8 @@
     </div>
     <p class="faint small" style="margin-bottom:8px;">Pour faire profiter <strong>tous les postes</strong> de ce que ce poste a appris : exportez, et transmettez le fichier pour l'intégrer au dictionnaire de l'app.</p>
     <div class="row wrap">
-      <button onclick={exportLearn}>⬇ Exporter l'apprentissage</button>
-      <label class="filebtn-wrap"><span>⬆ Importer un apprentissage</span><input type="file" accept=".json,application/json" onchange={importLearn} hidden /></label>
+      <button onclick={exportLearn}><Icon name="download" size={14} inline /> Exporter l'apprentissage</button>
+      <label class="filebtn-wrap"><span><Icon name="upload" size={14} inline /> Importer un apprentissage</span><input type="file" accept=".json,application/json" onchange={importLearn} hidden /></label>
       <div class="spacer"></div>
       <button class="danger small" title="N'efface aucun patient : oublie seulement les corrections de lecture apprises sur ce poste."
         onclick={() => { const snap = exportLearning(); resetLearning(); learn = learnStats(); uiBus.toastAction('Apprentissage de ce poste réinitialisé.', 'Annuler', () => { importLearning(snap); learn = learnStats(); }); }}>Réinitialiser (ce poste)</button>
@@ -116,15 +117,15 @@
     <div class="section-label">Sauvegarde</div>
     <p class="faint small" style="margin-bottom:8px;">Votre suivi est enregistré automatiquement dans ce navigateur : vous le retrouvez à la réouverture. Pour le garder durablement ou le reprendre sur un autre poste, enregistrez un fichier.</p>
     <div class="row wrap">
-      <button onclick={exportFile}>⬇ Enregistrer le fichier (.json)</button>
-      <label class="filebtn-wrap"><span>⬆ Ouvrir un fichier</span><input type="file" accept=".json,application/json" onchange={importFile} hidden /></label>
+      <button onclick={exportFile}><Icon name="download" size={14} inline /> Enregistrer le fichier (.json)</button>
+      <label class="filebtn-wrap"><span><Icon name="upload" size={14} inline /> Ouvrir un fichier</span><input type="file" accept=".json,application/json" onchange={importFile} hidden /></label>
     </div>
   </div>
 
   <div class="card" style="padding:12px;">
     <div class="section-label">Confidentialité</div>
     <p class="faint small" style="margin-bottom:8px; line-height:1.5;">
-      🔒 Tout reste dans <strong>ce navigateur</strong> : aucune donnée patient n'est envoyée. Avant de partager un graphique, vérifiez qu'aucun <strong>identifiant patient</strong> n'apparaît (nom, date de naissance, IPP). Utilisez le sous-titre pour un libellé anonymisé (« Cas n°12 »).
+      <Icon name="lock" size={12} inline /> Tout reste dans <strong>ce navigateur</strong> : aucune donnée patient n'est envoyée. Avant de partager un graphique, vérifiez qu'aucun <strong>identifiant patient</strong> n'apparaît (nom, date de naissance, IPP). Utilisez le sous-titre pour un libellé anonymisé (« Cas n°12 »).
     </p>
     <label class="row" style="gap:8px; cursor:pointer;">
       <input type="checkbox" checked={store.clearOnExit} onchange={(e) => store.setClearOnExit(e.currentTarget.checked)} />

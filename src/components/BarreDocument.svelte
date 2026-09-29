@@ -159,10 +159,11 @@
      Réglages et au clic sur l'icône dossier qui l'ouvre toujours pour le
      renommer. */
   @media (max-width: 640px) {
-    .doc { gap: 4px; padding-left: 8px; }
-    .act .txt { display: none; }
-    .act { padding: 8px 10px; }
-    .nom .txt { display: none; }
-    .nom { padding: 8px; }
+    .doc { gap: 3px; padding-left: 6px; }
+    /* Icône + libellé court dessous : des icônes seules (dossier, fichier+,
+       flèche, disquette) laissaient deviner leur rôle. */
+    .act, .nom { flex-direction: column; gap: 2px; padding: 4px 5px; font-size: 9.5px; line-height: 1.1; }
+    .act .txt { display: block; overflow: visible; }
+    .nom .txt { display: block; max-width: 52px; }
   }
 </style>
