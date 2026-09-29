@@ -493,7 +493,7 @@ class Store {
     // périmé, et la grille afficherait de vieilles valeurs en silence.
     if (this.#indexSource !== this.study.measurements || this.#indexRev !== this.#rev) {
       this.#index = new Map();
-      for (const m of this.study.measurements) this.#index.set(`${m.parameterId} ${m.date}`, m);
+      for (const m of this.study.measurements) this.#index.set(`${m.parameterId}\u0000${m.date}`, m);
       this.#indexSource = this.study.measurements;
       this.#indexRev = this.#rev;
     }
@@ -501,7 +501,7 @@ class Store {
   }
 
   valueAt(parameterId: string, date: string): Measurement | undefined {
-    return this.indexMesures().get(`${parameterId} ${date}`);
+    return this.indexMesures().get(`${parameterId}\u0000${date}`);
   }
 
   // ── Traitements ──────────────────────────────

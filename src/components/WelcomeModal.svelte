@@ -39,7 +39,7 @@
     <div class="head">
       <span class="logo">📈</span>
       <div class="titles">
-        <div class="name" id="welcome-title">FastCurve <span class="beta">bêta</span></div>
+        <div class="name" id="welcome-title">FastCurve</div>
         <div class="tag">Courbes de suivi biologique & EFR, qualité publication — en quelques secondes.</div>
       </div>
     </div>
@@ -61,10 +61,15 @@
       {/each}
     </div>
 
+    <div class="avert">
+      Outil d'illustration, pas d'aide au diagnostic. Les valeurs lues automatiquement
+      sont à vérifier sur le document source avant ajout — les cases en jaune d'abord.
+    </div>
+
     <button class="primary start" onclick={onClose}>Commencer</button>
 
     <div class="foot">
-      Créé par <strong>Quentin Astouati</strong> · Version bêta · Vos retours sont les bienvenus
+      Version {__APP_VERSION__} · Informations légales dans Réglages › À propos
     </div>
   </div>
 </div>
@@ -84,9 +89,9 @@
   .head { display: flex; gap: 14px; align-items: flex-start; }
   .logo { font-size: 30px; line-height: 1; }
   .name { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-  .beta {
-    font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
-    background: var(--accent-soft); color: var(--accent); padding: 2px 8px; border-radius: 999px;
+  .avert {
+    margin-top: 16px; padding: 10px 12px; border-radius: 10px;
+    background: var(--warn-bg); color: var(--warn-ink); font-size: 12.5px; line-height: 1.5;
   }
   .tag { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
 

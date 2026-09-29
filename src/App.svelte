@@ -51,6 +51,13 @@
     if (store.externalReload) uiBus.toast('Ce suivi vient d’être modifié dans un autre onglet : la version la plus récente est affichée.', 'info', 5000);
   });
 
+  // Mise en ligne d'une nouvelle version pendant l'utilisation.
+  $effect(() => {
+    const surMaj = () => uiBus.toastAction('Une nouvelle version de FastCurve est disponible.', 'Recharger', () => location.reload(), 'info', 600000);
+    window.addEventListener('fastcurve:nouvelle-version', surMaj);
+    return () => window.removeEventListener('fastcurve:nouvelle-version', surMaj);
+  });
+
   function onKey(e: KeyboardEvent) {
     if (!(e.ctrlKey || e.metaKey)) return;
     const tag = (e.target as HTMLElement)?.tagName;
