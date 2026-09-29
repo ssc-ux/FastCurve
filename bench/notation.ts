@@ -113,10 +113,13 @@ export function noter(cas: CasVerite, res: TableauMesure): Score {
   };
 
   // Correspondance des colonnes : par date ISO exacte.
-  const colDe = new Map<string, number>();
-  cas.dates.forEach(d => {
-    const i = res.dates.indexOf(d);
-    if (i >= 0 && ![...colDe.values()].includes(i)) { colDe.set(d, i); s.datesJustes++; }
+  const colDe = new Map<number, number>();
+  cas.dates.forEach((d, k) => {
+    // Deux prélèvements le même jour : la k-ième occurrence d'une date
+    // attendue s'apparie à la k-ième colonne lue portant cette date.
+    const pris = new Set(colDe.values());
+    const i = res.dates.findIndex((x, j) => x === d && !pris.has(j));
+    if (i >= 0) { colDe.set(k, i); s.datesJustes++; }
   });
 
   const appariees = apparier(cas.lignes, res.lignes);
@@ -125,11 +128,17 @@ export function noter(cas: CasVerite, res: TableauMesure): Score {
     if (lm) s.lignesTrouvees++;
     lv.valeurs.forEach((attendu, k) => {
       s.cellules++;
-      const ci = colDe.get(cas.dates[k]);
+      const ci = colDe.get(k);
       const brut = lm && ci !== undefined ? (lm.valeurs[ci] ?? '') : '';
       const douteux = lm && ci !== undefined ? !!lm.douteux[ci] : false;
       if (douteux) s.jaunes++;
-      if (!brut) { s.cellulesManquantes++; return; }
+      // Case vide attendue (analyte non dosé ce jour-là) : juste si rien n'est
+      // inventé, fausse sinon — et le pire des cas si ce n'est pas signalé.
+      if (!brut) {
+        if (!attendu && lm) { s.cellulesJustes++; if (douteux) s.jaunesInutiles++; }
+        else s.cellulesManquantes++;
+        return;
+      }
       if (normVal(brut) === normVal(attendu)) {
         s.cellulesJustes++;
         if (douteux) s.jaunesInutiles++;

@@ -17,7 +17,6 @@
 // Module PUR (aucun DOM) : entièrement testable hors navigateur.
 // ──────────────────────────────────────────────────────────────
 
-import { matchCatalog } from '../models/catalog';
 
 /** Résultat d'une réparation de nombre. */
 export interface NombreRepare {
@@ -95,29 +94,6 @@ export function aSeparateur(texte: string): boolean {
 }
 
 /** Facteur au-delà duquel une valeur n'est plus une valeur, mais une erreur de lecture. */
-const FACTEUR_INVRAISEMBLABLE = 25;
-
-/**
- * Valeur invraisemblable pour cet analyte — d'un ORDRE DE GRANDEUR hors de ce
- * que le catalogue connaît.
- *
- * Attention : ce test ne dit rien de la santé du patient. Une CRP à 96 mg/L
- * (norme < 5) ou une créatinine à 300 µmol/L (norme 60-110) sont des valeurs
- * parfaitement lisibles ; c'est le patient qui est malade, pas l'OCR. Le
- * facteur 25 est choisi pour laisser passer toute la pathologie courante et
- * n'attraper que les lectures aberrantes.
- */
-export function ordreDeGrandeurSuspect(nomAnalyte: string, valeur: number | null): boolean {
-  if (valeur === null || !isFinite(valeur)) return false;
-  const e = matchCatalog(nomAnalyte);
-  if (!e) return false;
-  const v = Math.abs(valeur);
-  if (v === 0) return false;
-  if (e.refHigh != null && e.refHigh > 0 && v > e.refHigh * FACTEUR_INVRAISEMBLABLE) return true;
-  if (e.refLow != null && e.refLow > 0 && v < e.refLow / FACTEUR_INVRAISEMBLABLE) return true;
-  return false;
-}
-
 /**
  * Décimale perdue : la cellule n'a pas de séparateur alors que ses voisines de
  * la même ligne en ont un, et la diviser par dix la remettrait dans l'ordre de

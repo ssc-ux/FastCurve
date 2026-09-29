@@ -36,11 +36,34 @@ plus tard le retrouve tel quel. **Enregistrer** produit un fichier
 
 ```sh
 npm install
-npm run dev      # serveur de développement
-npm test         # 137 vérifications
-npm run check    # typage Svelte + TypeScript
-npm run build    # production → dist/
+npm run dev        # serveur de développement
+npm test           # tests unitaires et de non-régression
+npm run test:e2e   # bout en bout (Chromium) + banc OCR, voir ci-dessous
+npm run check      # typage Svelte + TypeScript
+npm run build      # production → dist/
 ```
+
+## Mise en production
+
+Chaque envoi sur `main` déclenche `.github/workflows/deploy.yml` : typage,
+tests unitaires, tests de bout en bout (dont le banc OCR), build, puis
+publication sur GitHub Pages. Un échec à n'importe quelle étape bloque la mise
+en ligne. Pour publier une version : mettre à jour `version` dans
+`package.json` et `CHANGELOG.md`, puis fusionner sur `main`.
+
+Le cache hors-ligne du service worker est versionné automatiquement à chaque
+build ; les utilisateurs ayant l'application ouverte voient « Nouvelle version
+disponible — Recharger ».
+
+## Banc d'épreuve OCR
+
+`bench/shots/` contient des captures de résultats de laboratoire et leur
+vérité terrain (`verite.json`), dont des captures réelles d'extranet
+hospitalier. `npm run test:e2e` exige 100 % de cases, dates et lignes justes
+et aucune erreur silencieuse. Pour ajouter une capture qui pose problème :
+la déposer dans `bench/shots/` (anonymisée), ajouter sa vérité terrain dans
+`verite.json`, puis corriger jusqu'à ce que le banc repasse à 100 %.
+Détail par capture : `npx vite --port 5212 &` puis `node bench/run.mjs nouveau`.
 
 Svelte 5 (runes) + TypeScript + Vite. Le graphique est produit sous forme de
 SVG par `src/lib/chart/render.ts`, sans bibliothèque de tracé.

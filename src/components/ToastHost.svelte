@@ -1,12 +1,13 @@
 <script lang="ts">
   import { uiBus } from '../lib/models/ui.svelte';
-  const icon = (k: string) => (k === 'error' ? '⚠️' : k === 'info' ? 'ℹ️' : '✓');
+  import Icon from './Icon.svelte';
+  const icon = (k: string) => (k === 'error' ? 'alert' : k === 'info' ? 'info' : 'check');
 </script>
 
 <div class="host" aria-live="polite">
   {#each uiBus.toasts as t (t.id)}
     <div class="toast {t.kind}" role="status">
-      <span class="ic">{icon(t.kind)}</span>
+      <span class="ic"><Icon name={icon(t.kind)} size={16} /></span>
       <span class="tx">{t.text}</span>
       {#if t.action}
         <button class="act" onclick={() => t.action!.run()}>{t.action.label}</button>

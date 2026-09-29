@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../Icon.svelte';
   import { tick, onDestroy } from 'svelte';
   import { store } from '../../lib/models/store.svelte';
   import { CATALOG, type CatalogEntry, normalize } from '../../lib/models/catalog';
@@ -814,9 +815,9 @@
 
 <div class="data">
   <div class="modeseg">
-    <button class:on={mode === 'saisir'} onclick={() => (mode = 'saisir')}>⌨️ Saisir</button>
-    <button class:on={mode === 'importer' && importInitial !== 'dictee'} onclick={() => openImport('photo')}>📥 Importer</button>
-    <button class:on={mode === 'importer' && importInitial === 'dictee'} onclick={() => openImport('dictee')}>🎙️ Dicter</button>
+    <button class:on={mode === 'saisir'} onclick={() => (mode = 'saisir')}><Icon name="keyboard" size={14} inline /> Saisir</button>
+    <button class:on={mode === 'importer' && importInitial !== 'dictee'} onclick={() => openImport('photo')}><Icon name="import" size={14} inline /> Importer</button>
+    <button class:on={mode === 'importer' && importInitial === 'dictee'} onclick={() => openImport('dictee')}><Icon name="mic" size={14} inline /> Dicter</button>
   </div>
 
   {#if mode === 'importer'}
@@ -846,7 +847,7 @@
         <span class="faint" style="font-size:12px;">— une date n'a pas été reconnue : complétez-la puis ajoutez.</span>
       </div>
       {#if pasteHasMissing}
-        <div class="pastewarn">⚠️ Date manquante. Renseignez la (les) date(s) surlignée(s) avant d'ajouter.</div>
+        <div class="pastewarn"><Icon name="alert" size={14} inline /> Date manquante. Renseignez la (les) date(s) surlignée(s) avant d'ajouter.</div>
       {/if}
       <div class="tablescroll">
         <table class="dgrid">
@@ -911,13 +912,17 @@
   {#if isMobile}
     <!-- ── Vue mobile : liste verticale, une date active à la fois ── -->
     <div class="mobilegrid">
-      <div class="mchips" role="tablist" aria-label="Dates">
-        {#each colonnes as c (c.cle)}
-          <button class="mchip" class:on={activeCol?.cle === c.cle} role="tab"
-                  aria-selected={activeCol?.cle === c.cle} onclick={() => (activeCle = c.cle)}>
-            {formatDate(c.date)}
-          </button>
-        {/each}
+      <div class="mchips">
+        <!-- `display: contents` : les onglets restent des puces de la même
+             rangée, mais le champ « + date » n'est plus un enfant du tablist. -->
+        <div role={colonnes.length ? 'tablist' : undefined} aria-label={colonnes.length ? 'Dates' : undefined} style="display: contents;">
+          {#each colonnes as c (c.cle)}
+            <button class="mchip" class:on={activeCol?.cle === c.cle} role="tab"
+                    aria-selected={activeCol?.cle === c.cle} onclick={() => (activeCle = c.cle)}>
+              {formatDate(c.date)}
+            </button>
+          {/each}
+        </div>
         <input class="mchip madd" type="text" inputmode="numeric" placeholder="+ date"
                aria-label="Ajouter une date" title="Tapez une date (JJ/MM/AAAA) pour ajouter une colonne"
                onkeydown={mNeuveKey}
@@ -931,7 +936,7 @@
           <span class="mdate-label">{formatDate(activeCol.date)}</span>
           <div class="spacer"></div>
           <button class="micon" title="Choisir dans un calendrier" aria-label="Choisir la date dans un calendrier"
-                  onclick={() => ouvrirCalendrier(activeCol.cle)}>📅</button>
+                  onclick={() => ouvrirCalendrier(activeCol.cle)}><Icon name="calendar" size={14} inline /></button>
           <button class="micon" title="Supprimer cette date" aria-label="Supprimer la date du {formatDate(activeCol.date)}"
                   onclick={() => demanderSuppr(activeCol.cle, activeCol.date)}>✕</button>
         </div>
@@ -996,7 +1001,7 @@
               <th class="datecol">
                 <div class="colbar">
                   <button class="colicon" tabindex="-1" title="Choisir dans un calendrier"
-                    onclick={() => ouvrirCalendrier(c.cle)} aria-label="Calendrier">📅</button>
+                    onclick={() => ouvrirCalendrier(c.cle)} aria-label="Calendrier"><Icon name="calendar" size={12} inline /></button>
                   <button class="colx" tabindex="-1" title="Supprimer cette colonne"
                     onclick={() => demanderSuppr(c.cle, c.date)} aria-label="Supprimer la colonne du {formatDate(c.date)}">✕</button>
                 </div>
@@ -1116,7 +1121,7 @@
 
   .modeseg { display: inline-flex; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 7px; padding: 3px; align-self: flex-start; }
   .modeseg button { border: none; background: transparent; border-radius: 5px; padding: 5px 14px; font-size: 12.5px; color: var(--muted); }
-  .modeseg button.on { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .modeseg button.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 700; }
 
   /* En bandes, la grille prend toute la largeur — mais pas les blocs qui n'en
      sont pas un : un formulaire étiré sur 1600 px est illisible. */

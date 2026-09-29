@@ -298,3 +298,28 @@ export function nettoyerNom(brut: string): string {
   t = t.replace(/[\s\-–—]+$/, '').trim();
   return t;
 }
+
+/** Chiffres que la reconnaissance substitue couramment à une lettre. */
+const LETTRES_POUR_CHIFFRE: Record<string, string[]> = {
+  '0': ['O'], '1': ['I', 'l'], '5': ['S'], '6': ['G'], '8': ['B'], '9': ['g'],
+};
+
+/**
+ * Nom d'analyte mal lu où une lettre est devenue un chiffre (« 19G » pour
+ * « IgG »). On ne touche qu'à un nom INCONNU du catalogue, et on ne retient
+ * une variante que si elle y correspond EXACTEMENT (nom ou alias) : « C3 »,
+ * « T4 » ou « HbA1c », déjà connus, ne sont jamais modifiés.
+ */
+export function corrigerNomParCatalogue(
+  nom: string,
+  exact: (n: string) => boolean,
+): string {
+  if (!/\d/.test(nom) || exact(nom)) return nom;
+  let variantes = [''];
+  for (const c of nom) {
+    const opts = [c, ...(LETTRES_POUR_CHIFFRE[c] ?? [])];
+    variantes = variantes.flatMap(v => opts.map(o => v + o));
+    if (variantes.length > 256) return nom;
+  }
+  return variantes.find(v => v !== nom && exact(v)) ?? nom;
+}
