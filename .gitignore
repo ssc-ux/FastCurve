@@ -9,3 +9,7 @@ captures/
 !bench/*.mjs
 MEDECIN-CAHIER-DES-CHARGES.md
 RAPPORT-*.md
+
+# Tests de bout en bout
+test-results/
+playwright-report/

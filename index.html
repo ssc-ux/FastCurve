@@ -20,24 +20,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="FastCurve" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; connect-src 'self' blob: data:; img-src 'self' blob: data:; font-src 'self' data:; form-action 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; connect-src 'self' blob: data:; img-src 'self' blob: data:; font-src 'self' data:; form-action 'none';">
     <meta name="description" content="FastCurve — générateur de courbes biologiques et EFR de qualité publication, 100% local dans le navigateur." />
     <title>FastCurve — Courbes biologiques & EFR</title>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
-    <script>
-      // Service worker : ne fait que mettre en cache le shell applicatif
-      // (fichiers statiques déjà servis par ce site) pour un lancement
-      // instantané depuis l'écran d'accueil et un usage hors-ligne. Aucune
-      // donnée patient n'y transite jamais (elle reste dans localStorage).
-      // Dégradation silencieuse et sans régression si non supporté.
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./service-worker.js').catch(() => {});
-        });
-      }
-    </script>
   </body>
 </html>

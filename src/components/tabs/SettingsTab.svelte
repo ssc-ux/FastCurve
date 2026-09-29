@@ -5,6 +5,7 @@
   import type { Template } from '../../lib/models/types';
   import { learnStats, resetLearning, exportLearning, importLearning } from '../../lib/learn/memory';
   import { uiBus } from '../../lib/models/ui.svelte';
+  import InfosLegales from '../InfosLegales.svelte';
 
   let learn = $state(learnStats());
 
@@ -145,13 +146,11 @@
   <div class="card" style="padding:12px;">
     <div class="section-label">À propos</div>
     <p class="small" style="margin-bottom:8px; line-height:1.5;">
-      <strong>FastCurve</strong> — version bêta. Créé par <strong>Quentin Astouati</strong>.<br/>
-      🔒 100% local : aucune donnée envoyée, aucun cloud, aucune IA en ligne.
+      <strong>FastCurve</strong> {__APP_VERSION__} — courbes de suivi biologique et EFR, 100 % local.
     </p>
+    <InfosLegales />
     <button onclick={() => (uiBus.welcomeOpen = true)}>Revoir la présentation</button>
   </div>
-
-  <p class="faint small">FastCurve · 100% local, aucune donnée envoyée sur un serveur.</p>
 </div>
 
 <style>

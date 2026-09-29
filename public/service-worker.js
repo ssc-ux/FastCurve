@@ -21,13 +21,15 @@
 //     en cache de la réponse. Un nom de fichier haché correspond toujours au
 //     même contenu, donc cache-first est à la fois sûr et rapide.
 //
-// Invalidation : CACHE_NAME est versionné. À chaque changement de logique de
-// ce fichier, incrémenter le suffixe purge proprement l'ancien cache à
-// l'activation. Les anciens noms de fichiers hachés (après un nouveau build)
+// Invalidation : CACHE_NAME est versionné AUTOMATIQUEMENT à chaque build
+// (vite.config.ts remplace « dev » par l'horodatage du build). On garde, en
+// plus du cache courant, le cache de la version précédente : un onglet encore
+// ouvert sur l'ancienne version peut ainsi toujours charger ses modules
+// différés (lecture PDF, OCR) jusqu'à son rechargement. Les anciens noms de fichiers hachés (après un nouveau build)
 // ne sont eux jamais servis par erreur puisque index.html n'est jamais servi
 // depuis le cache tant que le réseau répond.
 
-const CACHE_NAME = 'fastcurve-shell-v1';
+const CACHE_NAME = 'fastcurve-shell-dev';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -37,11 +39,12 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const names = await caches.keys();
-      await Promise.all(
-        names
-          .filter((name) => name.startsWith('fastcurve-shell-') && name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      );
+      const anciens = names
+        .filter((name) => name.startsWith('fastcurve-shell-') && name !== CACHE_NAME)
+        .sort()
+        .reverse();
+      // Le plus récent des anciens est conservé (voir « Invalidation »).
+      await Promise.all(anciens.slice(1).map((name) => caches.delete(name)));
       await self.clients.claim();
     })()
   );
