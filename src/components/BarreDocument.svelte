@@ -9,6 +9,7 @@
   import Icon from './Icon.svelte';
 
   let renommage = $state(false);
+  let selecteur = $state<HTMLInputElement | undefined>();
   let saisie = $state('');
 
   const nom = $derived(nomEtude(store.study));
@@ -99,10 +100,10 @@
   <button class="act topbtn" onclick={nouveau} title="Repartir d’un suivi vierge" aria-label="Nouveau suivi">
     <Icon name="file-plus" size={14} /><span class="txt">Nouveau</span>
   </button>
-  <label class="act topbtn fichier" title="Ouvrir un fichier .fastcurve.json enregistré" aria-label="Ouvrir un fichier">
+  <button class="act topbtn fichier" onclick={() => selecteur?.click()} title="Ouvrir un fichier .fastcurve.json enregistré" aria-label="Ouvrir un fichier">
     <Icon name="upload" size={14} /><span class="txt">Ouvrir</span>
-    <input type="file" accept=".json,application/json" onchange={ouvrirFichier} hidden />
-  </label>
+  </button>
+  <input bind:this={selecteur} type="file" accept=".json,application/json" onchange={ouvrirFichier} hidden />
   <button class="act topbtn" class:a-enregistrer={nonEnregistre} onclick={enregistrerFichier} disabled={vide}
           title={nonEnregistre ? 'Modifications non enregistrées dans un fichier — le navigateur seul ne garantit pas leur conservation' : 'Enregistrer ce suivi dans un fichier'}
           aria-label={nonEnregistre ? 'Enregistrer le fichier (modifications non enregistrées)' : 'Enregistrer le fichier'}>

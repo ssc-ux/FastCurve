@@ -22,6 +22,9 @@ export const CATALOG: CatalogEntry[] = [
   // normal ou sur-signalerait une femme normale.
   { name: 'Hémoglobine', unit: 'g/dL', category: 'biologie', aliases: ['hb', 'hgb', 'hemoglobine', 'hémoglo'] },
   { name: 'Hématocrite', unit: '%', category: 'biologie', aliases: ['ht', 'hte', 'hct', 'hematocrite'] },
+  { name: 'Hématies', unit: 'T/L', category: 'biologie', aliases: ['hematies', 'erythrocytes', 'globules rouges', 'gr'] },
+  { name: 'TCMH', unit: 'pg', category: 'biologie', aliases: ['tcmh', 'teneur corpusculaire moyenne en hemoglobine'] },
+  { name: 'CCMH', unit: 'g/dL', category: 'biologie', aliases: ['ccmh', 'chcm', 'concentration corpusculaire moyenne en hemoglobine'] },
   { name: 'VGM', unit: 'fL', category: 'biologie', aliases: ['vgm', 'volume globulaire moyen'] },
   { name: 'Leucocytes', unit: 'G/L', category: 'biologie', aliases: ['leuco', 'gb', 'globules blancs', 'leucocytes'] },
   { name: 'PNN', unit: 'G/L', category: 'biologie', aliases: ['pnn', 'polynucleaires neutrophiles', 'neutrophiles'] },

@@ -483,7 +483,7 @@
                 <th style="text-align:left;">Variable</th>
                 {#each vDates as _d, i (i)}
                   <th class:doute={vDatesDoute[i] || missingDateCols.has(i)}>
-                    <input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" value={vDates[i] ? formatDate(vDates[i]) : ''}
+                    <input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" aria-label="Date de la colonne {i + 1}" value={vDates[i] ? formatDate(vDates[i]) : ''}
                            onblur={(e) => { const brut = e.currentTarget.value; if (!brut.trim()) { vDates[i] = ''; return; } const iso = parseDateSouple(brut); if (iso) { vDates[i] = iso; e.currentTarget.value = formatDate(iso); } }}
                            onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); } }}
                            title={missingDateCols.has(i) ? 'Date manquante : renseignez-la avant d’ajouter' : infobulle(vDatesMotifs[i] ?? [])} />
@@ -494,15 +494,15 @@
             <tbody>
               {#each vRows as row, ri (ri)}
                 <tr class:excluded={!row.include}>
-                  <td><input type="checkbox" bind:checked={row.include} /></td>
+                  <td><input type="checkbox" bind:checked={row.include} aria-label="Inclure la ligne {row.name}" /></td>
                   <td class="thumb">{#if row.thumb}<img src={row.thumb} alt="ligne d'origine" />{/if}</td>
                   <td class="name" class:doute={row.nameDoute}>
-                    <input class="ninp" bind:value={row.name} title={infobulle(row.nameMotifs)} />
+                    <input class="ninp" bind:value={row.name} title={infobulle(row.nameMotifs)} aria-label="Nom de la variable" />
                     {#if catalogHint(row.name)}<div class="faint" style="font-size:12px;">{catalogHint(row.name)}</div>{/if}
                   </td>
                   {#each row.values as _v, ci (ci)}
                     <td class:doute={row.doutes[ci]}>
-                      <input bind:value={row.values[ci]} title={infobulle(row.motifs[ci] ?? [])} />
+                      <input bind:value={row.values[ci]} title={infobulle(row.motifs[ci] ?? [])} aria-label="{row.name} — {vDates[ci] ? formatDate(vDates[ci]) : 'date manquante'}" />
                     </td>
                   {/each}
                 </tr>

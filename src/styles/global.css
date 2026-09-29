@@ -21,6 +21,8 @@
   --accent: #2f6fed;
   --accent-hover: #2359c9;
   --accent-soft: #eaf1fb;
+  /* Texte d'accent posé sur --accent-soft : #2f6fed n'y atteint pas 4.5:1. */
+  --accent-text: #2359c9;
   --accent-ink: #ffffff;
   /* #d0402f / #1f9d55 à l'origine : sous 4.5:1 pour du texte (le bouton
      « Supprimer » et le « ✓ Enregistré » de la barre du haut, entre autres) —
@@ -137,7 +139,7 @@ label { font-size: 13px; color: var(--muted); }
    les en-têtes de la grille dense et les titres de carte du graphique. */
 .section-label {
   font-size: 10.5px; font-weight: 800; text-transform: uppercase;
-  letter-spacing: .05em; color: #7686a1; margin: 0 0 8px;
+  letter-spacing: .05em; color: #5d6b82; margin: 0 0 8px;
 }
 
 .badge {
