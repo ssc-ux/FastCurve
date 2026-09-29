@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../Icon.svelte';
   import { store } from '../../lib/models/store.svelte';
   import { todayISO, formatDate, lireDateSouple } from '../../lib/models/types';
   import type { TreatmentKind } from '../../lib/models/types';
@@ -195,7 +196,7 @@
   </div>
 
   {#if !showImport}
-    <button class="linklike" onclick={() => (showImport = true)}>📄 Coller un compte-rendu</button>
+    <button class="linklike" onclick={() => (showImport = true)}><Icon name="file-text" size={14} inline /> Coller un compte-rendu</button>
   {:else}
     <div class="card" style="padding:12px;">
       <p class="faint small" style="margin-bottom:8px;">Collez la zone traitement d'un compte-rendu (ou dictez-la avec Dragon). J'en extrais les <strong>lignes thérapeutiques</strong> — vous validez avant d'ajouter. 100% local.</p>

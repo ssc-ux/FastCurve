@@ -32,6 +32,12 @@
 - Plus aucune valeur de référence pré-remplie : les normales sont celles du
   laboratoire, saisies par le médecin.
 
+### Présentation
+- Emojis remplacés par le jeu d'icônes de l'application (rendu identique sous
+  Windows, macOS, iOS, Android).
+- Téléphone : barre d'outils de la courbe sur une seule ligne ; icônes de la
+  barre du haut libellées.
+
 ### Production
 - Cache hors-ligne versionné à chaque build ; « Nouvelle version disponible »
   proposée pendant l'utilisation.

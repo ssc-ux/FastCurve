@@ -63,7 +63,7 @@ coupure), ou proposer d'emblée la fenêtre temporelle sur la période la plus
 dense. *Effort : moyen (moteur de rendu SVG maison, tests de signature à
 régénérer).*
 
-### P2 — Iconographie mélangée
+### P2 — Iconographie mélangée *(corrigé)*
 
 Icônes linéaires cohérentes dans les barres (rail, barre du haut) mais
 **emojis** ailleurs : ⌨️ Saisir, 📥 Importer, 🎙️ Dicter, 📅, ⬇ ⬆, 📄, ⧉, 🔒
@@ -72,7 +72,7 @@ Windows, courant à l'hôpital) et casse l'aspect « outil professionnel ».
 **Proposition** : remplacer par le jeu d'icônes existant (`Icon.svelte`).
 *Effort : faible.*
 
-### P2 — Barre d'outils de la courbe sur téléphone
+### P2 — Barre d'outils de la courbe sur téléphone *(corrigé)*
 
 ![Courbe sur téléphone](audit/mobile-4b-courbe-mobile.png)
 
@@ -81,7 +81,7 @@ soit ~15 % de la hauteur utile, avant même la courbe. **Proposition** : une
 seule ligne — bascule d'affichage en icônes, « Exporter » en menu
 regroupant Copier. *Effort : faible.*
 
-### P2 — Barre du haut sur téléphone : icônes sans libellé
+### P2 — Barre du haut sur téléphone : icônes sans libellé *(corrigé)*
 
 Dossier, fichier+, flèche montante, disquette : l'utilisateur doit deviner
 « nom du suivi / Nouveau / Ouvrir / Enregistrer ». **Proposition** : libellés

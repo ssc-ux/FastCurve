@@ -1,10 +1,11 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   let { onClose }: { onClose: () => void } = $props();
 
   const steps = [
-    { icon: '📥', t: 'Ajoutez vos données', d: 'Collez une capture (Ctrl+V), saisissez à la main, ou dictez les résultats — la courbe se génère aussitôt.' },
-    { icon: '💊', t: 'Ajoutez les traitements', d: 'Barres, décroissances de corticoïdes, événements, compte-rendu collé et annotations dans l’onglet « Traitements ».' },
-    { icon: '📤', t: 'Exportez', d: 'Image haute résolution, PDF / impression A4, ou copie dans le presse-papiers — qualité publication.' },
+    { icon: 'import', t: 'Ajoutez vos données', d: 'Collez une capture (Ctrl+V), saisissez à la main, ou dictez les résultats — la courbe se génère aussitôt.' },
+    { icon: 'pill', t: 'Ajoutez les traitements', d: 'Barres, décroissances de corticoïdes, événements, compte-rendu collé et annotations dans l’onglet « Traitements ».' },
+    { icon: 'download', t: 'Exportez', d: 'Image haute résolution, PDF / impression A4, ou copie dans le presse-papiers — qualité publication.' },
   ];
 
   // Sans ça, le premier `Tab` à l'ouverture saute la modale et va tabuler
@@ -37,7 +38,7 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="welcome-title" tabindex="-1"
        bind:this={modalEl} onclick={(e) => e.stopPropagation()} onkeydown={onModalKeydown}>
     <div class="head">
-      <span class="logo">📈</span>
+      <span class="logo"><Icon name="chart-spline" size={30} /></span>
       <div class="titles">
         <div class="name" id="welcome-title">FastCurve</div>
         <div class="tag">Courbes de suivi biologique & EFR, qualité publication — en quelques secondes.</div>
@@ -45,14 +46,14 @@
     </div>
 
     <div class="privacy">
-      🔒 <strong>100% sur votre ordinateur.</strong> Aucune donnée n'est envoyée, aucun cloud, aucune IA en ligne. La reconnaissance des captures se fait localement.
+      <Icon name="lock" size={14} inline /> <strong>100% sur votre ordinateur.</strong> Aucune donnée n'est envoyée, aucun cloud, aucune IA en ligne. La reconnaissance des captures se fait localement.
     </div>
 
     <div class="steps">
       {#each steps as s, i (i)}
         <div class="step">
           <span class="s-num">{i + 1}</span>
-          <span class="s-icon">{s.icon}</span>
+          <span class="s-icon"><Icon name={s.icon} size={18} /></span>
           <div>
             <div class="s-t">{s.t}</div>
             <div class="s-d">{s.d}</div>
@@ -87,7 +88,7 @@
     padding: 24px; animation: pop .24s cubic-bezier(.2,.8,.25,1);
   }
   .head { display: flex; gap: 14px; align-items: flex-start; }
-  .logo { font-size: 30px; line-height: 1; }
+  .logo { color: var(--accent); line-height: 1; }
   .name { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
   .avert {
     margin-top: 16px; padding: 10px 12px; border-radius: 10px;
@@ -107,7 +108,7 @@
     width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff;
     font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px;
   }
-  .s-icon { font-size: 18px; }
+  .s-icon { color: var(--accent); margin-top: 1px; }
   .s-t { font-size: 14px; font-weight: 600; }
   .s-d { font-size: 12.5px; color: var(--muted); line-height: 1.45; margin-top: 1px; }
 

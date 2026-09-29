@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from '../Icon.svelte';
   // ──────────────────────────────────────────────────────────────
   // ÉCRAN D'IMPORT — il ne fait qu'une chose.
   //
@@ -410,11 +411,11 @@
           <span class="desktop-only">ou glissez une image / un PDF ici · </span>
           <label class="filebtn">
             <span class="desktop-only">choisir un fichier</span>
-            <span class="mobile-only">📷 Photo ou fichier du bilan</span>
+            <span class="mobile-only"><Icon name="camera" size={18} inline /> Photo ou fichier du bilan</span>
             <input type="file" accept="image/*,application/pdf" capture="environment" multiple onchange={onSelect} hidden />
           </label>
         </p>
-        <p class="local" style="margin-top:12px;">🔒 100% local — rien n'est envoyé.</p>
+        <p class="local" style="margin-top:12px;"><Icon name="lock" size={12} inline /> 100% local — rien n'est envoyé.</p>
         <p class="faint small" style="margin-top:4px;">Plusieurs bilans ? <span class="desktop-only">Collez-les</span><span class="mobile-only">Ajoutez-les</span> à la suite : ils formeront un seul tableau.</p>
       </div>
     {/if}
@@ -425,14 +426,14 @@
           <strong>{pending.length > 1 ? `${pending.length} captures` : 'Capture'}</strong>
           <span class="faint small">— lecture automatique.</span>
           <div class="spacer"></div>
-          <span class="local small">🔒 100% local</span>
+          <span class="local small"><Icon name="lock" size={12} inline /> 100% local</span>
         </div>
         <div class="shots">
           {#each pending as sh (sh.id)}
             <div class="shot">
               <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
               <img src={sh.thumb} alt="capture" title="Cliquer pour recadrer (exclure l'en-tête patient)" onclick={() => openShotCrop(sh)} />
-              {#if sh.crop}<span class="shot-crop" title="Recadrée">✂</span>{/if}
+              {#if sh.crop}<span class="shot-crop" title="Recadrée"><Icon name="scissors" size={12} inline /></span>{/if}
               {#if !busy}<button class="shot-x" title="Retirer" onclick={() => removeShot(sh.id)}>✕</button>{/if}
             </div>
           {/each}
@@ -465,7 +466,7 @@
           <strong>Vérification</strong>
           <span class="faint small">— corrigez puis ajoutez.</span>
           <div class="spacer"></div>
-          <span class="local small">🔒 100% local — rien n'est envoyé</span>
+          <span class="local small"><Icon name="lock" size={12} inline /> 100% local — rien n'est envoyé</span>
         </div>
         <p class="consigne">
           {#if nbJaunes}
