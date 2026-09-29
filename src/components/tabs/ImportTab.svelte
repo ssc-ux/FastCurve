@@ -190,6 +190,8 @@
       parNom.set(normName(r.name), { ...r, values: [...r.values], doutes: [...r.doutes], motifs: r.motifs.map(m => [...m]) });
     }
     let sansDate = 0;
+    let conflitsMemeJour = 0;
+    const normVal = (v: string) => v.replace(/\s+/g, '').replace(',', '.');
 
     for (const t of tableaux) {
       const local: number[] = [];
@@ -219,13 +221,31 @@
         l.cellules.forEach((c, i) => {
           const gi = local[i];
           if (gi === undefined) return;
+          const deja = (ligne!.values[gi] ?? '').trim();
+          // Deux colonnes du même jour (deux prélèvements, ou deux captures) :
+          // une case vide n'efface jamais une valeur déjà lue…
+          if (!c.texte.trim() && deja) return;
+          // … et deux valeurs différentes ne s'écrasent pas en silence : le
+          // graphique ne garde qu'une valeur par jour, le médecin choisit.
+          if (deja && normVal(deja) !== normVal(c.texte)) {
+            ligne!.doutes[gi] = true;
+            ligne!.motifs[gi] = [
+              ...(ligne!.motifs[gi] ?? []),
+              `deux prélèvements ce jour-là : ${deja} et ${c.texte} — une seule valeur par jour est conservée, gardez la bonne`,
+            ];
+            conflitsMemeJour++;
+            return;
+          }
           ligne!.values[gi] = c.texte;
-          ligne!.doutes[gi] = c.douteux;
-          ligne!.motifs[gi] = c.motifs;
+          ligne!.doutes[gi] = c.douteux || !!ligne!.doutes[gi];
+          ligne!.motifs[gi] = [...(ligne!.motifs[gi] ?? []), ...c.motifs];
         });
       }
     }
 
+    if (conflitsMemeJour) {
+      uiBus.toast(`${conflitsMemeJour} case(s) en jaune : deux prélèvements le même jour. Une seule valeur par jour est gardée — le détail est dans l’infobulle de la case.`, 'info', 8000);
+    }
     vDates = colonnes;
     vDatesDoute = douteCol;
     vDatesMotifs = motifsCol;
