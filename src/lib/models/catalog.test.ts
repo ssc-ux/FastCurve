@@ -99,42 +99,18 @@ describe('matchCatalog — résolution des alias vers le bon analyte', () => {
   });
 });
 
-describe('bornes corrigées après audit médical', () => {
-  it('Créatinine : 5-13 mg/L (unité du laboratoire du médecin, reconvertie depuis 45-115 µmol/L)', () => {
-    const e = CATALOG.find(x => x.name === 'Créatinine')!;
-    expect(e.unit).toBe('mg/L');
-    expect(e.refLow).toBe(5);
-    expect(e.refHigh).toBe(13);
-  });
-
-  it('Hémoglobine : 12-17 g/dL (union homme/femme, jamais g/L)', () => {
-    const e = CATALOG.find(x => x.name === 'Hémoglobine')!;
-    expect(e.unit).toBe('g/dL');
-    expect(e.refLow).toBe(12);
-    expect(e.refHigh).toBe(17);
-  });
-
-  it('Glycémie : borne haute à jeun relevée à 6.1 mmol/L (1,10 g/L)', () => {
-    const e = CATALOG.find(x => x.name === 'Glycémie')!;
-    expect(e.refHigh).toBe(6.1);
+describe('catalogue sans valeurs de référence', () => {
+  it('aucune borne de normale : elles sont propres au laboratoire, saisies par le médecin', () => {
+    for (const e of CATALOG) {
+      expect(e.refLow, `${e.name} : borne basse`).toBeUndefined();
+      expect(e.refHigh, `${e.name} : borne haute`).toBeUndefined();
+    }
   });
 
   it('DFG renommé CKD-EPI et exprimé par 1,73 m² de surface corporelle', () => {
     const e = CATALOG.find(x => x.name === 'DFG (CKD-EPI)')!;
     expect(e.unit).toBe('mL/min/1.73m²');
     expect(e.aliases).toContain('mdrd');
-  });
-
-  it('paramètres sans « normale » de population : aucune borne inventée', () => {
-    // Ces analytes n'ont pas de valeur de référence unique et fiable
-    // (dépendance à l'âge, au sexe ou au kit du laboratoire) : l'absence de
-    // borne est un choix, pas un oubli — cf. commentaires dans catalog.ts.
-    for (const nom of ['VS', 'Procalcitonine', 'GGT', 'Troponine', 'NT-proBNP', 'BNP', 'CPK', 'LDL', 'HDL', 'PaO2', 'IgE totales', 'CH50']) {
-      const e = CATALOG.find(x => x.name === nom)!;
-      expect(e, `${nom} absent du catalogue`).toBeDefined();
-      expect(e.refLow, `${nom} : borne basse inattendue`).toBeUndefined();
-      expect(e.refHigh, `${nom} : borne haute inattendue`).toBeUndefined();
-    }
   });
 });
 
@@ -147,7 +123,6 @@ describe('analytes ajoutés lors de l’audit médical', () => {
   it('protéinurie des 24h', () => {
     const e = matchCatalog('proteinurie des 24h');
     expect(e?.unit).toBe('g/24h');
-    expect(e?.refHigh).toBe(0.15);
   });
 
   it('facteur rhumatoïde et anticorps anti-CCP (bilan de polyarthrite)', () => {

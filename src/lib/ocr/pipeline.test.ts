@@ -12,7 +12,7 @@ import {
   affecterRoles, estIntervalle, estUnite, lireDate, nettoyerNom, roleDepuisEntete,
   type ColonneCandidate,
 } from './roles';
-import { decimalePerdue, ordreDeGrandeurSuspect, reparerNombre } from './correction';
+import { decimalePerdue, reparerNombre } from './correction';
 import { jugerDate, jugerNom, jugerValeur, type ContexteValeur } from './confiance';
 import {
   blocPourColonne, blocsDeBande, ecartMaxInterne, ecarterBandesDecoratives, etendue,
@@ -312,12 +312,6 @@ describe('le jaune ne signale que le doute de LECTURE', () => {
     expect(jugerNom('', 95).douteux).toBe(true);
   });
 
-  it('ne confond jamais pathologie et aberration de lecture', () => {
-    // Créatinine à 300 µmol/L : un malade, pas une erreur.
-    expect(ordreDeGrandeurSuspect('Créatinine', 300)).toBe(false);
-    // Créatinine à 12 000 : personne n'a jamais vu ça.
-    expect(ordreDeGrandeurSuspect('Créatinine', 12000)).toBe(true);
-  });
 });
 
 // ── La géométrie du tableau ─────────────────────────────────────

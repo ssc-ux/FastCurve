@@ -275,11 +275,31 @@ export function rendreCellule(source: HTMLCanvasElement, boite: Boite, opts: Opt
     if (g < mini) mini = g;
     if (g > maxi) maxi = g;
   }
-  const etendue = maxi - mini;
+  // Fond de la case : la médiane (le fond occupe l'essentiel de la découpe).
+  // C'est lui, et non le pixel le plus clair, qui devient blanc — une case
+  // surlignée (jaune pâle, gris) n'arrive plus à Tesseract en fond gris.
+  const tri = Float32Array.from(gris).sort();
+  const fond = Math.max(mini + 1, tri[Math.floor(tri.length / 2)]);
+  const etendue = fond - mini;
   // On n'étire que si l'image a un vrai contraste : sinon on amplifierait du bruit.
   const etire = etendue > 40;
+  // Filets : colonne (ou rangée) sombre sur toute la hauteur (largeur) de la
+  // découpe. Aucun caractère ne va d'un bord à l'autre ; un trait de tableau, si.
+  const seuilSombre = mini + etendue * 0.5;
+  const colFilet = new Uint8Array(cw), rangFilet = new Uint8Array(ch);
+  for (let x = 0; x < cw; x++) {
+    let n = 0;
+    for (let y = 0; y < ch; y++) if (gris[y * cw + x] < seuilSombre) n++;
+    if (n >= ch * 0.85) colFilet[x] = 1;
+  }
+  for (let y = 0; y < ch; y++) {
+    let n = 0;
+    for (let x = 0; x < cw; x++) if (gris[y * cw + x] < seuilSombre) n++;
+    if (n >= cw * 0.85) rangFilet[y] = 1;
+  }
   for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-    const g = etire ? ((gris[p] - mini) / etendue) * 255 : gris[p];
+    const filet = colFilet[p % cw] || rangFilet[Math.floor(p / cw)];
+    const g = filet ? 255 : etire ? ((gris[p] - mini) / etendue) * 255 : gris[p];
     const val = Math.max(0, Math.min(255, g));
     d[i] = d[i + 1] = d[i + 2] = val;
     d[i + 3] = 255;

@@ -574,3 +574,43 @@ export function boiteEncre(carte: CarteEncre, bande: Bande, col: Colonne): { x0:
   }
   return x1 < x0 ? null : { x0, y0, x1, y1 };
 }
+
+/**
+ * Carte d'encre sans les FILETS du tableau : toute course verticale d'encre
+ * plus haute que deux lignes de texte, ou horizontale plus longue que six,
+ * est effacée. Aucun caractère n'atteint ces dimensions ; un filet, si.
+ *
+ * Indispensable au niveau de la CASE : un filet vertical collé à une case
+ * (bord gauche d'une colonne surlignée, par exemple) élargit sa boîte d'encre
+ * jusqu'au bord, fausse le comptage des glyphes et fait lire à Tesseract un
+ * « 1 » ou un « 7 » supplémentaire (« 30,3 » → « 7303 »).
+ */
+export function effacerFilets(carte: CarteEncre, hL: number): CarteEncre {
+  const { largeur: W, hauteur: H } = carte;
+  const encre = carte.encre.slice();
+  const vMin = Math.max(8, Math.round(hL * 2.2));
+  const hMin = Math.max(24, Math.round(hL * 6));
+  for (let x = 0; x < W; x++) {
+    let debut = -1;
+    for (let y = 0; y <= H; y++) {
+      const v = y < H && carte.encre[y * W + x];
+      if (v && debut < 0) debut = y;
+      else if (!v && debut >= 0) {
+        if (y - debut >= vMin) for (let k = debut; k < y; k++) encre[k * W + x] = 0;
+        debut = -1;
+      }
+    }
+  }
+  for (let y = 0; y < H; y++) {
+    let debut = -1;
+    for (let x = 0; x <= W; x++) {
+      const v = x < W && carte.encre[y * W + x];
+      if (v && debut < 0) debut = x;
+      else if (!v && debut >= 0) {
+        if (x - debut >= hMin) for (let k = debut; k < x; k++) encre[y * W + k] = 0;
+        debut = -1;
+      }
+    }
+  }
+  return { largeur: W, hauteur: H, encre };
+}
