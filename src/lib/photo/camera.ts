@@ -4,7 +4,7 @@
 // ──────────────────────────────────────────────────────────────
 
 import { carteEncreLocale, grisCanalMin } from '../ocr/preparation';
-import { carteTexte } from '../ocr/structure';
+import { carteTexte, detecterBandes, hauteurLigne } from '../ocr/structure';
 import {
   estimerCisaillement, estimerInclinaison, nettete, trouverTableau, verdictCadrage,
   type BoiteTableau, type MesureCadrage, type Verdict,
@@ -108,10 +108,16 @@ export function analyserImage(video: HTMLVideoElement, meilleureNettete: number)
     echellePleine: vw / c.width,
   };
   const b = tableau?.boite;
+  // Marge autour du tableau : deux lignes de texte en haut (en-tête des dates,
+  // parfois hors de la suite repérée) et en bas, un peu sur les côtés.
+  const mh = tableau ? tableau.hL * 3 : 0, mw = tableau ? tableau.hL * 1.5 : 0;
   return {
     mesure,
     verdict: verdictCadrage(mesure),
-    boiteRelative: b ? { x0: b.x0 / c.width, y0: b.y0 / c.height, x1: b.x1 / c.width, y1: b.y1 / c.height } : null,
+    boiteRelative: b ? {
+      x0: Math.max(0, (b.x0 - mw) / c.width), y0: Math.max(0, (b.y0 - mh) / c.height),
+      x1: Math.min(1, (b.x1 + mw) / c.width), y1: Math.min(1, (b.y1 + mh) / c.height),
+    } : null,
     netteteBrute,
   };
 }
@@ -146,10 +152,10 @@ export function preparerPhoto(photo: HTMLCanvasElement, angle: number, boite: Bo
     ? copieRedressee(photo, photo.width, photo.height, photo.width, angle)
     : photo;
   const W = droite.width, H = droite.height;
-  const m = 0.04;
+  const m = 0.005;
   const b = boite ?? { x0: 0, y0: 0, x1: 1, y1: 1 };
-  const x0 = Math.max(0, (b.x0 - m) * W), y0 = Math.max(0, (b.y0 - m * 1.5) * H);
-  const x1 = Math.min(W, (b.x1 + m) * W), y1 = Math.min(H, (b.y1 + m * 1.5) * H);
+  const x0 = Math.max(0, (b.x0 - m) * W), y0 = Math.max(0, (b.y0 - m) * H);
+  const x1 = Math.min(W, (b.x1 + m) * W), y1 = Math.min(H, (b.y1 + m) * H);
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.round(x1 - x0));
   c.height = Math.max(1, Math.round(y1 - y0));
@@ -211,4 +217,42 @@ export function cameraDisponible(): boolean {
     if (p === '0') localStorage.removeItem('fastcurve.photo-guidee');
     return localStorage.getItem('fastcurve.photo-guidee') === '1';
   } catch { return false; }
+}
+
+/**
+ * Photo → « fausse capture » : on ramène le texte à la taille d'une capture
+ * d'écran (≈ 14 px de haut), puis on ne garde que le texte, noir sur blanc —
+ * sans filets, fonds colorés ni moiré. La lecture des captures, éprouvée,
+ * fait le reste.
+ */
+export function photoVersCapture(c: HTMLCanvasElement, hauteurCible = 20): HTMLCanvasElement {
+  // 1. Taille du texte, mesurée sur une copie réduite.
+  const petite = copieRedressee(c, c.width, c.height, Math.min(1200, c.width), 0);
+  const cartePetite = carteTexte(carteEncreLocale(grisCanalMin(petite)).carte);
+  const hL = hauteurLigne(detecterBandes(cartePetite)) * (c.width / petite.width);
+  const echelle = hL > 0 ? Math.min(1, hauteurCible / hL) : Math.min(1, 1800 / c.width);
+  // 2. Mise à l'échelle (lissage de qualité : il gomme aussi le moiré).
+  const e = copieRedressee(c, c.width, c.height, Math.round(c.width * echelle), 0);
+  // 3. Texte seul, noir sur blanc. Gris en LUMINANCE : le canal minimum
+  //    (utile pour un texte coloré sur capture) rend un surlignage jaune
+  //    presque aussi sombre que le texte sur une photo.
+  const carte = carteTexte(carteEncreLocale(grisLuminance(e)).carte);
+  const sortie = document.createElement('canvas');
+  sortie.width = carte.largeur; sortie.height = carte.hauteur;
+  const ctx = sortie.getContext('2d')!;
+  const img = ctx.createImageData(sortie.width, sortie.height);
+  for (let i = 0; i < carte.encre.length; i++) {
+    const v = carte.encre[i] ? 0 : 255;
+    img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v;
+    img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return sortie;
+}
+
+function grisLuminance(canvas: HTMLCanvasElement) {
+  const d = canvas.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, canvas.width, canvas.height).data;
+  const v = new Float32Array(canvas.width * canvas.height);
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) v[p] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+  return { largeur: canvas.width, hauteur: canvas.height, v };
 }

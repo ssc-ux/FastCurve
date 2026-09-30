@@ -6,7 +6,7 @@
   import { onDestroy, onMount } from 'svelte';
   import Icon from './Icon.svelte';
   import {
-    analyserImage, fermerCamera, ouvrirCamera, preparerPhoto, rafale, viserPourMiseAuPoint, type Analyse,
+    analyserImage, fermerCamera, ouvrirCamera, photoVersCapture, preparerPhoto, rafale, viserPourMiseAuPoint, type Analyse,
   } from '../lib/photo/camera';
 
   let { onPhoto, onClose, partie = 1 }: {
@@ -69,7 +69,7 @@
     try {
       const a = analyse;
       const photo = await rafale(video, a?.boiteRelative ?? null);
-      const prete = preparerPhoto(photo, a?.mesure.angle ?? 0, a?.boiteRelative ?? null);
+      const prete = photoVersCapture(preparerPhoto(photo, a?.mesure.angle ?? 0, a?.boiteRelative ?? null));
       terminer();
       onPhoto(prete);
     } catch (e: any) {

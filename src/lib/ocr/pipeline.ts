@@ -494,6 +494,8 @@ async function reconnaitreTableauDepuis(
 
   // — Préparation —
   avancer(0, 1, 'Préparation de l’image…');
+  // Photo : pleine résolution (jusqu'à 2 800 px), sinon les points décimaux
+  // ne font plus que deux ou trois pixels.
   const source = canvasSource(img);
   const gris = grisCanalMin(source);
   const encreBrute = carteEncreLocale(gris);

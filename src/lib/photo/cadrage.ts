@@ -107,6 +107,24 @@ export function trouverTableau(carteBrute: CarteEncre): TableauRepere | null {
     if (e) { x0 = Math.min(x0, e.x0); x1 = Math.max(x1, e.x1); }
   }
   if (!isFinite(x0)) return null;
+  // Bords du tableau : là où l'encre est présente sur au moins la moitié des
+  // lignes (dans une fenêtre de quelques caractères). Une barre d'icônes ou un
+  // décor à côté du tableau n'occupe que quelques lignes et reste dehors.
+  const W = carte.largeur;
+  const fenetre = Math.max(3, Math.round(hL * 3));
+  const presence = new Float32Array(W);
+  for (const b of meilleure) {
+    const aEncre = new Uint8Array(W);
+    for (let y = b.y0; y <= b.y1; y++) for (let x = 0; x < W; x++) if (carte.encre[y * W + x]) aEncre[x] = 1;
+    // Dilatation horizontale : une colonne de texte « couvre » sa fenêtre.
+    let dernier = -Infinity;
+    for (let x = 0; x < W; x++) { if (aEncre[x]) dernier = x; if (x - dernier <= fenetre) presence[x]++; }
+  }
+  const seuil = meilleure.length * 0.5;
+  let gx0 = x0, gx1 = x1;
+  while (gx0 < x1 && presence[gx0] < seuil) gx0++;
+  while (gx1 > gx0 && presence[gx1] < seuil) gx1--;
+  if (gx1 - gx0 > (x1 - x0) * 0.4) { x0 = gx0; x1 = gx1; }
   return {
     boite: { x0, y0: meilleure[0].y0, x1, y1: meilleure[meilleure.length - 1].y1 },
     hL, lignes: meilleure.length,
