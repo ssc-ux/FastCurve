@@ -232,7 +232,7 @@
       {/each}
     </nav>
 
-    <div class="body" class:dragging class:horizontal={sens === 'horizontal'} class:vide={sansDonnees && !collapsed} class:mob-chart={mobileChart}>
+    <div class="body" class:dragging class:horizontal={sens === 'horizontal'} class:vide={sansDonnees && !collapsed} class:mob-chart={mobileChart} class:verif={uiBus.verification}>
       <aside class="sidebar" class:collapsed
              style={sens === 'horizontal'
                ? `max-height:${collapsed ? 0 : sidebarH}px`
@@ -370,6 +370,12 @@
   .body.horizontal .tab-content.forme { max-width: 760px; }
 
   .tab-content { flex: 1; overflow-y: auto; padding: 16px; min-height: 0; }
+  /* Vérification d'une lecture (capture, compte-rendu) : c'est l'écran où le
+     médecin compare chaque valeur à l'image — il prend toute la largeur, la
+     courbe revient une fois la vérification terminée. */
+  .body.verif .sidebar { flex: 1 1 auto; width: 100% !important; max-height: none !important; }
+  .body.verif .divider, .body.verif .chart-area { display: none; }
+  .body.verif .tab-content.forme { max-width: none; }
   /* Suivi vide : donne à DataTab (`.data`/`.corps`) une hauteur à occuper,
      pour qu'il puisse centrer son tableau au lieu de le laisser collé en
      haut d'un grand vide (voir `.corps.centrer` dans DataTab.svelte). Sans

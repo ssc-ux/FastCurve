@@ -94,6 +94,11 @@
   let trows = $state<TRow[]>([]);
   let analyzed = $state(false);
 
+  $effect(() => {
+    uiBus.verification = analyzed && trows.length > 0;
+    return () => { uiBus.verification = false; };
+  });
+
   function analyzeText() {
     const list = parseReport(reportText, getKnownDrugs());
     trows = list.map(t => ({ ...t, include: true, origName: t.name }));
