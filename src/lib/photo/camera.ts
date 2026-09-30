@@ -256,3 +256,15 @@ function grisLuminance(canvas: HTMLCanvasElement) {
   for (let i = 0, p = 0; i < d.length; i += 4, p++) v[p] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
   return { largeur: canvas.width, hauteur: canvas.height, v };
 }
+
+/**
+ * Photo pour le moteur PaddleOCR : redressée (inclinaison, perspective), sans
+ * recadrage — le détecteur isole lui-même le texte, et un recadrage trop
+ * court coupait le bas du tableau.
+ */
+export function redresserPhoto(photo: HTMLCanvasElement, angle: number): HTMLCanvasElement {
+  const droite = Math.abs(angle) >= 1 && Math.abs(angle) <= 4
+    ? copieRedressee(photo, photo.width, photo.height, photo.width, angle)
+    : photo;
+  return redresserCisaillement(droite);
+}

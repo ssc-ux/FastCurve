@@ -1,5 +1,18 @@
 # Journal des modifications
 
+## 1.4.0
+
+### Photo d'écran (encore derrière `?photo=1`)
+- Nouveau moteur de lecture pour les photos : PaddleOCR (PP-OCRv4) exécuté
+  dans le navigateur (ONNX Runtime, WebAssembly). Rien ne sort de l'appareil ;
+  modèles (~12 Mo) et moteur (~14 Mo) servis par le site, puis en cache.
+- Tableau reconstruit à partir des zones de texte : lignes suivies malgré la
+  perspective, ligne des dates, colonnes par bord droit, point décimal
+  cherché sur l'image, valeur coupée au bord jamais inventée.
+- Banc (6 photos réelles, 932 cases) : 93 % justes, 0 erreur silencieuse
+  (contre 0–10 % avec le moteur des captures). Chaque case a son extrait.
+- Les captures d'écran gardent leur moteur (Tesseract, 100 % sur le banc).
+
 ## 1.3.0
 
 ### Carrés bleus (traitements)

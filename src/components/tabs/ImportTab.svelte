@@ -23,6 +23,7 @@
   import DicteeBio from './DicteeBio.svelte';
   import CameraGuidee from '../CameraGuidee.svelte';
   import { cameraDisponible } from '../../lib/photo/camera';
+  import { lireTableauPhoto } from '../../lib/photo/tableauPhoto';
 
   let { initialMode = 'photo', onImported = () => {} }: { initialMode?: 'photo' | 'dictee'; onImported?: () => void } = $props();
   // svelte-ignore state_referenced_locally
@@ -85,6 +86,14 @@
   }
 
   /** Applique le recadrage de confidentialité (en-tête patient) avant lecture. */
+  function versCanvas(i: HTMLCanvasElement | HTMLImageElement): HTMLCanvasElement {
+    if (i instanceof HTMLCanvasElement) return i;
+    const c = document.createElement('canvas');
+    c.width = i.naturalWidth; c.height = i.naturalHeight;
+    c.getContext('2d')!.drawImage(i, 0, 0);
+    return c;
+  }
+
   function recadrer(sh: Shot): HTMLCanvasElement | HTMLImageElement {
     if (!sh.crop) return sh.img;
     const { x, y, w, h } = sh.crop;
@@ -182,22 +191,20 @@
       for (const sh of pending) {
         n++;
         const prefixe = pending.length > 1 ? `Capture ${n}/${pending.length} — ` : '';
-        const t = await reconnaitreTableau(recadrer(sh), {
+        const suivi = {
           vignettes: true,
           annule: () => annulee,
-          onProgress: (fait, total, e) => {
+          onProgress: (fait: number, total: number, e: string) => {
             etape = prefixe + e;
             progres = total ? fait / total : 0;
           },
-        });
+        };
+        // Photo d'écran : moteur dédié (PaddleOCR), qui lit les zones de texte
+        // où qu'elles soient. Capture : lecture case par case (Tesseract).
+        const t = sh.photo
+          ? await lireTableauPhoto(versCanvas(recadrer(sh)), suivi)
+          : await reconnaitreTableau(recadrer(sh), suivi);
         if (annulee) return;
-        // Garde-fou : la lecture sur PHOTO d'écran n'est pas encore fiable —
-        // chaque case lue sur une photo est à vérifier.
-        if (sh.photo && !t.echec) {
-          for (const l of t.lignes) for (const c of l.cellules) {
-            if (c.texte && !c.douteux) { c.douteux = true; c.motifs = [...c.motifs, 'lu sur une photo d’écran : à vérifier']; }
-          }
-        }
         if (t.echec) echecs.push(t.message);
         else tableaux.push({ t, source: sh });
       }
