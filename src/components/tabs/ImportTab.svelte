@@ -21,6 +21,8 @@
   import { learnAnalyte, lookupAnalyte } from '../../lib/learn/memory';
   import { uiBus } from '../../lib/models/ui.svelte';
   import DicteeBio from './DicteeBio.svelte';
+  import CameraGuidee from '../CameraGuidee.svelte';
+  import { cameraDisponible } from '../../lib/photo/camera';
 
   let { initialMode = 'photo', onImported = () => {} }: { initialMode?: 'photo' | 'dictee'; onImported?: () => void } = $props();
   // svelte-ignore state_referenced_locally
@@ -60,11 +62,15 @@
     doutes: boolean[];
     motifs: string[][];
     thumb?: string;
+    /** Extrait d'image du nom, et de chaque case (par colonne). */
+    nameThumb?: string;
+    cellThumbs: (string | undefined)[];
     origName: string;
   };
   let vDates = $state<string[]>([]);
   let vDatesDoute = $state<boolean[]>([]);
   let vDatesMotifs = $state<string[][]>([]);
+  let vDatesThumbs = $state<(string | undefined)[]>([]);
   let vRows = $state<VRow[]>([]);
 
   const normName = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -117,6 +123,40 @@
     } catch {
       errorMsg = "Je n’ai pas su ouvrir cette image.";
     }
+  }
+
+  // ── Photo guidée (téléphone) ─────────────────────────────────
+  // Chaque photo est lue comme une capture ; plusieurs photos d'un long
+  // tableau (« Ajouter la suite ») sont fusionnées par date et par variable,
+  // exactement comme plusieurs captures collées.
+  let cameraOuverte = $state(false);
+  let photosPrises = $state(0);
+  /** État de la vérification avant la dernière photo, pour « Reprendre ». */
+  let avantDernierePhoto: { rows: VRow[]; dates: string[]; dd: boolean[]; dm: string[][]; dt: (string | undefined)[] } | null = null;
+  const avecCamera = cameraDisponible();
+
+  function ouvrirCamera() { errorMsg = ''; cameraOuverte = true; }
+
+  async function surPhoto(photo: HTMLCanvasElement) {
+    cameraOuverte = false;
+    avantDernierePhoto = {
+      rows: vRows.map(r => ({ ...r })), dates: [...vDates], dd: [...vDatesDoute], dm: [...vDatesMotifs], dt: [...vDatesThumbs],
+    };
+    photosPrises++;
+    const image = await canvasToImage(photo);
+    pending = [...pending, { id: uid(), img: image, thumb: shotThumb(image) }];
+    await lireTout();
+  }
+
+  /** Oublie la dernière photo (mal cadrée, floue…) et rouvre la caméra. */
+  function reprendrePhoto() {
+    if (avantDernierePhoto) {
+      vRows = avantDernierePhoto.rows; vDates = avantDernierePhoto.dates; vDatesDoute = avantDernierePhoto.dd;
+      vDatesMotifs = avantDernierePhoto.dm; vDatesThumbs = avantDernierePhoto.dt;
+    }
+    photosPrises = Math.max(0, photosPrises - 1);
+    errorMsg = '';
+    cameraOuverte = true;
   }
 
   /**
@@ -184,11 +224,12 @@
     const colonnes: string[] = [...vDates];
     const douteCol: boolean[] = [...vDatesDoute];
     const motifsCol: string[][] = [...vDatesMotifs];
+    const thumbsCol: (string | undefined)[] = [...vDatesThumbs];
     const indexCol = new Map<string, number>();
     colonnes.forEach((iso, i) => { if (iso) indexCol.set('d:' + iso, i); });
     const parNom = new Map<string, VRow>();
     for (const r of vRows) {
-      parNom.set(normName(r.name), { ...r, values: [...r.values], doutes: [...r.doutes], motifs: r.motifs.map(m => [...m]) });
+      parNom.set(normName(r.name), { ...r, values: [...r.values], doutes: [...r.doutes], motifs: r.motifs.map(m => [...m]), cellThumbs: [...r.cellThumbs] });
     }
     let sansDate = 0;
     let conflitsMemeJour = 0;
@@ -203,6 +244,7 @@
           colonnes.push(d.iso ?? '');
           douteCol.push(d.douteux);
           motifsCol.push(d.motifs);
+          thumbsCol.push(d.vignette);
         }
         local[i] = indexCol.get(cle)!;
       });
@@ -215,7 +257,7 @@
           ligne = {
             include: true, name: nom, nameDoute: l.nomDouteux, nameMotifs: l.nomMotifs,
             unit: appris && appris.unit ? appris.unit : l.unite,
-            values: [], doutes: [], motifs: [], thumb: l.vignette, origName: l.nom,
+            values: [], doutes: [], motifs: [], thumb: l.vignette, nameThumb: l.vignetteNom, cellThumbs: [], origName: l.nom,
           };
           parNom.set(cle, ligne);
         }
@@ -238,6 +280,7 @@
             return;
           }
           ligne!.values[gi] = c.texte;
+          if (c.vignette) ligne!.cellThumbs[gi] = c.vignette;
           ligne!.doutes[gi] = c.douteux || !!ligne!.doutes[gi];
           ligne!.motifs[gi] = [...(ligne!.motifs[gi] ?? []), ...c.motifs];
         });
@@ -250,8 +293,10 @@
     vDates = colonnes;
     vDatesDoute = douteCol;
     vDatesMotifs = motifsCol;
+    vDatesThumbs = thumbsCol;
     vRows = [...parNom.values()].map(r => ({
       ...r,
+      cellThumbs: colonnes.map((_, i) => r.cellThumbs[i]),
       values: colonnes.map((_, i) => r.values[i] ?? ''),
       doutes: colonnes.map((_, i) => r.doutes[i] ?? false),
       motifs: colonnes.map((_, i) => r.motifs[i] ?? []),
@@ -337,12 +382,17 @@
         if (!isNaN(v)) { store.setMeasurement(param.id, date, v, qualifier); added++; }
       });
     }
-    vRows = []; vDates = []; vDatesDoute = []; vDatesMotifs = []; pending = [];
+    vRows = []; vDates = []; vDatesDoute = []; vDatesMotifs = []; vDatesThumbs = []; pending = [];
+    photosPrises = 0; avantDernierePhoto = null;
     uiBus.toast(`${added} valeur(s) ajoutée(s) au graphique.`);
     onImported();
   }
 
   const hasValidation = $derived(vRows.length > 0);
+  $effect(() => {
+    uiBus.verification = hasValidation;
+    return () => { uiBus.verification = false; };
+  });
 
   /** Colonnes qui portent une valeur (ligne incluse) mais dont la date est vide. */
   const missingDateCols = $derived.by(() => {
@@ -362,10 +412,10 @@
   // Annulation réversible de la vérification (Échap global / bouton Annuler).
   function cancelValidation() {
     if (!vRows.length && !vDates.length) return;
-    const rows = vRows, dates = vDates, dd = vDatesDoute, dm = vDatesMotifs;
-    vRows = []; vDates = []; vDatesDoute = []; vDatesMotifs = [];
+    const rows = vRows, dates = vDates, dd = vDatesDoute, dm = vDatesMotifs, dt = vDatesThumbs;
+    vRows = []; vDates = []; vDatesDoute = []; vDatesMotifs = []; vDatesThumbs = [];
     uiBus.toastAction('Vérification annulée.', 'Annuler', () => {
-      vRows = rows; vDates = dates; vDatesDoute = dd; vDatesMotifs = dm;
+      vRows = rows; vDates = dates; vDatesDoute = dd; vDatesMotifs = dm; vDatesThumbs = dt;
     });
   }
 
@@ -407,6 +457,11 @@
              l'habillage bascule selon l'écran (`.desktop-only`/`.mobile-only`). -->
         <p class="drop-title desktop-only"><strong>Collez une capture d'écran</strong> (Ctrl+V)</p>
         <p class="drop-title mobile-only"><strong>Importer un bilan</strong></p>
+        {#if avecCamera}
+          <button class="primary mobile-only photo-guidee" onclick={ouvrirCamera}>
+            <Icon name="camera" size={20} inline /> Photo guidée de l'écran
+          </button>
+        {/if}
         <p class="muted small drop-cta">
           <span class="desktop-only">ou glissez une image / un PDF ici · </span>
           <label class="filebtn">
@@ -457,10 +512,23 @@
         <strong>Je n'ai pas su lire cette capture.</strong>
         <p>{errorMsg}</p>
         <p class="faint small">Essayez une capture plus large ou plus nette (le tableau entier, sans zoom arrière), ou collez le tableau depuis Excel dans la grille.</p>
+        {#if photosPrises && avecCamera}
+          <button class="primary" style="margin-top:8px;" onclick={reprendrePhoto}><Icon name="camera" size={16} inline /> Reprendre la photo</button>
+        {/if}
       </div>
     {/if}
 
+    {#if cameraOuverte}
+      <CameraGuidee partie={photosPrises + 1} onPhoto={surPhoto} onClose={() => (cameraOuverte = false)} />
+    {/if}
+
     {#if hasValidation}
+      {#if photosPrises && avecCamera && !busy}
+        <div class="row wrap photo-actions">
+          <button onclick={reprendrePhoto}><Icon name="camera" size={16} inline /> Reprendre la photo</button>
+          <button onclick={ouvrirCamera}><Icon name="plus" size={16} inline /> Ajouter la suite du tableau</button>
+        </div>
+      {/if}
       <div class="card" style="padding:12px;">
         <div class="row wrap" style="margin-bottom:8px;">
           <strong>Vérification</strong>
@@ -480,10 +548,10 @@
             <thead>
               <tr>
                 <th></th>
-                <th style="text-align:left;">Image</th>
                 <th style="text-align:left;">Variable</th>
                 {#each vDates as _d, i (i)}
                   <th class:doute={vDatesDoute[i] || missingDateCols.has(i)}>
+                    {#if vDatesThumbs[i]}<img class="extrait" src={vDatesThumbs[i]} alt="" />{/if}
                     <input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" aria-label="Date de la colonne {i + 1}" value={vDates[i] ? formatDate(vDates[i]) : ''}
                            onblur={(e) => { const brut = e.currentTarget.value; if (!brut.trim()) { vDates[i] = ''; return; } const iso = parseDateSouple(brut); if (iso) { vDates[i] = iso; e.currentTarget.value = formatDate(iso); } }}
                            onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); } }}
@@ -496,13 +564,14 @@
               {#each vRows as row, ri (ri)}
                 <tr class:excluded={!row.include}>
                   <td><input type="checkbox" bind:checked={row.include} aria-label="Inclure la ligne {row.name}" /></td>
-                  <td class="thumb">{#if row.thumb}<img src={row.thumb} alt="ligne d'origine" />{/if}</td>
                   <td class="name" class:doute={row.nameDoute}>
+                    {#if row.nameThumb}<img class="extrait" src={row.nameThumb} alt="" />{/if}
                     <input class="ninp" bind:value={row.name} title={infobulle(row.nameMotifs)} aria-label="Nom de la variable" />
                     {#if catalogHint(row.name)}<div class="faint" style="font-size:12px;">{catalogHint(row.name)}</div>{/if}
                   </td>
                   {#each row.values as _v, ci (ci)}
                     <td class:doute={row.doutes[ci]}>
+                      {#if row.cellThumbs[ci]}<img class="extrait" src={row.cellThumbs[ci]} alt="" />{/if}
                       <input bind:value={row.values[ci]} title={infobulle(row.motifs[ci] ?? [])} aria-label="{row.name} — {vDates[ci] ? formatDate(vDates[ci]) : 'date manquante'}" />
                     </td>
                   {/each}
@@ -557,6 +626,10 @@
   }
   .drop p { margin: 4px 0; }
   .drop-title { font-size: 16px; }
+  .photo-guidee { display: none; margin: 10px auto 4px; min-height: 52px; padding: 0 22px; font-size: 16px; font-weight: 700; border-radius: 12px; align-items: center; gap: 8px; }
+  @media (max-width: 640px) { .photo-guidee { display: inline-flex; } }
+  .photo-actions { gap: 8px; margin-bottom: 10px; }
+  .photo-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
   .filebtn { color: var(--accent); text-decoration: underline; cursor: pointer; }
   .mobile-only { display: none; }
 
@@ -611,6 +684,13 @@
      « je ne suis pas sûr d'avoir bien LU cette case ». */
   .vgrid td.doute, .vgrid th.doute { background: var(--warn-bg); box-shadow: inset 0 0 0 1.5px #e0a33a; }
   .vgrid tr.excluded { opacity: .45; }
-  .vgrid td.thumb { padding: 2px; }
-  .vgrid td.thumb img { display: block; max-height: 34px; max-width: 260px; border: 1px solid var(--border); border-radius: 3px; }
+  /* Extrait de la capture d'origine juste au-dessus de la valeur lue : on
+     compare case par case, sans rouvrir l'image. */
+  .vgrid img.extrait { display: block; height: 22px; width: auto; max-width: 110px; margin: 0 auto 3px; border-radius: 3px; }
+  .vgrid td.name img.extrait { margin-left: 0; max-width: 200px; }
+  @media (max-width: 640px) {
+    .vgrid td:first-child, .vgrid th:first-child { width: 30px; padding: 2px; }
+    .vgrid .ninp { width: 104px; }
+    .vgrid td.name img.extrait { max-width: 110px; }
+  }
 </style>
