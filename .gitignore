@@ -13,3 +13,6 @@ RAPPORT-*.md
 # Tests de bout en bout
 test-results/
 playwright-report/
+
+# Photos réelles (données patient) : jamais versionnées
+bench/photos/

@@ -25,7 +25,7 @@
 
 import { matchCatalog, matchCatalogExact } from '../models/catalog';
 import { jugerDate, jugerNom, jugerValeur } from './confiance';
-import { reparerNombre } from './correction';
+import { corrigerDecimalePerdue, reparerNombre } from './correction';
 import { glyphesChiffres, ModelesChiffres, type Glyphe } from './glyphes';
 import { lireCellules, type ModeCellule } from './ocr';
 import {
@@ -39,7 +39,7 @@ import {
 import {
   analyserCellule, boiteEncre, colonnesDepuisAncres, colonnesDepuisGouttieres, detecterBandes,
   encreDansCellule, hauteurLigne, mediane, profilBandes, sansDecorationsCouleur,
-  effacerFilets, type Bande, type CarteCouleur, type CarteEncre, type Colonne, type GeometrieCellule,
+  carteTexte, effacerFilets, type Bande, type CarteCouleur, type CarteEncre, type Colonne, type GeometrieCellule,
 } from './structure';
 
 // ── Ce que la chaîne rend ───────────────────────────────────────
@@ -92,6 +92,10 @@ export interface OptionsReconnaissance {
   anneeParDefaut?: number;
   /** Produire les vignettes de ligne (inutile pour le banc). */
   vignettes?: boolean;
+  /** Photo d'écran (et non capture) : structure cherchée sur le texte seul. */
+  photo?: boolean;
+  /** Traces de diagnostic (banc d'épreuve uniquement). */
+  trace?: (etape: string, donnees: unknown) => void;
   /** Interrompt la lecture entre deux lots. */
   annule?: () => boolean;
 }
@@ -377,6 +381,16 @@ function celluleDe(
   if (coul) {
     const net = sansDecorationsCouleur(carte, coul, bande, col);
     carteBbox = net.carte; bandeBbox = net.bande; colBbox = net.col; dx = net.dx; dy = net.dy; picto = net.picto;
+    // Pictogramme accolé : le texte est d'un seul côté. On garde le côté qui
+    // porte le plus d'encre, à distance du pictogramme (son liseré compris).
+    if (net.picto && net.pictoX0 !== undefined && net.pictoX1 !== undefined) {
+      const garde = Math.max(2, Math.round(hL * 0.15));
+      const gauche = { x0: net.col.x0, x1: net.pictoX0 - garde };
+      const droite = { x0: net.pictoX1 + garde, x1: net.col.x1 };
+      const eG = gauche.x1 >= gauche.x0 ? encreDansCellule(net.carte, net.bande, gauche) : 0;
+      const eD = droite.x1 >= droite.x0 ? encreDansCellule(net.carte, net.bande, droite) : 0;
+      if (eG || eD) colBbox = eD >= eG ? droite : gauche;
+    }
   }
   const encre = encreDansCellule(carteBbox, bandeBbox, colBbox);
   const bLocal = boiteEncre(carteBbox, bandeBbox, colBbox);
@@ -412,7 +426,9 @@ export const AGRANDISSEMENTS_VALEUR = [68, 44, 96];
 
 export interface LectureVotee { texte: string; confiance: number; desaccord: boolean; unanime?: boolean; }
 
-const NOMBRE_LU = /^[<>]?\d+(\.\d+)?$/;
+// Un résultat de laboratoire n'a jamais plus de six chiffres avant la
+// virgule : « 2005201907 » est un numéro de demande, pas une valeur.
+const NOMBRE_LU = /^[<>]?\d{1,6}(\.\d+)?$/;
 const normaliserLecture = (t: string) => t.replace(/\s+/g, '').replace(',', '.');
 
 /**
@@ -445,9 +461,33 @@ export function voter(lectures: { texte: string; confiance: number }[]): Lecture
 
 // ── 3. La chaîne ────────────────────────────────────────────────
 
+/**
+ * Point d'entrée. Une barre de titre posée au-dessus du tableau (« Résultats
+ * du 27/01/2020 au 30/09/2026 ») peut être prise pour la ligne d'en-tête : ses
+ * deux dates deviennent des colonnes et tout le découpage déraille. Quand la
+ * lecture échoue ou ne trouve presque pas de dates, on la relance en écartant
+ * la (puis les deux) première(s) bande(s) de texte, et on garde la lecture
+ * qui a produit le plus de valeurs.
+ */
 export async function reconnaitreTableau(
   img: HTMLImageElement | HTMLCanvasElement,
   opts: OptionsReconnaissance = {},
+): Promise<TableauLu> {
+  const remplies = (t: TableauLu) => t.echec ? -1 : t.lignes.reduce((n, l) => n + l.cellules.filter(c => c.texte).length, 0);
+  let meilleur = await reconnaitreTableauDepuis(img, opts, 0);
+  for (let saut = 1; saut <= 2; saut++) {
+    if (!meilleur.echec && meilleur.dates.length >= 3) break;
+    if (opts.annule?.()) break;
+    const essai = await reconnaitreTableauDepuis(img, opts, saut);
+    if (remplies(essai) > remplies(meilleur)) meilleur = essai;
+  }
+  return meilleur;
+}
+
+async function reconnaitreTableauDepuis(
+  img: HTMLImageElement | HTMLCanvasElement,
+  opts: OptionsReconnaissance,
+  sauterBandes: number,
 ): Promise<TableauLu> {
   const annule = () => !!opts.annule?.();
   const avancer = (f: number, t: number, e: string) => opts.onProgress?.(f, t, e);
@@ -456,7 +496,11 @@ export async function reconnaitreTableau(
   avancer(0, 1, 'Préparation de l’image…');
   const source = canvasSource(img);
   const gris = grisCanalMin(source);
-  const { carte, polarite } = carteEncreLocale(gris);
+  const encreBrute = carteEncreLocale(gris);
+  const polarite = encreBrute.polarite;
+  // Photo d'écran : filets, bords et moiré relient toutes les lignes entre
+  // elles ; on ne garde que ce qui a la taille du texte (voir carteTexte).
+  const carte = opts.photo ? carteTexte(encreBrute.carte) : encreBrute.carte;
   // Repère le bleu et l'orange/rouge de l'image ORIGINALE (perdus par
   // `grisCanalMin`, qui aplatit tout en niveaux de gris) : c'est ce qui
   // permet de distinguer un pictogramme accolé à une valeur (§ « Valeurs »
@@ -472,7 +516,7 @@ export async function reconnaitreTableau(
   // Au niveau des cases, les filets du tableau ne sont que du bruit.
   const carteCases = effacerFilets(carte, hL);
   const bandesIsolees = isolerTableau(carte, toutes, hL);
-  const bandes = ecarterBandesDecoratives(bandesIsolees, hL);
+  const bandes = ecarterBandesDecoratives(bandesIsolees, hL).slice(sauterBandes);
   if (bandes.length < 2) {
     return echec('Je n’ai trouvé qu’une seule ligne de texte : ce n’est pas un tableau.');
   }
@@ -752,6 +796,7 @@ export async function reconnaitreTableau(
     index: ci, entete: entetes[ci], echantillon: echantillons[ci],
   }));
   const roles = affecterRoles(candidates, anneeParDefaut);
+  opts.trace?.('roles', { colonnes, entetes, echantillons, roles: roles.map(r => r.role), bandes: bandes.map(b => [b.y0, b.y1]), iEntete });
 
   const colDates = roles.filter(r => r.role === 'date');
   // Titre de section qui déborde de la colonne des noms (« HÉMATO CELLULAIRE
@@ -817,6 +862,7 @@ export async function reconnaitreTableau(
     if (annule()) return echec('Lecture interrompue.');
   }
 
+  opts.trace?.('pictos', pictos.map(col => col.map(Number).join('')));
   // — Cohérence des glyphes (voir glyphes.ts) : modèles appris sur les cases
   //   lues à l'unanimité, puis chaque autre case confrontée à ces modèles. —
   const modeles = new ModelesChiffres();
@@ -927,6 +973,16 @@ export async function reconnaitreTableau(
         colonneAnormale: colonneAnormale[c],
         picto: v.picto,
       });
+      // Virgule perdue, la ligne pour témoin : on la rétablit — la case reste
+      // jaune, le médecin confirme.
+      const corrige = corrigerDecimalePerdue(v.texte, valeurs.filter((_, k) => k !== c).map(o => o.texte));
+      if (corrige) {
+        return {
+          texte: corrige, douteux: true,
+          motifs: [...verdict.motifs.filter(m => !m.includes('facteur 10')), `virgule rétablie d’après le reste de la ligne (lu « ${v.texte} »)`],
+          vignette: opts.vignettes && v.encre > 0 ? vignette(source, boitesValeurs[c][r]) : undefined,
+        };
+      }
       return {
         texte: v.texte, douteux: verdict.douteux, motifs: verdict.motifs,
         vignette: opts.vignettes && v.encre > 0 ? vignette(source, boitesValeurs[c][r]) : undefined,
