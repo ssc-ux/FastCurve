@@ -1126,6 +1126,8 @@
   /* En bandes, la grille prend toute la largeur — mais pas les blocs qui n'en
      sont pas un : un formulaire étiré sur 1600 px est illisible. */
   .aux { max-width: 880px; }
+  /* Vérification en pleine largeur : toutes les dates visibles d'un coup. */
+  :global(.body.verif) .aux { max-width: none; }
 
   .corps { display: flex; flex-direction: column; gap: 14px; }
   /* Suivi vide : le tableau + « Série de dates » n'ont aucune raison de rester

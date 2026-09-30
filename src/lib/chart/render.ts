@@ -219,27 +219,63 @@ function buildXMapper(dates: string[], timeAxis: boolean, layout: Layout) {
   const { marginLeft, plotWidth } = layout;
   const minGap = 78; // espace minimal entre étiquettes (format JJ/MM/AAAA plus large)
   if (dates.length === 0) {
-    return { xOf: (_d: string) => marginLeft, ticks: [] as { x: number; label: string }[], dayOf: (_d: string) => 0, domain: [0, 1] as [number, number] };
+    return { xOf: (_d: string) => marginLeft, ticks: [] as { x: number; label: string }[], dayOf: (_d: string) => 0, domain: [0, 1] as [number, number], coupures: [] as number[] };
   }
   if (timeAxis) {
     const days = dates.map(dayNumber);
     let min = Math.min(...days);
     let max = Math.max(...days);
     if (min === max) { min -= 1; max += 1; }
-    const span = max - min;
-    const pad = span * 0.04;
-    const dmin = min - pad;
-    const dmax = max + pad;
-    const scaleX = (d: number) => marginLeft + ((d - dmin) / (dmax - dmin)) * plotWidth;
+    // Coupures d'axe : un trou de plusieurs années entre deux salves de
+    // prélèvements tasserait chacune en un trait vertical illisible. Le trou
+    // est remplacé par un court intervalle fixe, marqué « // » sur l'axe ;
+    // le temps reste proportionnel DE PART ET D'AUTRE.
+    const trous = coupuresDeTemps(days);
+    const conserve = max - min - trous.reduce((t, c) => t + (c.fin - c.debut), 0);
+    const tailleCoupure = Math.max(1, conserve * 0.06);
+    const virtuel = (d: number) => {
+      let v = d;
+      for (const c of trous) {
+        if (d >= c.fin) v -= (c.fin - c.debut) - tailleCoupure;
+        else if (d > c.debut) v -= (d - c.debut) * (1 - tailleCoupure / (c.fin - c.debut));
+      }
+      return v;
+    };
+    const vmin = virtuel(min), vmax = virtuel(max);
+    const pad = (vmax - vmin) * 0.04;
+    const dmin = vmin - pad;
+    const dmax = vmax + pad;
+    const scaleX = (d: number) => marginLeft + ((virtuel(d) - dmin) / (dmax - dmin)) * plotWidth;
     const xOf = (date: string) => scaleX(dayNumber(date));
-    return { xOf, ticks: thinTicks(dates, xOf, minGap), dayOf: (d: string) => dayNumber(d), domain: [dmin, dmax] as [number, number] };
+    const coupures = trous.map(c => (scaleX(c.debut) + scaleX(c.fin)) / 2);
+    return { xOf, ticks: thinTicks(dates, xOf, minGap), dayOf: (d: string) => dayNumber(d), domain: [dmin, dmax] as [number, number], coupures };
   }
   // Catégoriel : espacement régulier
   const n = dates.length;
   const step = n > 1 ? plotWidth / (n - 1) : 0;
   const idx = new Map(dates.map((d, i) => [d, i]));
   const xOf = (date: string) => marginLeft + (idx.get(date) ?? 0) * step;
-  return { xOf, ticks: thinTicks(dates, xOf, minGap), dayOf: (d: string) => idx.get(d) ?? 0, domain: [0, n - 1] as [number, number] };
+  return { xOf, ticks: thinTicks(dates, xOf, minGap), dayOf: (d: string) => idx.get(d) ?? 0, domain: [0, n - 1] as [number, number], coupures: [] as number[] };
+}
+
+/**
+ * Trous de temps à couper sur l'axe : un intervalle entre deux dates
+ * consécutives est coupé s'il dépasse à la fois 180 jours, dix fois l'écart
+ * médian entre prélèvements et le tiers de la période totale. Un suivi
+ * régulier, même très espacé, n'est jamais coupé.
+ */
+export function coupuresDeTemps(days: number[]): { debut: number; fin: number }[] {
+  const u = [...new Set(days)].sort((a, b) => a - b);
+  if (u.length < 3) return [];
+  const ecarts = u.slice(1).map((d, i) => d - u[i]);
+  const tri = [...ecarts].sort((a, b) => a - b);
+  const mediane = tri[Math.floor(tri.length / 2)];
+  const span = u[u.length - 1] - u[0];
+  const out: { debut: number; fin: number }[] = [];
+  ecarts.forEach((e, i) => {
+    if (e > 180 && e > mediane * 10 && e > span / 3) out.push({ debut: u[i], fin: u[i + 1] });
+  });
+  return out;
 }
 
 /** #8 : restreint l'étude à la fenêtre [fromDate, toDate] (les barres sont bornées). */
@@ -417,7 +453,7 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
       if (g.params.length === 1) {
         const p = g.params[0];
         const pi = globalIndex.get(p.id)!;
-        const pts = collectPoints(mesuresDe(p), p, xm.xOf);
+        const pts = collectPoints(mesuresDe(p), p, xm.xOf, xm.coupures);
         const sc = echelles.get(p.id)!;
         const y0 = py;
         const y1 = py + panelH;
@@ -500,7 +536,7 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     params.forEach((p, i) => {
       const onRight = rightParams.includes(p);
       const yOf = onRight ? yOfR : yOfL;
-      const pts = collectPoints(mesuresDe(p), p, xm.xOf);
+      const pts = collectPoints(mesuresDe(p), p, xm.xOf, xm.coupures);
       panelsSVG += series(p, i, pts, yOf, s, hotspots, y0, y1, motifTrait(i, params.length > MARKER_SHAPES.length));
     });
 
@@ -745,9 +781,20 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
 
 // ── Helpers de tracé ──────────────────────────────────────────
 
-type SeriesPoint = { date: string; x: number; value: number; q: '<' | '>' | null; outOfRange: boolean };
+type SeriesPoint = { date: string; x: number; value: number; q: '<' | '>' | null; outOfRange: boolean; apresCoupure?: boolean };
 
-function collectPoints(mesures: StudyState['measurements'], p: Parameter, xOf: (d: string) => number): SeriesPoint[] {
+function collectPoints(mesures: StudyState['measurements'], p: Parameter, xOf: (d: string) => number, coupures: number[] = []): SeriesPoint[] {
+  const pts = collectPointsBruts(mesures, p, xOf);
+  // Premier point après une coupure d'axe : pas de trait plein à travers le
+  // trou (on ne sait rien de ce qui s'y est passé).
+  for (let i = 1; i < pts.length; i++) {
+    const a = Math.min(pts[i - 1].x, pts[i].x), b = Math.max(pts[i - 1].x, pts[i].x);
+    if (coupures.some(c => c > a && c < b)) pts[i].apresCoupure = true;
+  }
+  return pts;
+}
+
+function collectPointsBruts(mesures: StudyState['measurements'], p: Parameter, xOf: (d: string) => number): SeriesPoint[] {
   const isPct = p.category === 'efr' && p.display === 'percent';
   return mesures
     .map(m => {
@@ -1020,7 +1067,7 @@ function groupPanel(
     const i = indices[idx];
     const onRight = droite.includes(p);
     const yOf = onRight ? yOfR : yOfL;
-    const pts = collectPoints(mesuresDe(p), p, xm.xOf);
+    const pts = collectPoints(mesuresDe(p), p, xm.xOf, xm.coupures);
     out += series(p, i, pts, yOf, s, hotspots, y0, y1, motifTrait(i, true));
   });
 
@@ -1063,9 +1110,15 @@ function series(
   const rAnneau = rayon + 3;
   let out = '';
   // Ligne
-  const d = pts.map((pt, i) => `${i === 0 ? 'M' : 'L'}${pt.x.toFixed(1)},${yOf(pt.value).toFixed(1)}`).join(' ');
+  const d = pts.map((pt, i) => `${i === 0 || pt.apresCoupure ? 'M' : 'L'}${pt.x.toFixed(1)},${yOf(pt.value).toFixed(1)}`).join(' ');
   const trait = dash ? ` stroke-dasharray="${dash}"` : '';
   out += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${trait}/>`;
+  // À travers une coupure d'axe : simple pointillé discret.
+  pts.forEach((pt, i) => {
+    if (!pt.apresCoupure) return;
+    const a = pts[i - 1];
+    out += `<path d="M${a.x.toFixed(1)},${yOf(a.value).toFixed(1)} L${pt.x.toFixed(1)},${yOf(pt.value).toFixed(1)}" fill="none" stroke="${color}" stroke-width="1.2" stroke-dasharray="2 4" opacity="0.6"/>`;
+  });
   // Marqueurs + indicateurs
   pts.forEach((pt, i) => {
     const cy = yOf(pt.value);
@@ -1130,6 +1183,12 @@ function series(
 function xAxis(xm: ReturnType<typeof buildXMapper>, y: number, layout: Layout): string {
   const { marginLeft, plotWidth } = layout;
   let out = `<line x1="${marginLeft}" y1="${n(y)}" x2="${marginLeft + plotWidth}" y2="${n(y)}" stroke="${AXIS}" stroke-width="1.2"/>`;
+  // Coupure d'axe : fond blanc puis deux traits obliques « // ».
+  for (const c of xm.coupures) {
+    out += `<rect x="${n(c - 5)}" y="${n(y - 5)}" width="10" height="10" fill="#fff"/>`;
+    out += `<line x1="${n(c - 6)}" y1="${n(y + 5)}" x2="${n(c - 1)}" y2="${n(y - 5)}" stroke="${AXIS}" stroke-width="1.2"/>`;
+    out += `<line x1="${n(c + 1)}" y1="${n(y + 5)}" x2="${n(c + 6)}" y2="${n(y - 5)}" stroke="${AXIS}" stroke-width="1.2"/>`;
+  }
   xm.ticks.forEach(t => {
     out += `<line x1="${n(t.x)}" y1="${n(y)}" x2="${n(t.x)}" y2="${n(y + 4)}" stroke="${AXIS}" stroke-width="1"/>`;
     out += `<text x="${n(t.x)}" y="${n(y + 16)}" text-anchor="middle" font-family="${FONT}" font-size="9.5" fill="${MUTED}">${esc(t.label)}</text>`;

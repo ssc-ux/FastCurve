@@ -51,6 +51,8 @@ export interface CelluleLue {
   douteux: boolean;
   /** Raisons du doute, en français, pour l'infobulle. */
   motifs: string[];
+  /** Extrait de l'image d'origine pour CETTE case (data-URL). */
+  vignette?: string;
 }
 
 export interface LigneLue {
@@ -61,6 +63,8 @@ export interface LigneLue {
   cellules: CelluleLue[];
   /** Portion de l'image d'origine correspondant à la ligne (data-URL). */
   vignette?: string;
+  /** Extrait de l'image d'origine pour le nom de la variable. */
+  vignetteNom?: string;
 }
 
 export interface DateLue {
@@ -68,6 +72,8 @@ export interface DateLue {
   brut: string;
   douteux: boolean;
   motifs: string[];
+  /** Extrait de l'image d'origine pour l'en-tête de date. */
+  vignette?: string;
 }
 
 export interface TableauLu {
@@ -791,6 +797,7 @@ export async function reconnaitreTableau(
 
   // — Valeurs, colonne de résultats par colonne de résultats —
   const brutes: LectureVotee[][] = [];
+  const boitesValeurs: Boite[][] = [];
   const glyphes: Glyphe[][][] = [];
   const geos: GeometrieCellule[][] = [];
   const pictos: boolean[][] = [];
@@ -798,6 +805,7 @@ export async function reconnaitreTableau(
     const col = colonnes[d.index];
     const limites = plageEntete(colonnes, d.index, carte.largeur);
     const cases = iDonnees.map(bi => celluleDe(carteCases, polarite, bandes[bi], col, hL, limites, coul));
+    boitesValeurs.push(cases.map(c => c.boite));
     // Le worker OCR est unique : les lectures se font l'une après l'autre.
     const lectures: { texte: string; confiance: number }[][] = [];
     for (const h of AGRANDISSEMENTS_VALEUR) lectures.push(await lire(cases, 'valeur', 'Valeurs', h));
@@ -868,7 +876,10 @@ export async function reconnaitreTableau(
   // — Dates de colonnes —
   const dates: DateLue[] = colDates.map(d => {
     const v = jugerDate(d.date as DateEntete | null, 100);
-    return { iso: d.date?.iso ?? null, brut: d.date?.brut ?? '', douteux: v.douteux, motifs: v.motifs };
+    return {
+      iso: d.date?.iso ?? null, brut: d.date?.brut ?? '', douteux: v.douteux, motifs: v.motifs,
+      vignette: opts.vignettes ? vignette(source, celluleEntete(iEntete, d.index).boite) : undefined,
+    };
   });
 
   // — Assemblage des lignes —
@@ -916,7 +927,10 @@ export async function reconnaitreTableau(
         colonneAnormale: colonneAnormale[c],
         picto: v.picto,
       });
-      return { texte: v.texte, douteux: verdict.douteux, motifs: verdict.motifs };
+      return {
+        texte: v.texte, douteux: verdict.douteux, motifs: verdict.motifs,
+        vignette: opts.vignettes && v.encre > 0 ? vignette(source, boitesValeurs[c][r]) : undefined,
+      };
     });
 
     const vNom = jugerNom(nom, lusNoms[r].confiance);
@@ -933,6 +947,7 @@ export async function reconnaitreTableau(
             y1: bandes[iDonnees[r]].y1 + 2,
           })
         : undefined,
+      vignetteNom: opts.vignettes ? vignette(source, casNoms[r].boite) : undefined,
     });
     if (!cat && colUnite >= 0) unitesALire.push({ ligne: lignes.length - 1, bande: iDonnees[r] });
   }

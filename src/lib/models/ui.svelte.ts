@@ -73,6 +73,9 @@ class UiBus {
 
   /** Affichage de la présentation d'accueil. */
   welcomeOpen = $state(false);
+  /** Un écran de vérification (import, traitements lus) est ouvert : le
+   *  panneau de saisie prend toute la largeur le temps de vérifier. */
+  verification = $state(false);
 
   /** Texte tabulé collé globalement (Excel / tableau) → remplissage de la grille. */
   pendingTableText = $state<string | null>(null);
