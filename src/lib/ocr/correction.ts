@@ -144,7 +144,10 @@ export function decimalePerdue(texte: string, autresDeLaLigne: string[]): boolea
   if (med <= 0) return false;
 
   const ecart = Math.abs(v) / med;
-  if (ecart < 6) return false;                 // pas décalé : rien à dire
+  const maxi = vals[vals.length - 1];
+  // Décalé : loin au-dessus de la médiane, ou nettement au-dessus de TOUTES
+  // les voisines décimales (« 3,3 · 20 · 4,3 · 3,7 » : 20 est 2,0).
+  if (ecart < 6 && Math.abs(v) <= maxi * 2.5) return false;
   // ÷10 ou ÷100 le remet dans la ligne (« 12,2 » → 122, « 12,22 » → 1222).
-  return [10, 100].some(f => { const r = Math.abs(v) / f / med; return r >= 1 / 3 && r <= 3; });
+  return [10, 100].some(f => { const r = Math.abs(v) / f / med; return r >= 1 / 5 && r <= 5; });
 }
