@@ -26,10 +26,11 @@ for (const c0 of cas.filter(x => x.id.includes(filtre))) {
     Object.defineProperty(v, 'videoWidth', { value: v.width });
     Object.defineProperty(v, 'videoHeight', { value: v.height });
     const a = cam.analyserImage(v, 0);
-    const prete = cam.preparerPhoto(v, a.mesure.angle, a.boiteRelative, c.flou);
+    const prete = cam.redresserPhoto(v, a.mesure.angle);
     window.__prete = prete.toDataURL('image/jpeg', 0.7);
-    const traces = []; const capture = cam.photoVersCapture(prete); window.__prete = capture.toDataURL('image/png');
-    const t = await reconnaitreTableau(capture, { trace: (e, d) => traces.push(e + ' ' + JSON.stringify(d)) }); window.__traces = traces;
+    const { lireTableauPhoto } = await import('/src/lib/photo/tableauPhoto.ts');
+    const t = await lireTableauPhoto(prete);
+    window.__traces = [];
     const res = t.echec ? { dates: [], lignes: [] } : {
       dates: t.dates.map(d => d.iso ?? ''),
       lignes: t.lignes.map(l => ({ nom: l.nom, unite: l.unite, valeurs: l.cellules.map(x => x.texte), douteux: l.cellules.map(x => x.douteux) })),

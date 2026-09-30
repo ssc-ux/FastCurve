@@ -16,3 +16,7 @@ playwright-report/
 
 # Photos réelles (données patient) : jamais versionnées
 bench/photos/
+
+# Modèles OCR photo (copiés depuis node_modules au build)
+public/paddle/
+public/ort/
