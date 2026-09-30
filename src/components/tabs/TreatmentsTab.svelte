@@ -83,11 +83,6 @@
     if (m !== 'saisir') setTimeout(() => zoneTexte?.focus(), 0);
   }
 
-  // Collage : analyse immédiate, sans clic supplémentaire.
-  function surCollage() {
-    setTimeout(() => { if (reportText.trim()) analyzeText(); }, 0);
-  }
-
   // Dictée : Dragon tape par rafales ; on analyse après une pause d'une
   // seconde et demie, ce qui montre le résultat pendant qu'on dicte.
   let minuteurDictee: ReturnType<typeof setTimeout> | undefined;
@@ -230,12 +225,11 @@
   {:else}
     <div class="card" style="padding:12px;">
       {#if mode === 'coller'}
-        <p class="faint small" style="margin-bottom:8px;">Copiez le <strong>carré bleu</strong> (zone traitements) du compte-rendu et collez-le ci-dessous (<span class="kbd">Ctrl+V</span>) : les lignes thérapeutiques sont extraites aussitôt, vous validez avant d'ajouter. <Icon name="lock" size={12} inline /> 100 % local.</p>
+        <p class="faint small" style="margin-bottom:8px;">Copiez le <strong>carré bleu</strong> (zone traitements) du compte-rendu et collez-le ci-dessous (<span class="kbd">Ctrl+V</span>), retouchez le texte si besoin, puis <strong>Analyser</strong> : vous validez chaque ligne avant d'ajouter. <Icon name="lock" size={12} inline /> 100 % local.</p>
       {:else}
         <p class="faint small" style="margin-bottom:8px;">Le curseur est dans la zone : <strong>dictez avec Dragon</strong> (« cellcept un virgule cinq grammes matin et soir… »). Les traitements reconnus s'affichent dès que vous marquez une pause ; vous validez avant d'ajouter. <Icon name="lock" size={12} inline /> 100 % local.</p>
       {/if}
       <textarea class="report" bind:this={zoneTexte} bind:value={reportText}
-        onpaste={mode === 'coller' ? surCollage : undefined}
         oninput={surSaisieDictee}
         aria-label={mode === 'coller' ? 'Texte du carré bleu' : 'Texte dicté'}
         placeholder={mode === 'coller' ? 'Collez ici le carré bleu du compte-rendu…' : 'Dictez ici (Dragon)…'}></textarea>

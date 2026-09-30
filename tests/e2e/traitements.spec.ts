@@ -7,7 +7,7 @@ async function ouvrirTraitements(page: Page) {
   await page.getByRole('button', { name: 'Traitements' }).first().click();
 }
 
-test('traitements — coller le carré bleu : extraction immédiate puis ajout', async ({ page }) => {
+test('traitements — coller le carré bleu : analyse au clic puis ajout', async ({ page }) => {
   await ouvrirTraitements(page);
   await page.getByRole('button', { name: 'Coller' }).click();
   const zone = page.getByRole('textbox', { name: 'Texte du carré bleu' });
@@ -19,6 +19,9 @@ test('traitements — coller le carré bleu : extraction immédiate puis ajout',
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true }));
   });
+  // Pas d'analyse automatique : le médecin peut retoucher le texte avant.
+  await expect(page.getByRole('textbox', { name: 'Nom du traitement' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Analyser' }).click();
   await expect(page.getByRole('textbox', { name: 'Nom du traitement' })).toHaveCount(2);
   await page.getByRole('button', { name: 'Ajouter au graphique' }).click();
   await expect(page.getByText(/CELLCEPT/i).first()).toBeVisible();
