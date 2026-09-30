@@ -53,6 +53,35 @@ export function estimerInclinaison(carte: CarteEncre, x0 = 0, x1 = carte.largeur
 }
 
 /**
+ * Cisaillement horizontal (perspective d'une photo prise un peu de haut ou de
+ * bas) : les colonnes « penchent » — x dérive linéairement avec y. On cherche
+ * le décalage par ligne `s` (px de x par px de y) qui rend le profil vertical
+ * de l'encre le plus contrasté : c'est là que les gouttières entre colonnes
+ * redeviennent droites.
+ */
+export function estimerCisaillement(carte: CarteEncre, maxPente = 0.2): number {
+  const { largeur: W, hauteur: H, encre } = carte;
+  const pts: number[] = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (encre[y * W + x]) pts.push(x, y);
+  if (pts.length < 40) return 0;
+  const yc = H / 2;
+  let meilleur = 0, score = -1;
+  for (let s = -maxPente; s <= maxPente + 1e-9; s += 0.005) {
+    const hist = new Float64Array(W * 2);
+    for (let i = 0; i < pts.length; i += 2) {
+      const xp = Math.round(pts[i] - (pts[i + 1] - yc) * s) + (W >> 1);
+      if (xp >= 0 && xp < hist.length) hist[xp]++;
+    }
+    // Contraste du profil : somme des carrés des différences voisines
+    // (des gouttières franches créent de fortes transitions).
+    let sc = 0;
+    for (let i = 1; i < hist.length; i++) { const d = hist[i] - hist[i - 1]; sc += d * d; }
+    if (sc > score) { score = sc; meilleur = s; }
+  }
+  return Math.round(meilleur * 1000) / 1000;
+}
+
+/**
  * Tableau le plus vraisemblable de la carte : la plus longue suite de lignes
  * de texte consécutives qui portent chacune une large gouttière (au moins
  * deux colonnes). Au moins trois lignes, sinon ce n'est pas un tableau.
@@ -78,6 +107,24 @@ export function trouverTableau(carteBrute: CarteEncre): TableauRepere | null {
     if (e) { x0 = Math.min(x0, e.x0); x1 = Math.max(x1, e.x1); }
   }
   if (!isFinite(x0)) return null;
+  // Bords du tableau : là où l'encre est présente sur au moins la moitié des
+  // lignes (dans une fenêtre de quelques caractères). Une barre d'icônes ou un
+  // décor à côté du tableau n'occupe que quelques lignes et reste dehors.
+  const W = carte.largeur;
+  const fenetre = Math.max(3, Math.round(hL * 3));
+  const presence = new Float32Array(W);
+  for (const b of meilleure) {
+    const aEncre = new Uint8Array(W);
+    for (let y = b.y0; y <= b.y1; y++) for (let x = 0; x < W; x++) if (carte.encre[y * W + x]) aEncre[x] = 1;
+    // Dilatation horizontale : une colonne de texte « couvre » sa fenêtre.
+    let dernier = -Infinity;
+    for (let x = 0; x < W; x++) { if (aEncre[x]) dernier = x; if (x - dernier <= fenetre) presence[x]++; }
+  }
+  const seuil = meilleure.length * 0.5;
+  let gx0 = x0, gx1 = x1;
+  while (gx0 < x1 && presence[gx0] < seuil) gx0++;
+  while (gx1 > gx0 && presence[gx1] < seuil) gx1--;
+  if (gx1 - gx0 > (x1 - x0) * 0.4) { x0 = gx0; x1 = gx1; }
   return {
     boite: { x0, y0: meilleure[0].y0, x1, y1: meilleure[meilleure.length - 1].y1 },
     hL, lignes: meilleure.length,

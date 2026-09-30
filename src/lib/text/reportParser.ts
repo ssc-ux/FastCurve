@@ -14,6 +14,12 @@ export interface ExtractedTreatment {
   isStop: boolean;       // « arrêt … » → marque une fin
   taper: boolean;        // « décroissance »
   raw: string;
+  /**
+   * Ce que la ligne dit du traitement : début (instauration, reprise, relai
+   * PAR), arrêt (arrêt, relai DU), changement de dose, événement ponctuel
+   * (cure, bolus) ou traitement actuel (section « Traitement actuel »).
+   */
+  action: 'debut' | 'arret' | 'modif' | 'evenement' | 'actuel';
 }
 
 const MONTHS: Record<string, string> = {
@@ -73,6 +79,13 @@ function findDates(text: string): DateHit[] {
     const mo = MONTHS[norm(m[1])];
     if (mo) hits.push({ index: m.index!, iso: `${m[2]}-${mo}-01`, raw: m[0] });
   }
+  // 3 bis) Année seule (« de 2003 à 2010 », « en 2015 ») — hors des dates
+  //    déjà captées (JJ/MM/AAAA, MM/AAAA, Mois AAAA).
+  for (const m of text.matchAll(/\b(19[5-9]\d|20\d{2})\b/g)) {
+    const idx = m.index!;
+    if (hits.some(h => idx >= h.index && idx < h.index + h.raw.length)) continue;
+    hits.push({ index: idx, iso: `${m[1]}-01-01`, raw: m[0] });
+  }
   // 4) Mn seul (relatif) — résolu plus tard via une date de référence
   for (const m of text.matchAll(/\bM(\d{1,2})\b/g)) {
     // Ignore si suivi immédiatement d'une parenthèse datée (déjà capté en 3)
@@ -108,6 +121,10 @@ const DRUGS = [
   'BELIMUMAB', 'BENLYSTA', 'INFLIXIMAB', 'ADALIMUMAB', 'HUMIRA', 'ETANERCEPT',
   'CICLOSPORINE', 'IGIV', 'IMMUNOGLOBULINES', 'PRIVIGEN', 'TEGELINE',
   'COLCHICINE', 'ANAKINRA', 'KINERET', 'CTC',
+  // Hématologie / PTI, vasculaire et sclérodermie (carrés bleus réels).
+  'REVOLADE', 'ELTROMBOPAG', 'NPLATE', 'ROMIPLOSTIM', 'VELBE', 'VINBLASTINE',
+  'AMLODIPINE', 'NICARDIPINE', 'LOXEN', 'ADALATE', 'NIFEDIPINE', 'IEC',
+  'BOSENTAN', 'TRACLEER', 'SILDENAFIL', 'REVATIO', 'ILOPROST', 'ILOMEDINE',
 ];
 const DRUG_SET = new Set(DRUGS.map(norm));
 
@@ -145,7 +162,13 @@ const RYTHME_RE =
   '|' +
     'midi' +
   '|' +
-    'x\\s?\\d+' +
+    '\\d\\s?x\\s?\\/\\s?j(?:our)?' +
+  '|' +
+    'x\\s?\\d+(?:\\s?\\/\\s?j(?:our)?)?' +
+  '|' +
+    '(?:iv|sc|per\\s+os|po)(?:\\s+(?:mensuel(?:le)?|hebdomadaire|quotidien(?:ne)?|par\\s+(?:semaine|mois|jour)))?' +
+  '|' +
+    'mensuel(?:le)?|hebdomadaire|quotidien(?:ne)?' +
   '|' +
     '(?:\\d+\\s?fois\\s+)?par\\s+(?:jour|semaine|mois|cure|cures)' +
   '|' +
@@ -230,9 +253,29 @@ function reconstruireDoseDictee(segment: string): string | null {
   return `${numStr} ${unit}${rest}`;
 }
 
+/** Dose en comprimés (« 1 comprimé matin et soir », « deux comprimés … »). */
+const DOSE_CP_RE = new RegExp(
+  '\\b(\\d+|une?|deux|trois|quatre)\\s+(?:comprim[ée]s?|cp|g[ée]lules?|sachets?|ampoules?)' +
+  '(?:\\s+(?:le\\s+|au\\s+)?(?:matin(?:\\s+et\\s+(?:le\\s+)?soir)?|soir|midi|par\\s+(?:jour|semaine|mois)))?',
+  'i',
+);
+
 function findDose(segment: string): string {
   const direct = segment.match(DOSE_RE);
-  if (direct) return direct[0].replace(/\s+/g, ' ').trim();
+  if (direct) {
+    // Dose composée : « 1 g matin - 500 mg soir », « 1 g le matin 500 mg le soir ».
+    let dose = direct[0];
+    let reste = segment.slice((direct.index ?? 0) + direct[0].length);
+    for (let k = 0; k < 2; k++) {
+      const suite = reste.match(new RegExp('^\\s*(?:[-–,+]|et)?\\s*(' + DOSE_RE.source + ')', 'i'));
+      if (!suite) break;
+      dose += ' ' + suite[1];
+      reste = reste.slice(suite[0].length);
+    }
+    return dose.replace(/\s+/g, ' ').trim();
+  }
+  const cp = segment.match(DOSE_CP_RE);
+  if (cp) return cp[0].replace(/\s+/g, ' ').trim();
   const reconstruit = reconstruireDoseDictee(segment);
   if (reconstruit) {
     const m2 = reconstruit.match(DOSE_RE);
@@ -241,77 +284,201 @@ function findDose(segment: string): string {
   return '';
 }
 
-/** Extrait les traitements datés d'un compte-rendu clinique.
+// ── Sections du compte-rendu ────────────────────────────────────
+// Une ligne « Titre : » (ou « TITRE : contenu ») ouvre une section. Seules
+// les sections thérapeutiques sont lues ; « Suivi sous traitement »,
+// vaccinations, projet, bilan, examen, biologie… ne produisent rien — leurs
+// dates (consultation, ostéodensitométrie) ne sont pas des dates de traitement.
+type Section = 'lire' | 'ignorer' | 'actuel';
+const SECTION_IGNOREE = /\b(suivi|projet|vaccin|bilan|examen|biologie|antecedent|mode de vie|allergie|conclusion|imagerie|scanner|surveillance|consultation|autres pathologies)/;
+const SECTION_ACTUELLE = /\btraitements?\s+(actuels?|en cours|de sortie)|\bordonnance\b|\btraitement a la sortie/;
+const SECTION_LUE = /\b(traitement|therapeutique|lignes?|pathologie|histoire|evolution)/;
+
+function sectionDe(titre: string): Section | null {
+  const t = norm(titre);
+  if (SECTION_ACTUELLE.test(t)) return 'actuel';
+  if (SECTION_IGNOREE.test(t)) return 'ignorer';
+  if (SECTION_LUE.test(t)) return 'lire';
+  return null;
+}
+
+// ── Actions ────────────────────────────────────────────────────
+const ACT_ARRET = /\b(arret(e|es)?|stop(pe)?|interruption|interrompu|suspension|suspendu|sevrage)\b/;
+const ACT_MODIF = /\b(augmentation|augmente|diminution|diminue|majoration|baisse|reduction|reduit|decroissance|degression|passage)\b/;
+const ACT_DEBUT = /\b(reprise|repris|instauration|introduction|introduit|initiation|ajout|debut|mise sous|traitement par|relais? par|par)\b/;
+const ACT_EVENT = /\b(cures?|bolus|perfusions?|j1)\b/;
+const ACT_SUITE = /\b(sous|poursuite|maintien|reponse complete)\b/;
+
+function distance1(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1 || a === b) return a === b;
+  let i = 0, j = 0, diff = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++diff > 1) return false;
+    if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; }
+  }
+  return diff + (a.length - i) + (b.length - j) <= 1;
+}
+
+interface Mention { debut: number; fin: number; nom: string; dict: boolean; }
+
+/** Extrait les traitements d'un compte-rendu clinique (« carré bleu »).
  *  `extraDrugs` : médicaments appris des imports précédents. */
 export function parseReport(text: string, extraDrugs: string[] = []): ExtractedTreatment[] {
   if (!text || !text.trim()) return [];
   const drugSet = new Set(DRUG_SET);
   for (const d of extraDrugs) drugSet.add(norm(d));
+  const connus = [...drugSet];
 
   const clean = text.replace(/\r/g, '');
   const dates = findDates(clean);
-
-  const dateBefore = (idx: number): DateHit | null => {
-    let best: DateHit | null = null;
-    for (const d of dates) {
-      if (d.index <= idx) best = d;
-      else break;
-    }
-    return best;
-  };
-
   const out: ExtractedTreatment[] = [];
   const seen = new Set<string>();
 
-  // Parcours des tokens en majuscules OU mots du dictionnaire.
-  const tokenRe = /[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\-]{2,}/g;
-  for (const m of clean.matchAll(tokenRe)) {
-    const tok = m[0];
-    const n = norm(tok);
-    const isDict = drugSet.has(n);
-    const isCaps = /^[A-ZÀ-Ý][A-ZÀ-Ý\-]{2,}$/.test(tok); // token en majuscules
-    if (!isDict && !isCaps) continue;
-    if (BLACKLIST.has(n)) continue;
+  let section: Section = 'lire';
+  let dateReportee: DateHit | null = null; // date de tête de la dernière ligne datée
+  let pos = 0;
+  for (const ligneBrute of clean.split('\n')) {
+    const debutLigne = pos;
+    pos += ligneBrute.length + 1;
+    const ligne = ligneBrute.replace(/^[\s•·●◦○▪■\-–*o]+(?=\S)/, m => ' '.repeat(m.length));
+    if (!ligne.trim()) continue;
 
-    const idx = m.index!;
-    // Contexte : 20 caractères avant, 45 après
-    const before = clean.slice(Math.max(0, idx - 22), idx);
-    const after = clean.slice(idx + tok.length, idx + tok.length + 46);
-    // Le contexte utile pour qualifier CE médicament s'arrête à la fin de la
-    // prescription précédente : sans cette coupure, le « bolus x3 » du produit
-    // d'avant fait passer une corticothérapie continue pour un événement
-    // (« SOLUMEDROL 1 g en bolus x3 puis CORTANCYL 60 mg/j »).
-    const beforeUtile = before.split(/[\n;.]|\bpuis\b/).pop() ?? '';
-    const ctx = beforeUtile + tok + after;
+    // Titre de section, seul (« Suivi sous traitement : ») ou suivi d'un contenu.
+    let offsetContenu = 0;
+    const titre = ligne.match(/^\s*([A-Za-zÀ-ÿ'’ ]{3,60}?)\s*(?:\([^)]*\))?\s*:\s*/);
+    if (titre) {
+      const sec = sectionDe(titre[1]);
+      if (sec) {
+        section = sec;
+        dateReportee = null;
+        offsetContenu = titre[0].length;
+      }
+    } else if (/^\s*[A-Za-zÀ-ÿ'’ ]{3,60}\s*(?:\([^)]*\))?\s*$/.test(ligne)) {
+      const sec = sectionDe(ligne);
+      if (sec) { section = sec; dateReportee = null; continue; }
+    }
+    if (section === 'ignorer') continue;
 
-    const dose = findDose(after);
-    // Un token en MAJ non catalogué n'est retenu que s'il a une dose proche.
-    if (!isDict && !dose) continue;
+    const aLigne = debutLigne + offsetContenu, bLigne = debutLigne + ligne.length;
+    const datesLigne = dates.filter(d => d.index >= aLigne && d.index < bLigne);
+    // Date de tête : avant les deux-points de la ligne (« Janvier 2020 : … »).
+    const deuxPoints = ligne.indexOf(':', offsetContenu);
+    const dateTete = datesLigne.find(d => deuxPoints > 0 && d.index < debutLigne + deuxPoints && d.index - aLigne < 60) ?? null;
+    if (dateTete) dateReportee = dateTete;
 
-    const nctx = norm(ctx);
-    const nbefore = norm(before);
-    const isStop = /\barr[e]t\b/.test(nbefore) || /\bstop\b/.test(nbefore);
-    const taper = /\b(decroissance|degression|decroissant)/.test(norm(after));
-    const kind: 'continuous' | 'event' =
-      /\b(bolus|cure|cures|perfusion|perfusions|x\s?\d)\b/.test(nctx) ? 'event' : 'continuous';
+    // Propositions : fin de phrase, « ; », « => », « puis », virgule (hors décimale).
+    const coupures = [aLigne];
+    const reCoupe = /\.\s+(?=[A-ZÀ-Ý0-9])|;|=>|→|\bpuis\b|,\s+(?!\d)/g;
+    const contenu = clean.slice(aLigne, bLigne);
+    for (const m of contenu.matchAll(reCoupe)) coupures.push(aLigne + m.index! + m[0].length);
+    coupures.push(bLigne);
 
-    const dh = dateBefore(idx);
-    const iso = dh?.iso ?? null;
-    const key = `${n}|${iso}|${dose}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    for (let ci = 0; ci + 1 < coupures.length; ci++) {
+      const a = coupures[ci], b = coupures[ci + 1];
+      const prop = clean.slice(a, b);
 
-    out.push({
-      name: tok,
-      dose,
-      date: iso,
-      rawDate: dh?.raw ?? '',
-      kind,
-      isStop,
-      taper,
-      raw: ctx.replace(/\s+/g, ' ').trim(),
-    });
+      // Médicaments de la proposition.
+      const mentions: Mention[] = [];
+      for (const m of prop.matchAll(/\bI[gG]\s?I[Vv]\b|\b[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\-]{2,}\b|\b[A-Z]{1,2}\s+[A-Z]{3,}\b/g)) {
+        const tok = m[0];
+        const n = norm(tok).replace(/\s+/g, '');
+        let nom = tok.replace(/\s+/g, ' ');
+        let dict = drugSet.has(n) || /^igiv$/.test(n);
+        if (/^igiv$/.test(n)) nom = 'IgIV';
+        const caps = /^[A-ZÀ-Ý][A-ZÀ-Ý\- ]{2,}$/.test(tok);
+        if (!dict && !caps) continue;
+        if (BLACKLIST.has(n)) continue;
+        if (!dict && caps && n.length >= 6) {
+          // Faute de frappe sur un médicament connu (« MYORTIC » → MYFORTIC).
+          const proche = connus.find(c => c.length >= 6 && distance1(c, n));
+          if (proche) { dict = true; nom = proche.toUpperCase(); }
+        }
+        const d = a + m.index!;
+        if (mentions.some(x => d < x.fin)) continue; // chevauchement (« N PLATE »)
+        mentions.push({ debut: d, fin: d + tok.length, nom, dict });
+      }
+
+      mentions.forEach((mt, k) => {
+        const finZone = k + 1 < mentions.length ? mentions[k + 1].debut : b;
+        const apres = clean.slice(mt.fin, finZone);
+        const avant = clean.slice(k > 0 ? mentions[k - 1].fin : a, mt.debut);
+        const avantProp = clean.slice(a, mt.debut);
+        const dose = findDose(apres.slice(0, 80));
+        const nAvant = norm(avant), nAvantProp = norm(avantProp), nApres = norm(apres);
+
+        // Un mot en MAJUSCULES inconnu n'est un médicament qu'avec une dose
+        // ou une action claire (sinon : titre, sigle, nom propre…).
+        if (!mt.dict && !dose && !ACT_ARRET.test(nAvant) && !ACT_DEBUT.test(nAvant)) return;
+
+        // Action.
+        let action: ExtractedTreatment['action'];
+        if (section === 'actuel') action = 'actuel';
+        else if (/\brelais?\s+(du|de la|de l|des)\s*$/.test(nAvant)) action = 'arret';
+        else if (ACT_ARRET.test(nAvant)) action = 'arret';
+        else if (ACT_EVENT.test(nAvant) || ACT_EVENT.test(nApres) || /\bx\s?\d\b(?!\s?\/)/.test(nApres)) action = 'evenement';
+        else if (ACT_MODIF.test(nAvantProp)) action = 'modif';
+        else if (ACT_DEBUT.test(nAvantProp)) action = 'debut';
+        // « sous CELLCEPT seul », « poursuite » : rien de neuf — sauf avec une
+        // dose (« actuellement sous cellcept 1,5 g… ») : c'est le traitement actuel.
+        else if (ACT_SUITE.test(nAvant)) { if (!dose) return; action = 'actuel'; }
+        else action = 'debut';
+
+        // Date.
+        let dh: DateHit | null = null, fin: DateHit | null = null;
+        if (action !== 'actuel') {
+          const apresDates = dates.filter(d => d.index >= mt.fin && d.index < finZone);
+          const plage = apres.match(/^\s*(?:de|du|entre)\s+\S+(?:\s+\S+)?\s+(?:a|à|au|et)\s+\S+/i);
+          if (plage && apresDates.length >= 2) { dh = apresDates[0]; fin = apresDates[1]; }
+          else if (apresDates.length) dh = apresDates[0];
+          else {
+            // « CELLCEPT + REVOLADE en 2015 » : la date qui suit dans la proposition.
+            const suivante = dates.find(d => d.index >= mt.fin && d.index < b);
+            const tete = dates.filter(d => d.index >= a && d.index < mt.debut).pop();
+            const precedente = dates.filter(d => d.index >= aLigne && d.index < mt.debut).pop();
+            dh = suivante ?? tete ?? dateTete ?? precedente ?? dateReportee;
+          }
+        }
+
+        const kind: 'continuous' | 'event' = action === 'evenement' ? 'event' : 'continuous';
+        const taper = /\b(decroissance|degression|decroissant)/.test(nAvantProp + ' ' + nApres);
+        const pousser = (act: ExtractedTreatment['action'], d: DateHit | null, dos: string) => {
+          const key = `${norm(mt.nom)}|${d?.iso}|${act}|${dos}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          out.push({
+            name: mt.nom, dose: dos, date: d?.iso ?? null, rawDate: d?.raw ?? '', kind: act === 'evenement' ? 'event' : kind,
+            isStop: act === 'arret', taper, raw: (avantProp + clean.slice(mt.debut, finZone)).replace(/\s+/g, ' ').trim(), action: act,
+          });
+        };
+        pousser(action, dh, dose);
+        if (fin) pousser('arret', fin, '');
+      });
+    }
   }
-
   return out;
+}
+
+/**
+ * Dose quotidienne en mg quand la posologie le permet (« 1 g x 2/j » → 2000,
+ * « 1 g matin 500 mg soir » → 1500, « 1,5 g matin et soir » → 3000). `null`
+ * pour les doses non journalières ou non pondérales (mg/kg, comprimés, UI…).
+ */
+export function doseJournaliereMg(dose: string): number | null {
+  const d = norm(dose ?? '').replace(/,/g, '.');
+  if (!d || /mg\/kg|g\/kg|mg\/m|comprim|cp\b|gelule|ui\b|mensuel|semaine|mois|cure/.test(d)) return null;
+  const termes = [...d.matchAll(/(\d+(?:\.\d+)?)\s?(mg|g)\b([^0-9]*)/g)];
+  if (!termes.length) return null;
+  let total = 0;
+  for (const t of termes) {
+    let mg = parseFloat(t[1]) * (t[2] === 'g' ? 1000 : 1);
+    const suite = t[3];
+    // Multiplicateur juste après la dose : « x 2 », « 2x/j ».
+    const zone = d.slice(t.index! + t[0].length - suite.length, t.index! + t[0].length + 3);
+    const fois = zone.match(/^\s*x\s?(\d)|^\s*(\d)\s?x/);
+    if (fois) mg *= +(fois[1] ?? fois[2]);
+    else if (/matin\s+et\s+(le\s+)?soir/.test(suite)) mg *= 2;
+    total += mg;
+  }
+  return Math.round(total);
 }

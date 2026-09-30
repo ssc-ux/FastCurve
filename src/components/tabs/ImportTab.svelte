@@ -42,7 +42,7 @@
 
   // ── Import d'une capture ─────────────────────────────────────
 
-  type Shot = { id: string; img: HTMLImageElement; thumb: string; crop?: CropRect | null };
+  type Shot = { id: string; img: HTMLImageElement; thumb: string; crop?: CropRect | null; photo?: boolean };
   let pending = $state<Shot[]>([]);
   let busy = $state(false);
   let etape = $state('');
@@ -144,7 +144,7 @@
     };
     photosPrises++;
     const image = await canvasToImage(photo);
-    pending = [...pending, { id: uid(), img: image, thumb: shotThumb(image) }];
+    pending = [...pending, { id: uid(), img: image, thumb: shotThumb(image), photo: true }];
     await lireTout();
   }
 
@@ -191,6 +191,13 @@
           },
         });
         if (annulee) return;
+        // Garde-fou : la lecture sur PHOTO d'écran n'est pas encore fiable —
+        // chaque case lue sur une photo est à vérifier.
+        if (sh.photo && !t.echec) {
+          for (const l of t.lignes) for (const c of l.cellules) {
+            if (c.texte && !c.douteux) { c.douteux = true; c.motifs = [...c.motifs, 'lu sur une photo d’écran : à vérifier']; }
+          }
+        }
         if (t.echec) echecs.push(t.message);
         else tableaux.push({ t, source: sh });
       }

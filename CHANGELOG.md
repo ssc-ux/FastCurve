@@ -1,5 +1,24 @@
 # Journal des modifications
 
+## 1.3.0
+
+### Carrés bleus (traitements)
+- Lecture refondue sur de vrais comptes-rendus : plages « de 2003 à 2010 »,
+  années seules, « en octobre 2019 », date de tête de ligne.
+- Chaque ligne dit ce qu'elle fait : début, arrêt, nouvelle dose, cure,
+  traitement actuel ; « relai du X par Y » arrête X et démarre Y ; faute de
+  frappe rattrapée (« MYORTIC » → MYFORTIC).
+- Sections sans rapport ignorées (suivi, vaccinations, projet, bilan) : leurs
+  dates ne deviennent plus des dates de traitement.
+- Un changement de dose devient un palier de la même barre (dose en mg/j
+  quand elle se calcule) ; une ligne sans date n'est plus ajoutée « à
+  aujourd'hui » : elle est décochée.
+
+### Captures
+- Barre de titre au-dessus du tableau, pictogrammes au liseré flou, numéros
+  de demande pris pour des valeurs, virgule perdue rétablie d'après la ligne
+  (case laissée en jaune) — banc : 15 captures dont 3 réelles, 100 %.
+
 ## 1.2.0
 
 ### Traitements
