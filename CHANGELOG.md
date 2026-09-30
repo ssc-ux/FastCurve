@@ -4,7 +4,7 @@
 
 ### Traitements
 - Trois façons de les renseigner, comme la biologie : **Saisir** (manuel),
-  **Coller** (carré bleu du compte-rendu, extraction dès le collage) et
+  **Coller** (carré bleu du compte-rendu, retouchable avant « Analyser ») et
   **Dicter** (Dragon écrit dans la zone ; analyse à chaque pause).
 - Boutons « Ajouter » distincts (traitement, annotation, lecture validée).
 
