@@ -28,14 +28,15 @@ for (const c0 of cas.filter(x => x.id.includes(filtre))) {
     const a = cam.analyserImage(v, 0);
     const prete = cam.preparerPhoto(v, a.mesure.angle, a.boiteRelative, c.flou);
     window.__prete = prete.toDataURL('image/jpeg', 0.7);
-    const t = await reconnaitreTableau(prete, { photo: true });
+    const traces = []; const capture = cam.photoVersCapture(prete); window.__prete = capture.toDataURL('image/png');
+    const t = await reconnaitreTableau(capture, { trace: (e, d) => traces.push(e + ' ' + JSON.stringify(d)) }); window.__traces = traces;
     const res = t.echec ? { dates: [], lignes: [] } : {
       dates: t.dates.map(d => d.iso ?? ''),
       lignes: t.lignes.map(l => ({ nom: l.nom, unite: l.unite, valeurs: l.cellules.map(x => x.texte), douteux: l.cellules.map(x => x.douteux) })),
     };
-    return { img: window.__prete, lu: [res.dates.join(' '), ...res.lignes.map(l => l.nom + ': ' + l.valeurs.map((v, k) => v + (l.douteux[k] ? '?' : '')).join('|'))], verdict: a.verdict.message, angle: a.mesure.angle, boite: !!a.boiteRelative, echec: t.echec ? t.message : '', score: noter(c, res) };
+    return { traces: window.__traces, img: window.__prete, lu: [res.dates.join(' '), ...res.lignes.map(l => l.nom + ': ' + l.valeurs.map((v, k) => v + (l.douteux[k] ? '?' : '')).join('|'))], verdict: a.verdict.message, angle: a.mesure.angle, boite: !!a.boiteRelative, echec: t.echec ? t.message : '', score: noter(c, res) };
   }, c);
-  if (process.env.DETAIL) { console.log(r.lu.join('\n')); (await import('node:fs')).writeFileSync('/tmp/claude-0/sp/prete-' + c.id + '.jpg', Buffer.from(r.img.split(',')[1], 'base64')); }
+  if (process.env.DETAIL) { console.log(r.traces.map(x => x.slice(0, 1500)).join('\n')); console.log(r.lu.join('\n')); (await import('node:fs')).writeFileSync('/tmp/claude-0/sp/prete-' + c.id + '.jpg', Buffer.from(r.img.split(',')[1], 'base64')); }
   const s = r.score;
   tot.c += s.cellules; tot.j += s.cellulesJustes; tot.f += s.cellulesFausses; tot.fs += s.fauxSilencieux; tot.m += s.cellulesManquantes;
   console.log(c.id.padEnd(9), `${s.cellulesJustes}/${s.cellules}`.padStart(8), `fausses ${s.cellulesFausses} (silencieuses ${s.fauxSilencieux}) manquantes ${s.cellulesManquantes} dates ${s.datesJustes}/${s.dates} lignes ${s.lignesTrouvees}/${s.lignes}`, `| cadre: ${r.verdict} ${r.boite ? '' : '(non repéré)'} angle ${r.angle}`, r.echec);
