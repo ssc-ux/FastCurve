@@ -8,6 +8,21 @@
   **Dicter** (Dragon écrit dans la zone ; analyse à chaque pause).
 - Boutons « Ajouter » distincts (traitement, annotation, lecture validée).
 
+### Vérification et courbe (audit, priorité 1)
+- Vérification d'une lecture en pleine largeur ; au-dessus de chaque valeur,
+  nom et date, l'extrait correspondant de la capture d'origine.
+- Axe du temps coupé (« // ») sur les trous de plusieurs années : chaque
+  période reste lisible ; la courbe traverse la coupure en pointillé.
+
+### Photo guidée (en réglage, activée par `?photo=1`)
+- Caméra avec cadre qui suit le tableau repéré en direct (rouge / orange /
+  vert) et consignes : redresser, se placer en face, se rapprocher, zoomer.
+- Déclenchement automatique quand l'image est bonne et stable ; rafale de
+  4 images, la plus nette est retenue ; mise au point visée sur le tableau.
+- Photo redressée, recadrée, lissée contre le moiré, puis lue comme une
+  capture. « Reprendre la photo » et « Ajouter la suite du tableau »
+  (les parties sont fusionnées par date et par variable).
+
 ## 1.1.0 — mise en production
 
 ### Reconnaissance des captures d'écran
