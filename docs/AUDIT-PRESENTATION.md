@@ -27,7 +27,7 @@ Résultat : **0 violation axe** sur tous les écrans au bureau et sur téléphon
 
 ## Recommandations, par priorité
 
-### P1 — Écran de vérification trop étroit (fiabilité)
+### P1 — Écran de vérification trop étroit (fiabilité) *(corrigé)*
 
 ![Vérification au bureau](audit/bureau-3-verification.png)
 
@@ -48,7 +48,7 @@ la vignette de ligne par **l'extrait de l'image au-dessus de chaque valeur**
 devient immédiate, case par case. Sur téléphone : une date à la fois, comme
 la saisie mobile existante. *Effort : moyen.*
 
-### P1 — Courbe écrasée quand les dates sont très dispersées
+### P1 — Courbe écrasée quand les dates sont très dispersées *(corrigé)*
 
 ![Courbe](audit/bureau-4-courbe.png)
 

@@ -21,6 +21,8 @@
   import { learnAnalyte, lookupAnalyte } from '../../lib/learn/memory';
   import { uiBus } from '../../lib/models/ui.svelte';
   import DicteeBio from './DicteeBio.svelte';
+  import CameraGuidee from '../CameraGuidee.svelte';
+  import { cameraDisponible } from '../../lib/photo/camera';
 
   let { initialMode = 'photo', onImported = () => {} }: { initialMode?: 'photo' | 'dictee'; onImported?: () => void } = $props();
   // svelte-ignore state_referenced_locally
@@ -121,6 +123,40 @@
     } catch {
       errorMsg = "Je n’ai pas su ouvrir cette image.";
     }
+  }
+
+  // ── Photo guidée (téléphone) ─────────────────────────────────
+  // Chaque photo est lue comme une capture ; plusieurs photos d'un long
+  // tableau (« Ajouter la suite ») sont fusionnées par date et par variable,
+  // exactement comme plusieurs captures collées.
+  let cameraOuverte = $state(false);
+  let photosPrises = $state(0);
+  /** État de la vérification avant la dernière photo, pour « Reprendre ». */
+  let avantDernierePhoto: { rows: VRow[]; dates: string[]; dd: boolean[]; dm: string[][]; dt: (string | undefined)[] } | null = null;
+  const avecCamera = cameraDisponible();
+
+  function ouvrirCamera() { errorMsg = ''; cameraOuverte = true; }
+
+  async function surPhoto(photo: HTMLCanvasElement) {
+    cameraOuverte = false;
+    avantDernierePhoto = {
+      rows: vRows.map(r => ({ ...r })), dates: [...vDates], dd: [...vDatesDoute], dm: [...vDatesMotifs], dt: [...vDatesThumbs],
+    };
+    photosPrises++;
+    const image = await canvasToImage(photo);
+    pending = [...pending, { id: uid(), img: image, thumb: shotThumb(image) }];
+    await lireTout();
+  }
+
+  /** Oublie la dernière photo (mal cadrée, floue…) et rouvre la caméra. */
+  function reprendrePhoto() {
+    if (avantDernierePhoto) {
+      vRows = avantDernierePhoto.rows; vDates = avantDernierePhoto.dates; vDatesDoute = avantDernierePhoto.dd;
+      vDatesMotifs = avantDernierePhoto.dm; vDatesThumbs = avantDernierePhoto.dt;
+    }
+    photosPrises = Math.max(0, photosPrises - 1);
+    errorMsg = '';
+    cameraOuverte = true;
   }
 
   /**
@@ -347,6 +383,7 @@
       });
     }
     vRows = []; vDates = []; vDatesDoute = []; vDatesMotifs = []; vDatesThumbs = []; pending = [];
+    photosPrises = 0; avantDernierePhoto = null;
     uiBus.toast(`${added} valeur(s) ajoutée(s) au graphique.`);
     onImported();
   }
@@ -420,6 +457,11 @@
              l'habillage bascule selon l'écran (`.desktop-only`/`.mobile-only`). -->
         <p class="drop-title desktop-only"><strong>Collez une capture d'écran</strong> (Ctrl+V)</p>
         <p class="drop-title mobile-only"><strong>Importer un bilan</strong></p>
+        {#if avecCamera}
+          <button class="primary mobile-only photo-guidee" onclick={ouvrirCamera}>
+            <Icon name="camera" size={20} inline /> Photo guidée de l'écran
+          </button>
+        {/if}
         <p class="muted small drop-cta">
           <span class="desktop-only">ou glissez une image / un PDF ici · </span>
           <label class="filebtn">
@@ -470,10 +512,23 @@
         <strong>Je n'ai pas su lire cette capture.</strong>
         <p>{errorMsg}</p>
         <p class="faint small">Essayez une capture plus large ou plus nette (le tableau entier, sans zoom arrière), ou collez le tableau depuis Excel dans la grille.</p>
+        {#if photosPrises && avecCamera}
+          <button class="primary" style="margin-top:8px;" onclick={reprendrePhoto}><Icon name="camera" size={16} inline /> Reprendre la photo</button>
+        {/if}
       </div>
     {/if}
 
+    {#if cameraOuverte}
+      <CameraGuidee partie={photosPrises + 1} onPhoto={surPhoto} onClose={() => (cameraOuverte = false)} />
+    {/if}
+
     {#if hasValidation}
+      {#if photosPrises && avecCamera && !busy}
+        <div class="row wrap photo-actions">
+          <button onclick={reprendrePhoto}><Icon name="camera" size={16} inline /> Reprendre la photo</button>
+          <button onclick={ouvrirCamera}><Icon name="plus" size={16} inline /> Ajouter la suite du tableau</button>
+        </div>
+      {/if}
       <div class="card" style="padding:12px;">
         <div class="row wrap" style="margin-bottom:8px;">
           <strong>Vérification</strong>
@@ -571,6 +626,10 @@
   }
   .drop p { margin: 4px 0; }
   .drop-title { font-size: 16px; }
+  .photo-guidee { display: none; margin: 10px auto 4px; min-height: 52px; padding: 0 22px; font-size: 16px; font-weight: 700; border-radius: 12px; align-items: center; gap: 8px; }
+  @media (max-width: 640px) { .photo-guidee { display: inline-flex; } }
+  .photo-actions { gap: 8px; margin-bottom: 10px; }
+  .photo-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
   .filebtn { color: var(--accent); text-decoration: underline; cursor: pointer; }
   .mobile-only { display: none; }
 
