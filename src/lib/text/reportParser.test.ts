@@ -146,3 +146,49 @@ describe('parseReport', () => {
     expect(list).toHaveLength(0);
   });
 });
+
+import { doseJournaliereMg } from './reportParser';
+import { CARRE_PTI, CARRE_SCLERODERMIE } from './__fixtures__/carres-bleus';
+
+describe('carrés bleus réels', () => {
+  const resume = (t: string) => parseReport(t).map(x => `${x.date ?? '?'} ${x.action} ${x.name.toUpperCase()}${x.dose ? ' | ' + x.dose : ''}`);
+
+  it('PTI : plages d’années, cures, paliers, arrêt non daté, sections ignorées', () => {
+    const r = resume(CARRE_PTI);
+    for (const attendu of [
+      '2003-01-01 debut IMUREL', '2010-01-01 arret IMUREL',
+      '2011-01-01 debut VELBE', '2014-01-01 arret VELBE',
+      '2014-01-01 debut RITUXIMAB', '2015-01-01 arret RITUXIMAB',
+      '2015-01-01 debut CELLCEPT', '2015-01-01 debut REVOLADE', '? arret REVOLADE',
+      '2020-01-01 evenement IGIV', '2020-02-01 evenement IGIV', '2020-03-01 evenement IGIV',
+      '2019-10-01 modif CELLCEPT | 500 mg/j',
+      '2020-02-01 modif CELLCEPT | 1 g matin 500 mg soir',
+      '2020-03-01 modif CELLCEPT | 1 g x 2/j',
+      '? actuel CELLCEPT | 1 g le matin 500 mg le soir',
+    ]) expect(r).toContain(attendu);
+    // Projet thérapeutique, suivi, consultation : aucune ligne.
+    expect(r.filter(x => x.includes('2020-10-13'))).toEqual([]);
+    expect(r.filter(x => /PNEUMO|HAEMO/.test(x))).toEqual([]);
+  });
+
+  it('sclérodermie : relai (arrêt + début), ajout, faute de frappe, traitement actuel', () => {
+    const r = resume(CARRE_SCLERODERMIE);
+    expect(r).toEqual([
+      '2022-11-01 debut IEC', '2022-11-01 debut LOXEN',
+      '2022-12-01 debut CELLCEPT | 2 g/jour', '2022-12-01 debut TOCILIZUMAB | 8 mg/kg IV mensuel',
+      '2023-02-01 arret CELLCEPT', '2023-02-01 debut MYFORTIC', '2023-02-01 debut AMLODIPINE',
+      '2024-10-01 modif MYFORTIC | 1 comprimé matin et soir',
+      '2025-06-01 arret MYFORTIC',
+      '2026-08-01 debut MYFORTIC | deux comprimés matin et soir',
+      '? actuel TOCILIZUMAB | 162 mg SC par semaine', '? actuel MYFORTIC | 360 mg 2x/j',
+    ]);
+  });
+});
+
+describe('dose journalière en mg', () => {
+  it.each([
+    ['500 mg/j', 500], ['2 g/jour', 2000], ['1 g x 2/j', 2000], ['1 g matin 500 mg soir', 1500],
+    ['1,5 g matin et soir', 3000], ['360 mg 2x/j', 720], ['10 mg le matin', 10],
+    ['1 comprimé matin et soir', null], ['8 mg/kg IV mensuel', null], ['', null],
+  ])('%s → %s', (dose, attendu) => expect(doseJournaliereMg(dose as string)).toBe(attendu));
+});
