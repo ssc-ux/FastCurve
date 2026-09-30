@@ -6,7 +6,7 @@
   import { getKnownDrugs, learnDrug } from '../../lib/learn/memory';
   import { uiBus } from '../../lib/models/ui.svelte';
   import { posologiesPour, datesDuSchema, type SchemaPosologie } from '../../lib/models/posologies';
-  import { parseReport, type ExtractedTreatment } from '../../lib/text/reportParser';
+  import { doseJournaliereMg, parseReport, type ExtractedTreatment } from '../../lib/text/reportParser';
   import TreatmentEditor from './TreatmentEditor.svelte';
 
   const knownDrugs = getKnownDrugs();
@@ -101,7 +101,9 @@
 
   function analyzeText() {
     const list = parseReport(reportText, getKnownDrugs());
-    trows = list.map(t => ({ ...t, include: true, origName: t.name }));
+    // Une ligne sans date n'est jamais ajoutée « à aujourd'hui » : elle est
+    // décochée, le médecin la date s'il veut la garder.
+    trows = list.map(t => ({ ...t, include: !!t.date, origName: t.name }));
     analyzed = true;
   }
 
@@ -112,39 +114,60 @@
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
+  const LIBELLE_ACTION: Record<ExtractedTreatment['action'], string> = {
+    debut: 'Début', arret: 'Arrêt', modif: 'Nouvelle dose', evenement: 'Cure / bolus', actuel: 'Actuel',
+  };
+
+  /**
+   * Construit la frise à partir des lignes lues, dans l'ordre chronologique :
+   * un changement de dose devient un palier de la barre en cours (et non une
+   * nouvelle barre), un arrêt la ferme, une cure est un événement ponctuel,
+   * « actuel » met à jour la dose de la barre en cours.
+   */
   function commitText() {
-    const rows = [...trows].filter(r => r.include && r.name.trim())
-      .sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999'));
-    const openByName = new Map<string, string>(); // nom normalisé → id du traitement ouvert
+    const rows = [...trows].filter(r => r.include && r.name.trim() && r.date)
+      .sort((a, b) => a.date!.localeCompare(b.date!));
     const nrm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-    let added = 0, ended = 0;
+    type Ouvert = { id: string; mg: number | null; points: { date: string; dose: number }[] };
+    const ouverts = new Map<string, Ouvert>();
+    let added = 0, ended = 0, paliers = 0;
     for (const r of rows) {
-      if (r.isStop && r.date) {
-        const id = openByName.get(nrm(r.name));
-        if (id) { store.updateTreatment(id, { end: r.date }); ended++; continue; }
-        continue; // arrêt sans traitement ouvert correspondant → ignoré
+      const cle = nrm(r.name);
+      const ouvert = ouverts.get(cle);
+      const mg = doseJournaliereMg(r.dose);
+      if (r.action === 'arret') {
+        if (ouvert) { store.updateTreatment(ouvert.id, { end: r.date! }); ouverts.delete(cle); ended++; }
+        continue;
       }
-      const t = store.addTreatment({
-        name: r.name.trim(), dose: r.dose, kind: r.kind, start: r.date ?? todayISO(),
-      });
-      // « avec décroissance progressive » dans le compte-rendu : on amorce les
-      // paliers à partir de la dose lue, plutôt que de détecter sans rien faire.
-      if (r.taper && r.kind === 'continuous') {
-        const n = (r.dose ?? '').match(/-?\d+(?:[.,]\d+)?/);
-        const depart = n ? parseFloat(n[0].replace(',', '.')) : 0;
-        if (depart > 0) {
-          store.updateTreatment(t.id, {
-            dosePoints: [{ date: t.start, dose: depart }, { date: plusSixMois(t.start), dose: 0 }],
-            doseUnit: 'mg/j',
-          });
+      if (r.action === 'evenement' || r.kind === 'event') {
+        store.addTreatment({ name: r.name.trim(), dose: r.dose, kind: 'event', start: r.date! });
+        added++; learnDrug(r.origName, r.name);
+        continue;
+      }
+      if (ouvert && (r.action === 'modif' || r.action === 'debut' || r.action === 'actuel')) {
+        // Nouvelle dose sur la barre en cours : palier chiffré si possible.
+        if (mg !== null && ouvert.mg !== null && mg !== ouvert.mg) {
+          ouvert.points.push({ date: r.date!, dose: mg });
+          store.updateTreatment(ouvert.id, { dosePoints: [...ouvert.points], doseUnit: 'mg/j', dose: r.dose });
+          ouvert.mg = mg; paliers++;
+        } else if (mg !== null && ouvert.mg === null) {
+          // Première dose chiffrée connue : la courbe de dose part d'ici.
+          ouvert.points = [{ date: r.date!, dose: mg }]; ouvert.mg = mg;
+          store.updateTreatment(ouvert.id, { dose: r.dose });
+        } else if (r.dose) {
+          store.updateTreatment(ouvert.id, { dose: r.dose });
         }
+        continue;
       }
-      added++;
-      learnDrug(r.origName, r.name); // apprentissage : retenir ce médicament
-      if (r.kind === 'continuous') openByName.set(nrm(r.name), t.id);
+      const t = store.addTreatment({ name: r.name.trim(), dose: r.dose, kind: 'continuous', start: r.date! });
+      if (r.taper && mg) {
+        store.updateTreatment(t.id, { dosePoints: [{ date: t.start, dose: mg }, { date: plusSixMois(t.start), dose: 0 }], doseUnit: 'mg/j' });
+      }
+      ouverts.set(cle, { id: t.id, mg, points: mg !== null ? [{ date: t.start, dose: mg }] : [] });
+      added++; learnDrug(r.origName, r.name);
     }
     trows = []; analyzed = false; reportText = ''; mode = 'saisir';
-    uiBus.toast(`${added} traitement(s) ajouté(s)${ended ? `, ${ended} fin(s) de traitement` : ''}.`);
+    uiBus.toast(`${added} traitement(s) ajouté(s)${paliers ? `, ${paliers} changement(s) de dose` : ''}${ended ? `, ${ended} fin(s) de traitement` : ''}.`);
   }
 
   /**
@@ -249,7 +272,7 @@
           <div style="margin-top:12px; overflow-x:auto;">
             <table class="grid vgrid">
               <thead>
-                <tr><th></th><th style="text-align:left;">Traitement</th><th>Dose</th><th>Type</th><th>Date</th><th></th></tr>
+                <tr><th></th><th style="text-align:left;">Traitement</th><th>Dose</th><th>Ligne</th><th>Date</th><th></th></tr>
               </thead>
               <tbody>
                 {#each trows as r, ri (ri)}
@@ -258,9 +281,8 @@
                     <td class="name"><input class="ninp" bind:value={r.name} aria-label="Nom du traitement" /></td>
                     <td><input class="uinp" bind:value={r.dose} aria-label="Dose de {r.name}" /></td>
                     <td>
-                      <select bind:value={r.kind} aria-label="Type de {r.name}">
-                        <option value="continuous">Continu</option>
-                        <option value="event">Événement</option>
+                      <select bind:value={r.action} aria-label="Ce que dit la ligne pour {r.name}">
+                        {#each Object.entries(LIBELLE_ACTION) as [v, l] (v)}<option value={v}>{l}</option>{/each}
                       </select>
                     </td>
                     <td><input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" aria-label="Date de {r.name}" value={r.date ? formatDate(r.date) : ''}
@@ -268,7 +290,7 @@
                       onkeydown={(e) => dateKeydown(e, r.date ?? '')}
                       onblur={(e) => dateBlur(e, r.date ?? '', (iso) => (r.date = iso))} /></td>
                     <td class="flags">
-                      {#if r.isStop}<span class="flag stop">arrêt</span>{/if}
+                      {#if !r.date}<span class="flag stop" title="Aucune date dans le texte : datez la ligne pour l'ajouter">sans date</span>{/if}
                       {#if r.taper}<span class="flag taper">↘ décroissance</span>{/if}
                     </td>
                   </tr>
@@ -276,7 +298,7 @@
               </tbody>
             </table>
           </div>
-          <p class="faint" style="font-size:12px;margin-top:6px;">« arrêt X » ferme la barre du traitement X (fin). « décroissance » : ajoutez les paliers dans l'éditeur après l'ajout.</p>
+          <p class="faint" style="font-size:12px;margin-top:6px;">Un <strong>arrêt</strong> ferme la barre, une <strong>nouvelle dose</strong> devient un palier de la même barre, une <strong>cure</strong> une flèche. Les lignes <strong>sans date</strong> sont décochées : datez-les pour les garder.</p>
           <div class="row" style="margin-top:10px;">
             <span class="faint small">{trows.filter(r => r.include).length} sélectionné(s)</span>
             <div class="spacer"></div>

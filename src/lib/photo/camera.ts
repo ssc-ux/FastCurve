@@ -4,8 +4,9 @@
 // ──────────────────────────────────────────────────────────────
 
 import { carteEncreLocale, grisCanalMin } from '../ocr/preparation';
+import { carteTexte, detecterBandes, hauteurLigne } from '../ocr/structure';
 import {
-  estimerInclinaison, nettete, trouverTableau, verdictCadrage,
+  estimerCisaillement, estimerInclinaison, nettete, trouverTableau, verdictCadrage,
   type BoiteTableau, type MesureCadrage, type Verdict,
 } from './cadrage';
 
@@ -83,14 +84,15 @@ export function analyserImage(video: HTMLVideoElement, meilleureNettete: number)
   const largeur = Math.min(LARGEUR_ANALYSE, vw);
   let c = copieRedressee(video, vw, vh, largeur, 0);
   let gris = grisCanalMin(c);
-  let { carte } = carteEncreLocale(gris);
+  // Photo d'écran : on ne garde que ce qui a la taille du texte (voir carteTexte).
+  let carte = carteTexte(carteEncreLocale(gris).carte);
   const angle = estimerInclinaison(carte);
   if (Math.abs(angle) >= 1 && Math.abs(angle) <= 4) {
     // Petite inclinaison : on redresse avant de chercher le tableau ; la
     // photo finale sera redressée du même angle.
     c = copieRedressee(video, vw, vh, largeur, angle);
     gris = grisCanalMin(c);
-    carte = carteEncreLocale(gris).carte;
+    carte = carteTexte(carteEncreLocale(gris).carte);
   }
   const tableau = trouverTableau(carte);
   let biais = 0, netteteBrute = 0;
@@ -106,10 +108,16 @@ export function analyserImage(video: HTMLVideoElement, meilleureNettete: number)
     echellePleine: vw / c.width,
   };
   const b = tableau?.boite;
+  // Marge autour du tableau : deux lignes de texte en haut (en-tête des dates,
+  // parfois hors de la suite repérée) et en bas, un peu sur les côtés.
+  const mh = tableau ? tableau.hL * 3 : 0, mw = tableau ? tableau.hL * 1.5 : 0;
   return {
     mesure,
     verdict: verdictCadrage(mesure),
-    boiteRelative: b ? { x0: b.x0 / c.width, y0: b.y0 / c.height, x1: b.x1 / c.width, y1: b.y1 / c.height } : null,
+    boiteRelative: b ? {
+      x0: Math.max(0, (b.x0 - mw) / c.width), y0: Math.max(0, (b.y0 - mh) / c.height),
+      x1: Math.min(1, (b.x1 + mw) / c.width), y1: Math.min(1, (b.y1 + mh) / c.height),
+    } : null,
     netteteBrute,
   };
 }
@@ -139,28 +147,68 @@ export async function rafale(video: HTMLVideoElement, boite: BoiteTableau | null
  * recadrée sur le tableau (avec une marge), et très légèrement lissée pour
  * gommer le moiré de la trame de l'écran.
  */
-export function preparerPhoto(photo: HTMLCanvasElement, angle: number, boite: BoiteTableau | null): HTMLCanvasElement {
+export function preparerPhoto(photo: HTMLCanvasElement, angle: number, boite: BoiteTableau | null, flou = 0.6): HTMLCanvasElement {
   const droite = Math.abs(angle) >= 1 && Math.abs(angle) <= 4
     ? copieRedressee(photo, photo.width, photo.height, photo.width, angle)
     : photo;
   const W = droite.width, H = droite.height;
-  const m = 0.04;
+  const m = 0.005;
   const b = boite ?? { x0: 0, y0: 0, x1: 1, y1: 1 };
-  const x0 = Math.max(0, (b.x0 - m) * W), y0 = Math.max(0, (b.y0 - m * 1.5) * H);
-  const x1 = Math.min(W, (b.x1 + m) * W), y1 = Math.min(H, (b.y1 + m * 1.5) * H);
+  const x0 = Math.max(0, (b.x0 - m) * W), y0 = Math.max(0, (b.y0 - m) * H);
+  const x1 = Math.min(W, (b.x1 + m) * W), y1 = Math.min(H, (b.y1 + m) * H);
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.round(x1 - x0));
   c.height = Math.max(1, Math.round(y1 - y0));
   const ctx = c.getContext('2d')!;
-  ctx.filter = 'blur(0.6px)';
+  if (flou > 0) ctx.filter = `blur(${flou}px)`;
   ctx.drawImage(droite, x0, y0, c.width, c.height, 0, 0, c.width, c.height);
-  return c;
+  return redresserCisaillement(c);
 }
 
 /**
  * Photo guidée : en réglage sur de vraies photos d'écran, elle n'est proposée
  * que si l'adresse contient `?photo=1` (le choix est ensuite mémorisé).
  */
+/**
+ * Perspective verticale : mesurée sur une copie réduite (texte seul), puis
+ * compensée sur l'image pleine résolution par un cisaillement horizontal.
+ */
+export function redresserCisaillement(c: HTMLCanvasElement): HTMLCanvasElement {
+  const petite = copieRedressee(c, c.width, c.height, Math.min(900, c.width), 0);
+  const carte = carteTexte(carteEncreLocale(grisCanalMin(petite)).carte);
+  // Perspective en trapèze : les colonnes de gauche et de droite ne penchent
+  // pas du même côté. On mesure la pente sur trois tiers de la largeur et on
+  // l'interpole linéairement en x.
+  const W = carte.largeur;
+  const tiers = [0, 1, 2].map(k => {
+    const x0 = Math.round((k * W) / 3), x1 = Math.round(((k + 1) * W) / 3);
+    const sous = { largeur: x1 - x0, hauteur: carte.hauteur, encre: new Uint8Array((x1 - x0) * carte.hauteur) };
+    for (let y = 0; y < carte.hauteur; y++) for (let x = x0; x < x1; x++) sous.encre[y * (x1 - x0) + (x - x0)] = carte.encre[y * W + x];
+    return { xc: (x0 + x1) / 2 / W, pente: estimerCisaillement(sous) };
+  });
+  if (tiers.every(t => Math.abs(t.pente) < 0.01)) return c;
+  // Régression linéaire pente(x) sur les trois mesures.
+  const mx = tiers.reduce((a, t) => a + t.xc, 0) / 3, my = tiers.reduce((a, t) => a + t.pente, 0) / 3;
+  const k = tiers.reduce((a, t) => a + (t.xc - mx) * (t.pente - my), 0) / tiers.reduce((a, t) => a + (t.xc - mx) ** 2, 0);
+  const pente = (xr: number) => my + k * (xr - mx);
+  const d = document.createElement('canvas');
+  d.width = c.width; d.height = c.height;
+  const ctx = d.getContext('2d')!;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, d.width, d.height);
+  const yc = c.height / 2, bande = 6;
+  // Chaque bande verticale reçoit son propre cisaillement : x' = x - p·(y - yc).
+  for (let x = 0; x < c.width; x += bande) {
+    const p = pente((x + bande / 2) / c.width);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x, 0, bande, c.height); ctx.clip();
+    ctx.setTransform(1, 0, -p, 1, p * yc, 0);
+    ctx.drawImage(c, 0, 0);
+    ctx.restore();
+  }
+  return d;
+}
+
 export function cameraDisponible(): boolean {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return false;
   try {
@@ -169,4 +217,42 @@ export function cameraDisponible(): boolean {
     if (p === '0') localStorage.removeItem('fastcurve.photo-guidee');
     return localStorage.getItem('fastcurve.photo-guidee') === '1';
   } catch { return false; }
+}
+
+/**
+ * Photo → « fausse capture » : on ramène le texte à la taille d'une capture
+ * d'écran (≈ 14 px de haut), puis on ne garde que le texte, noir sur blanc —
+ * sans filets, fonds colorés ni moiré. La lecture des captures, éprouvée,
+ * fait le reste.
+ */
+export function photoVersCapture(c: HTMLCanvasElement, hauteurCible = 20): HTMLCanvasElement {
+  // 1. Taille du texte, mesurée sur une copie réduite.
+  const petite = copieRedressee(c, c.width, c.height, Math.min(1200, c.width), 0);
+  const cartePetite = carteTexte(carteEncreLocale(grisCanalMin(petite)).carte);
+  const hL = hauteurLigne(detecterBandes(cartePetite)) * (c.width / petite.width);
+  const echelle = hL > 0 ? Math.min(1, hauteurCible / hL) : Math.min(1, 1800 / c.width);
+  // 2. Mise à l'échelle (lissage de qualité : il gomme aussi le moiré).
+  const e = copieRedressee(c, c.width, c.height, Math.round(c.width * echelle), 0);
+  // 3. Texte seul, noir sur blanc. Gris en LUMINANCE : le canal minimum
+  //    (utile pour un texte coloré sur capture) rend un surlignage jaune
+  //    presque aussi sombre que le texte sur une photo.
+  const carte = carteTexte(carteEncreLocale(grisLuminance(e)).carte);
+  const sortie = document.createElement('canvas');
+  sortie.width = carte.largeur; sortie.height = carte.hauteur;
+  const ctx = sortie.getContext('2d')!;
+  const img = ctx.createImageData(sortie.width, sortie.height);
+  for (let i = 0; i < carte.encre.length; i++) {
+    const v = carte.encre[i] ? 0 : 255;
+    img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v;
+    img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return sortie;
+}
+
+function grisLuminance(canvas: HTMLCanvasElement) {
+  const d = canvas.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, canvas.width, canvas.height).data;
+  const v = new Float32Array(canvas.width * canvas.height);
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) v[p] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+  return { largeur: canvas.width, hauteur: canvas.height, v };
 }
