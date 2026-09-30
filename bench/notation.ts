@@ -127,6 +127,15 @@ export function noter(cas: CasVerite, res: TableauMesure): Score {
     const lm = appariees[li];
     if (lm) s.lignesTrouvees++;
     lv.valeurs.forEach((attendu, k) => {
+      // « ? » : case masquée sur l'image (infobulle…) — non notée, mais une
+      // valeur inventée SANS signalement reste une faute silencieuse.
+      if (attendu === '?') {
+        const ci = colDe.get(k);
+        const brut = lm && ci !== undefined ? (lm.valeurs[ci] ?? '') : '';
+        const douteux = lm && ci !== undefined ? !!lm.douteux[ci] : false;
+        if (brut && !douteux) { s.cellules++; s.cellulesFausses++; s.fauxSilencieux++; }
+        return;
+      }
       s.cellules++;
       const ci = colDe.get(k);
       const brut = lm && ci !== undefined ? (lm.valeurs[ci] ?? '') : '';

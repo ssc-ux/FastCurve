@@ -58,3 +58,23 @@ describe('filets du tableau', () => {
     expect(c.encre[15 * W + 3]).toBe(1);
   });
 });
+
+import { corrigerDecimalePerdue, decimalePerdue } from './correction';
+
+describe('virgule perdue, la ligne pour témoin', () => {
+  it('rétablit 445 → 44.5 quand toute la ligne a une décimale', () => {
+    expect(corrigerDecimalePerdue('445', ['34.4', '35.5', '37.8', '42.3', '34.8'])).toBe('44.5');
+  });
+  it('rétablit 1222 → 12.22 (deux décimales dans la ligne)', () => {
+    expect(corrigerDecimalePerdue('1222', ['6.90', '5.63', '8.78', '12.04'])).toBe('12.22');
+  });
+  it('signale même si plusieurs virgules de la ligne ont sauté (photo)', () => {
+    expect(decimalePerdue('1222', ['6.90', '5.63', '878', '12.04', '7.45'])).toBe(true);
+  });
+  it('ne touche pas une vraie évolution (CRP 96 → 7, sans décimales)', () => {
+    expect(corrigerDecimalePerdue('96', ['7', '12', '5'])).toBeNull();
+  });
+  it('ne réécrit pas si la ligne ne dit pas combien de décimales', () => {
+    expect(corrigerDecimalePerdue('445', ['34.44', '35.5', '37.8'])).not.toBe('4.45');
+  });
+});

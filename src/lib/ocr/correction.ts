@@ -104,6 +104,27 @@ export function aSeparateur(texte: string): boolean {
  * signalée à tort, et le médecin est formel — une valeur simplement
  * pathologique ne doit jamais être surlignée.
  */
+/**
+ * Valeur corrigée d'une décimale perdue (voir `decimalePerdue`) : le facteur
+ * 10 ou 100 qui la remet le mieux dans la ligne. `null` si rien à corriger.
+ */
+export function corrigerDecimalePerdue(texte: string, autresDeLaLigne: string[]): string | null {
+  if (!decimalePerdue(texte, autresDeLaLigne)) return null;
+  const v = valeurDe(texte);
+  if (v === null) return null;
+  const refs = autresDeLaLigne.filter(aSeparateur).map(valeurDe).filter((x): x is number => x !== null && x !== 0);
+  const med = refs.map(Math.abs).sort((a, b) => a - b)[Math.floor(refs.length / 2)];
+  // Décimales usuelles de la ligne : on écrit la valeur corrigée pareil.
+  const decs = autresDeLaLigne.filter(aSeparateur).map(t => (t.split(/[.,]/)[1] ?? '').length);
+  const nd = decs.sort((a, b) => a - b)[Math.floor(decs.length / 2)] ?? 1;
+  const f = [10, 100].sort((a, b) => Math.abs(Math.log(Math.abs(v) / a / med)) - Math.abs(Math.log(Math.abs(v) / b / med)))[0];
+  const chiffres = texte.replace(/[^\d]/g, '');
+  const k = f === 10 ? 1 : 2;
+  if (chiffres.length <= k || k !== nd) return null; // on ne réécrit que si la ligne dit combien de décimales
+  const prefixe = texte.trim().match(/^[<>]/)?.[0] ?? '';
+  return prefixe + chiffres.slice(0, -k) + '.' + chiffres.slice(-k);
+}
+
 export function decimalePerdue(texte: string, autresDeLaLigne: string[]): boolean {
   if (aSeparateur(texte)) return false;
   const v = valeurDe(texte);
@@ -113,14 +134,17 @@ export function decimalePerdue(texte: string, autresDeLaLigne: string[]): boolea
     .map(t => ({ t, v: valeurDe(t) }))
     .filter((o): o is { t: string; v: number } => o.v !== null && o.v !== 0);
   if (autres.length < 2) return false;
-  if (!autres.every(o => aSeparateur(o.t))) return false;
+  // La MAJORITÉ des voisines porte une virgule (sur une photo, plusieurs
+  // virgules d'une même ligne peuvent sauter à la fois).
+  const avecSep = autres.filter(o => aSeparateur(o.t));
+  if (avecSep.length * 2 <= autres.length) return false;
 
-  const vals = autres.map(o => Math.abs(o.v)).sort((a, b) => a - b);
+  const vals = avecSep.map(o => Math.abs(o.v)).sort((a, b) => a - b);
   const med = vals[Math.floor(vals.length / 2)];
   if (med <= 0) return false;
 
   const ecart = Math.abs(v) / med;
   if (ecart < 6) return false;                 // pas décalé : rien à dire
-  const apres = Math.abs(v) / 10 / med;
-  return apres >= 1 / 3 && apres <= 3;         // ÷10 le remet dans la ligne
+  // ÷10 ou ÷100 le remet dans la ligne (« 12,2 » → 122, « 12,22 » → 1222).
+  return [10, 100].some(f => { const r = Math.abs(v) / f / med; return r >= 1 / 3 && r <= 3; });
 }

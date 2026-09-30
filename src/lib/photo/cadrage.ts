@@ -53,6 +53,35 @@ export function estimerInclinaison(carte: CarteEncre, x0 = 0, x1 = carte.largeur
 }
 
 /**
+ * Cisaillement horizontal (perspective d'une photo prise un peu de haut ou de
+ * bas) : les colonnes « penchent » — x dérive linéairement avec y. On cherche
+ * le décalage par ligne `s` (px de x par px de y) qui rend le profil vertical
+ * de l'encre le plus contrasté : c'est là que les gouttières entre colonnes
+ * redeviennent droites.
+ */
+export function estimerCisaillement(carte: CarteEncre, maxPente = 0.2): number {
+  const { largeur: W, hauteur: H, encre } = carte;
+  const pts: number[] = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (encre[y * W + x]) pts.push(x, y);
+  if (pts.length < 40) return 0;
+  const yc = H / 2;
+  let meilleur = 0, score = -1;
+  for (let s = -maxPente; s <= maxPente + 1e-9; s += 0.005) {
+    const hist = new Float64Array(W * 2);
+    for (let i = 0; i < pts.length; i += 2) {
+      const xp = Math.round(pts[i] - (pts[i + 1] - yc) * s) + (W >> 1);
+      if (xp >= 0 && xp < hist.length) hist[xp]++;
+    }
+    // Contraste du profil : somme des carrés des différences voisines
+    // (des gouttières franches créent de fortes transitions).
+    let sc = 0;
+    for (let i = 1; i < hist.length; i++) { const d = hist[i] - hist[i - 1]; sc += d * d; }
+    if (sc > score) { score = sc; meilleur = s; }
+  }
+  return Math.round(meilleur * 1000) / 1000;
+}
+
+/**
  * Tableau le plus vraisemblable de la carte : la plus longue suite de lignes
  * de texte consécutives qui portent chacune une large gouttière (au moins
  * deux colonnes). Au moins trois lignes, sinon ce n'est pas un tableau.

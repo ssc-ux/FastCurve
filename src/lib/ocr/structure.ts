@@ -443,7 +443,7 @@ export interface CarteCouleur {
  */
 export function sansDecorationsCouleur(
   carte: CarteEncre, coul: CarteCouleur, bande: Bande, col: Colonne,
-): { carte: CarteEncre; bande: Bande; col: Colonne; dx: number; dy: number; picto: boolean } {
+): { carte: CarteEncre; bande: Bande; col: Colonne; dx: number; dy: number; picto: boolean; pictoX0?: number; pictoX1?: number } {
   const x0 = Math.max(0, col.x0), x1 = Math.min(carte.largeur - 1, col.x1);
   const y0 = Math.max(0, bande.y0), y1 = Math.min(carte.hauteur - 1, bande.y1);
   const w = x1 - x0 + 1, h = y1 - y0 + 1;
@@ -547,13 +547,21 @@ export function sansDecorationsCouleur(
   propage(1, 3, true);
   propage(2, 4, oteChaud);
 
-  let picto = false;
+  let picto = false, pictoX0 = Infinity, pictoX1 = -Infinity;
   for (let i = 0; i < encre.length; i++) {
     if (!retire[i]) continue;
     picto = true;
     encre[i] = 0;
+    const x = i % w;
+    if (x < pictoX0) pictoX0 = x;
+    if (x > pictoX1) pictoX1 = x;
   }
-  return { carte: { largeur: w, hauteur: h, encre }, ...local, picto };
+  // Étendue horizontale (locale) du pictogramme retiré : son liseré flou
+  // (JPEG, lissage) peut survivre comme « encre » — l'appelant découpe alors
+  // la case strictement de l'autre côté.
+  return picto
+    ? { carte: { largeur: w, hauteur: h, encre }, ...local, picto, pictoX0, pictoX1 }
+    : { carte: { largeur: w, hauteur: h, encre }, ...local, picto };
 }
 
 /** Boîte englobante de l'encre d'une cellule (null si la cellule est vide). */
@@ -613,4 +621,50 @@ export function effacerFilets(carte: CarteEncre, hL: number): CarteEncre {
     }
   }
   return { largeur: W, hauteur: H, encre };
+}
+
+/**
+ * Carte d'encre réduite au TEXTE, pour les photos d'écran : on n'y garde que
+ * les composantes connexes de la taille d'un caractère ou d'un mot. Filets du
+ * tableau, bords noirs de l'écran, aplats de couleur et bruit de moiré — qui,
+ * sur une photo, relient toutes les lignes entre elles en une seule masse —
+ * disparaissent.
+ */
+export function carteTexte(carte: CarteEncre, opts: { hMax?: number; wMax?: number } = {}): CarteEncre {
+  const { largeur: W, hauteur: H, encre } = carte;
+  const hMax = opts.hMax ?? Math.max(6, Math.round(H * 0.045));
+  const wMax = opts.wMax ?? Math.max(12, Math.round(W * 0.2));
+  const sortie = new Uint8Array(W * H);
+  const vu = new Uint8Array(W * H);
+  const pile = new Int32Array(W * H);
+  const membres = new Int32Array(W * H);
+  for (let depart = 0; depart < W * H; depart++) {
+    if (!encre[depart] || vu[depart]) continue;
+    let sommet = 0, n = 0;
+    let x0 = W, x1 = -1, y0 = H, y1 = -1;
+    pile[sommet++] = depart; vu[depart] = 1;
+    while (sommet > 0) {
+      const i = pile[--sommet];
+      membres[n++] = i;
+      const x = i % W, y = (i / W) | 0;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= H) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          if (nx < 0 || nx >= W) continue;
+          const k = ny * W + nx;
+          if (encre[k] && !vu[k]) { vu[k] = 1; pile[sommet++] = k; }
+        }
+      }
+    }
+    const h = y1 - y0 + 1, w = x1 - x0 + 1;
+    const densite = n / (w * h);
+    // Caractère ou mot : ni trop haut (filet vertical, bord d'écran), ni trop
+    // large (filet horizontal), ni plein (aplat), ni poussière.
+    if (h > hMax || w > wMax || n < 3 || (densite > 0.8 && w * h > 30) || (h >= 2 && w / h > 25)) continue;
+    for (let k = 0; k < n; k++) sortie[membres[k]] = 1;
+  }
+  return { largeur: W, hauteur: H, encre: sortie };
 }
