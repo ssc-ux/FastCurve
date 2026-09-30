@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## 1.2.0
+
+### Traitements
+- Trois façons de les renseigner, comme la biologie : **Saisir** (manuel),
+  **Coller** (carré bleu du compte-rendu, extraction dès le collage) et
+  **Dicter** (Dragon écrit dans la zone ; analyse à chaque pause).
+- Boutons « Ajouter » distincts (traitement, annotation, lecture validée).
+
 ## 1.1.0 — mise en production
 
 ### Reconnaissance des captures d'écran

@@ -68,8 +68,34 @@
   // La zone traitement d'un compte-rendu ne concerne QUE les traitements :
   // ce geste vit ici, pas dans Biologie/EFR.
   type TRow = ExtractedTreatment & { include: boolean; origName: string };
-  let showImport = $state(false);
+  // Trois façons de renseigner les traitements, comme pour la biologie :
+  // saisie manuelle, collage du « carré bleu » d'un compte-rendu, ou dictée
+  // (Dragon écrit dans la zone de texte comme un clavier).
+  type ModeTraitement = 'saisir' | 'coller' | 'dicter';
+  let mode = $state<ModeTraitement>('saisir');
   let reportText = $state('');
+  let zoneTexte = $state<HTMLTextAreaElement | undefined>();
+
+  function choisirMode(m: ModeTraitement) {
+    if (m !== mode) { reportText = ''; trows = []; analyzed = false; }
+    mode = m;
+    // La dictée écrit là où est le curseur : on l'y place d'emblée.
+    if (m !== 'saisir') setTimeout(() => zoneTexte?.focus(), 0);
+  }
+
+  // Collage : analyse immédiate, sans clic supplémentaire.
+  function surCollage() {
+    setTimeout(() => { if (reportText.trim()) analyzeText(); }, 0);
+  }
+
+  // Dictée : Dragon tape par rafales ; on analyse après une pause d'une
+  // seconde et demie, ce qui montre le résultat pendant qu'on dicte.
+  let minuteurDictee: ReturnType<typeof setTimeout> | undefined;
+  function surSaisieDictee() {
+    if (mode !== 'dicter') return;
+    clearTimeout(minuteurDictee);
+    minuteurDictee = setTimeout(() => { if (reportText.trim()) analyzeText(); }, 1500);
+  }
   let trows = $state<TRow[]>([]);
   let analyzed = $state(false);
 
@@ -117,7 +143,7 @@
       learnDrug(r.origName, r.name); // apprentissage : retenir ce médicament
       if (r.kind === 'continuous') openByName.set(nrm(r.name), t.id);
     }
-    trows = []; analyzed = false; reportText = ''; showImport = false;
+    trows = []; analyzed = false; reportText = ''; mode = 'saisir';
     uiBus.toast(`${added} traitement(s) ajouté(s)${ended ? `, ${ended} fin(s) de traitement` : ''}.`);
   }
 
@@ -167,6 +193,13 @@
 </script>
 
 <div class="col" style="gap:14px;">
+  <div class="modeseg" role="group" aria-label="Façon de renseigner les traitements">
+    <button class:on={mode === 'saisir'} onclick={() => choisirMode('saisir')}><Icon name="keyboard" size={14} inline /> Saisir</button>
+    <button class:on={mode === 'coller'} onclick={() => choisirMode('coller')}><Icon name="file-text" size={14} inline /> Coller</button>
+    <button class:on={mode === 'dicter'} onclick={() => choisirMode('dicter')}><Icon name="mic" size={14} inline /> Dicter</button>
+  </div>
+
+  {#if mode === 'saisir'}
   <div class="card" style="padding:12px;">
     <div class="row wrap">
       <input class="grow" list="druglist-add" placeholder="Nom (Prednisone, Rituximab, Chirurgie…)" bind:value={name} onkeydown={(e) => e.key === 'Enter' && add()} />
@@ -182,7 +215,7 @@
         onfocus={dateFocus}
         onkeydown={(e) => dateKeydown(e, start)}
         onblur={(e) => dateBlur(e, start, (iso) => (start = iso))} />
-      <button class="primary" onclick={add}>Ajouter</button>
+      <button class="primary" onclick={add} aria-label="Ajouter le traitement">Ajouter</button>
     </div>
     {#if schemasProposes.length}
       <div class="schemas">
@@ -194,16 +227,20 @@
     {/if}
     <p class="hint">Après l'ajout, précisez la dose ou la <strong>décroissance</strong> dans l'éditeur qui s'ouvre.</p>
   </div>
-
-  {#if !showImport}
-    <button class="linklike" onclick={() => (showImport = true)}><Icon name="file-text" size={14} inline /> Coller un compte-rendu</button>
   {:else}
     <div class="card" style="padding:12px;">
-      <p class="faint small" style="margin-bottom:8px;">Collez la zone traitement d'un compte-rendu (ou dictez-la avec Dragon). J'en extrais les <strong>lignes thérapeutiques</strong> — vous validez avant d'ajouter. 100% local.</p>
-      <!-- svelte-ignore a11y_autofocus -->
-      <textarea class="report" bind:value={reportText} placeholder="Collez ou dictez ici le texte du compte-rendu…" autofocus></textarea>
+      {#if mode === 'coller'}
+        <p class="faint small" style="margin-bottom:8px;">Copiez le <strong>carré bleu</strong> (zone traitements) du compte-rendu et collez-le ci-dessous (<span class="kbd">Ctrl+V</span>) : les lignes thérapeutiques sont extraites aussitôt, vous validez avant d'ajouter. <Icon name="lock" size={12} inline /> 100 % local.</p>
+      {:else}
+        <p class="faint small" style="margin-bottom:8px;">Le curseur est dans la zone : <strong>dictez avec Dragon</strong> (« cellcept un virgule cinq grammes matin et soir… »). Les traitements reconnus s'affichent dès que vous marquez une pause ; vous validez avant d'ajouter. <Icon name="lock" size={12} inline /> 100 % local.</p>
+      {/if}
+      <textarea class="report" bind:this={zoneTexte} bind:value={reportText}
+        onpaste={mode === 'coller' ? surCollage : undefined}
+        oninput={surSaisieDictee}
+        aria-label={mode === 'coller' ? 'Texte du carré bleu' : 'Texte dicté'}
+        placeholder={mode === 'coller' ? 'Collez ici le carré bleu du compte-rendu…' : 'Dictez ici (Dragon)…'}></textarea>
       <div class="row" style="margin-top:8px;">
-        <button onclick={() => { showImport = false; reportText = ''; trows = []; analyzed = false; }}>Annuler</button>
+        <button onclick={() => { reportText = ''; trows = []; analyzed = false; zoneTexte?.focus(); }}>Effacer</button>
         <div class="spacer"></div>
         <button class="primary" disabled={!reportText.trim()} onclick={analyzeText}>Analyser</button>
       </div>
@@ -218,16 +255,16 @@
               <tbody>
                 {#each trows as r, ri (ri)}
                   <tr class:excluded={!r.include}>
-                    <td><input type="checkbox" bind:checked={r.include} /></td>
-                    <td class="name"><input class="ninp" bind:value={r.name} /></td>
-                    <td><input class="uinp" bind:value={r.dose} /></td>
+                    <td><input type="checkbox" bind:checked={r.include} aria-label="Inclure {r.name}" /></td>
+                    <td class="name"><input class="ninp" bind:value={r.name} aria-label="Nom du traitement" /></td>
+                    <td><input class="uinp" bind:value={r.dose} aria-label="Dose de {r.name}" /></td>
                     <td>
-                      <select bind:value={r.kind}>
+                      <select bind:value={r.kind} aria-label="Type de {r.name}">
                         <option value="continuous">Continu</option>
                         <option value="event">Événement</option>
                       </select>
                     </td>
-                    <td><input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" value={r.date ? formatDate(r.date) : ''}
+                    <td><input class="dinp" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA" aria-label="Date de {r.name}" value={r.date ? formatDate(r.date) : ''}
                       onfocus={dateFocus}
                       onkeydown={(e) => dateKeydown(e, r.date ?? '')}
                       onblur={(e) => dateBlur(e, r.date ?? '', (iso) => (r.date = iso))} /></td>
@@ -245,7 +282,7 @@
             <span class="faint small">{trows.filter(r => r.include).length} sélectionné(s)</span>
             <div class="spacer"></div>
             <button onclick={() => { trows = []; analyzed = false; }}>Annuler la lecture</button>
-            <button class="primary" onclick={commitText}>Ajouter</button>
+            <button class="primary" onclick={commitText}>Ajouter au graphique</button>
           </div>
         {:else}
           <div class="callout" style="margin-top:12px;">Aucune ligne thérapeutique reconnue. Vérifiez que le texte contient des médicaments datés (ex. « Mai 2020 : CELLCEPT 3 g/jour »).</div>
@@ -291,7 +328,7 @@
         onfocus={dateFocus}
         onkeydown={(e) => dateKeydown(e, annDate)}
         onblur={(e) => dateBlur(e, annDate, (iso) => (annDate = iso))} />
-      <button class="primary" onclick={addAnnotation}>Ajouter</button>
+      <button class="primary" onclick={addAnnotation} aria-label="Ajouter l’annotation">Ajouter</button>
     </div>
   </div>
   {#if annotations.length}
@@ -314,6 +351,14 @@
 </div>
 
 <style>
+  /* Même sélecteur de mode que l'onglet Biologie/EFR. */
+  .modeseg { display: inline-flex; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 7px; padding: 3px; align-self: flex-start; }
+  .modeseg button { border: none; background: transparent; border-radius: 5px; padding: 5px 14px; font-size: 12.5px; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
+  .modeseg button.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 700; }
+  @media (max-width: 700px) {
+    .modeseg { align-self: stretch; width: 100%; }
+    .modeseg button { flex: 1; justify-content: center; min-height: 44px; font-size: 13.5px; }
+  }
   .dateinput { width: 108px; text-align: left; font-variant-numeric: tabular-nums; }
   .seg { display: inline-flex; background: #eef1f4; border-radius: 8px; padding: 2px; }
   .seg button { border: none; background: transparent; border-radius: 6px; padding: 5px 11px; font-size: 12.5px; color: var(--muted); }
@@ -323,8 +368,6 @@
   .chip { border: 1px solid var(--border-strong); background: var(--panel); color: var(--ink); font-size: 12px; padding: 4px 10px; border-radius: 999px; }
   .chip:hover { background: var(--accent-weak, #eaf2fb); border-color: var(--accent); color: var(--accent); }
 
-  .linklike { align-self: flex-start; border: none; background: transparent; color: var(--accent-text); font-size: 13px; padding: 2px 0; }
-  .linklike:hover { text-decoration: underline; }
   .report { width: 100%; min-height: 220px; resize: vertical; font-size: 13px; line-height: 1.5; }
   .vgrid .ninp { width: 160px; text-align: left; }
   .vgrid .uinp { width: 74px; }
