@@ -24,7 +24,7 @@ export default defineConfig({
     },
     // Serveur de développement : sert le banc d'épreuve OCR (bench/banc.html).
     {
-      command: 'npx vite --port 5212 --strictPort',
+      command: 'node scripts/modeles-photo.mjs && npx vite --port 5212 --strictPort',
       url: 'http://localhost:5212/bench/banc.html',
       reuseExistingServer: true,
       timeout: 120_000,
