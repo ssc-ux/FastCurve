@@ -13,7 +13,11 @@
 
 import * as ort from 'onnxruntime-web/wasm';
 
-export interface BoiteTexte { texte: string; confiance: number; x0: number; y0: number; x1: number; y1: number; }
+export interface BoiteTexte {
+  texte: string; confiance: number; x0: number; y0: number; x1: number; y1: number;
+  /** Fin du nombre retrouvée par une seconde lecture élargie. */
+  relu?: boolean;
+}
 
 const base = (): string => new URL((import.meta as any).env?.BASE_URL ?? './', location.href).href;
 
@@ -24,7 +28,8 @@ export function chargerPaddle(): Promise<Moteur> {
   if (!moteur) {
     moteur = (async () => {
       ort.env.wasm.wasmPaths = base() + 'ort/';
-      ort.env.wasm.numThreads = 1;
+      // Plusieurs cœurs seulement si la page est isolée (SharedArrayBuffer).
+      ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
       const opts: ort.InferenceSession.SessionOptions = { executionProviders: ['wasm'] };
       const [det, rec, texte] = await Promise.all([
         ort.InferenceSession.create(base() + 'paddle/ch_PP-OCRv4_det_infer.onnx', opts),
@@ -96,29 +101,60 @@ async function detecter(m: Moteur, img: HTMLCanvasElement, coteMax: number): Pro
   return boites;
 }
 
-/** Reconnaissance d'une zone (hauteur ramenée à 48 px, décodage CTC glouton). */
-async function reconnaitre(m: Moteur, img: HTMLCanvasElement, b: { x0: number; y0: number; x1: number; y1: number }): Promise<{ texte: string; confiance: number }> {
-  const sw = b.x1 - b.x0, sh = b.y1 - b.y0;
-  if (sw < 2 || sh < 2) return { texte: '', confiance: 0 };
-  const H = 48, W = Math.max(16, Math.min(1280, Math.ceil((sw / sh) * H / 8) * 8));
-  const c = redimensionner(img, W, H, sw, sh, b.x0, b.y0);
-  const d = pixels(c);
-  const t = new Float32Array(3 * W * H);
-  for (let i = 0, p = 0; p < W * H; i += 4, p++) {
-    for (let k = 0; k < 3; k++) t[k * W * H + p] = (d[i + k] / 255 - 0.5) / 0.5;
-  }
-  const sortie = await m.rec.run({ [m.rec.inputNames[0]]: new ort.Tensor('float32', t, [1, 3, H, W]) });
+type Zone = { x0: number; y0: number; x1: number; y1: number };
+
+/** Largeur de la zone une fois ramenée à 48 px de haut (multiple de 8, bornée). */
+const largeurRec = (b: Zone): number => Math.max(16, Math.min(1280, Math.ceil(((b.x1 - b.x0) / (b.y1 - b.y0)) * 48 / 8) * 8));
+
+/**
+ * Reconnaissance d'un LOT de zones de largeurs voisines, en un seul passage du
+ * réseau (hauteur 48 px, zones complétées à droite par du gris neutre, comme
+ * le fait PaddleOCR) ; décodage CTC glouton. Un appel par zone coûtait surtout
+ * en frais fixes : le lot divise le temps de lecture par 3 à 4.
+ */
+export async function reconnaitreLot(m: Moteur, img: HTMLCanvasElement, lot: Zone[]): Promise<{ texte: string; confiance: number }[]> {
+  const H = 48, W = Math.max(...lot.map(largeurRec)), N = lot.length;
+  const t = new Float32Array(N * 3 * W * H); // 0 = gris neutre après normalisation
+  lot.forEach((b, n) => {
+    const w = largeurRec(b);
+    const d = pixels(redimensionner(img, w, H, b.x1 - b.x0, b.y1 - b.y0, b.x0, b.y0));
+    const base = n * 3 * W * H;
+    for (let y = 0; y < H; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4, p = y * W + x;
+      for (let k = 0; k < 3; k++) t[base + k * W * H + p] = (d[i + k] / 255 - 0.5) / 0.5;
+    }
+  });
+  const sortie = await m.rec.run({ [m.rec.inputNames[0]]: new ort.Tensor('float32', t, [N, 3, H, W]) });
   const o = sortie[m.rec.outputNames[0]];
   const [, T, C] = o.dims as number[];
   const data = o.data as Float32Array;
-  let texte = '', somme = 0, n = 0, prec = -1;
-  for (let i = 0; i < T; i++) {
-    let best = 0, bv = -Infinity;
-    for (let k = 0; k < C; k++) { const v = data[i * C + k]; if (v > bv) { bv = v; best = k; } }
-    if (best !== 0 && best !== prec) { texte += m.dico[best] ?? ''; somme += bv; n++; }
-    prec = best;
-  }
-  return { texte, confiance: n ? somme / n : 0 };
+  return lot.map((_, n) => {
+    let texte = '', somme = 0, nb = 0, prec = -1;
+    for (let i = 0; i < T; i++) {
+      const off = (n * T + i) * C;
+      let best = 0, bv = -Infinity;
+      for (let k = 0; k < C; k++) { const v = data[off + k]; if (v > bv) { bv = v; best = k; } }
+      if (best !== 0 && best !== prec) { texte += m.dico[best] ?? ''; somme += bv; nb++; }
+      prec = best;
+    }
+    return { texte, confiance: nb ? somme / nb : 0 };
+  });
+}
+
+/** Zone élargie pour la relecture : surtout à droite, où le chiffre a été rogné. */
+function elargir(bs: Zone[], img: HTMLCanvasElement): Zone[] {
+  return bs.map(b => {
+    const h = b.y1 - b.y0;
+    return {
+      x0: Math.max(0, b.x0 - h * 0.2), x1: Math.min(img.width - 1, b.x1 + h * 0.8),
+      y0: Math.max(0, b.y0 - h * 0.15), y1: Math.min(img.height - 1, b.y1 + h * 0.15),
+    };
+  });
+}
+
+/** Détection seule (sans lecture), pour la visée en direct : rapide à petite taille. */
+export async function detecterZones(img: HTMLCanvasElement, coteMax = 640): Promise<Zone[]> {
+  return detecter(await chargerPaddle(), img, coteMax);
 }
 
 /**
@@ -129,14 +165,36 @@ export async function lireTextes(
   img: HTMLCanvasElement, coteMax = 1920, onProgress?: (fait: number, total: number) => void, annule?: () => boolean,
 ): Promise<BoiteTexte[]> {
   const m = await chargerPaddle();
-  const boites = await detecter(m, img, coteMax);
-  const out: BoiteTexte[] = [];
-  for (let i = 0; i < boites.length; i++) {
+  const brutes = (await detecter(m, img, coteMax)).filter(b => b.x1 - b.x0 >= 2 && b.y1 - b.y0 >= 2);
+  const boites = brutes;
+  // Lots de zones de largeurs voisines : peu de remplissage perdu.
+  const ordre = boites.map((b, i) => i).sort((p, q) => largeurRec(boites[p]) - largeurRec(boites[q]));
+  const lus: { texte: string; confiance: number }[] = new Array(boites.length);
+  for (let i = 0; i < ordre.length;) {
     if (annule?.()) return [];
     onProgress?.(i, boites.length);
-    const b = boites[i];
-    const r = await reconnaitre(m, img, b);
-    if (r.texte.trim()) out.push({ ...b, texte: r.texte.trim(), confiance: r.confiance });
+    const w0 = largeurRec(boites[ordre[i]]);
+    let j = i + 1;
+    while (j < ordre.length && j - i < 32 && largeurRec(boites[ordre[j]]) <= w0 * 1.3 + 16) j++;
+    const r = await reconnaitreLot(m, img, ordre.slice(i, j).map(k => boites[k]));
+    r.forEach((x, n) => { lus[ordre[i + n]] = x; });
+    i = j;
+  }
+  const out: BoiteTexte[] = [];
+  boites.forEach((b, i) => { const r = lus[i]; if (r.texte.trim()) out.push({ ...b, texte: r.texte.trim(), confiance: r.confiance }); });
+  // Sur fond peu contrasté, la détection rogne le bord droit (« 38. » pour
+  // 38.7) : les nombres qui finissent par un séparateur sont relus avec un peu
+  // de marge. La relecture n'est retenue que si elle PROLONGE la première.
+  const tronques = out.filter(b => /^[<>]?\d+[.,]$/.test(b.texte.replace(/\s+/g, '')));
+  for (let i = 0; i < tronques.length; i += 32) {
+    const lot = tronques.slice(i, i + 32);
+    const r = await reconnaitreLot(m, img, elargir(lot, img));
+    lot.forEach((b, n) => {
+      const avant = b.texte.replace(/\s+/g, ''), apres = r[n].texte.replace(/\s+/g, '');
+      if (apres.length > avant.length && apres.startsWith(avant) && /^[<>]?\d+[.,]\d+$/.test(apres)) {
+        b.texte = apres; b.confiance = Math.min(b.confiance, r[n].confiance); b.relu = true;
+      }
+    });
   }
   return out;
 }

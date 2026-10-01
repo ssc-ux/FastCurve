@@ -131,12 +131,14 @@ export interface OptionsPhoto {
   vignettes?: boolean;
   onProgress?: (fait: number, total: number, etape: string) => void;
   annule?: () => boolean;
+  /** Taille de travail de la détection (banc). */
+  coteMax?: number;
 }
 
 export async function lireTableauPhoto(image: HTMLCanvasElement, opts: OptionsPhoto = {}): Promise<TableauLu> {
   const echec = (message: string): TableauLu => ({ dates: [], lignes: [], echec: true, message });
   opts.onProgress?.(0, 1, 'Chargement du moteur photo…');
-  const boites = await lireTextes(image, 1920, (f, t) => opts.onProgress?.(f, t, 'Lecture de la photo…'), opts.annule);
+  const boites = await lireTextes(image, opts.coteMax ?? 1920, (f, t) => opts.onProgress?.(f, t, 'Lecture de la photo…'), opts.annule);
   if (boites.length < 6) return echec('Je n’ai trouvé presque aucun texte sur cette photo.');
   const lignes = grouperLignes(boites);
 
@@ -165,17 +167,28 @@ export async function lireTableauPhoto(image: HTMLCanvasElement, opts: OptionsPh
     iso: c.iso, brut: c.brut, douteux: false, motifs: [], vignette: opts.vignettes ? extrait(image, c.b) : undefined,
   }));
   const sortie: LigneLue[] = [];
+  let sansNom = 0;
   for (const l of lignes.slice(iEntete + 1)) {
     const gauche = l.filter(b => b.x1 < debutValeurs);
     const droite = l.filter(b => b.x1 >= debutValeurs);
     // Nom : les zones de gauche qui ne sont ni unité ni norme.
-    const zonesNom = gauche.filter(b => !estUnite(b.texte) && !estIntervalle(b.texte) && /[A-Za-zÀ-ÿ]{2,}/.test(b.texte));
+    const zonesNom = gauche.sort((p, q) => p.x0 - q.x0).filter(b => !estUnite(b.texte) && !estIntervalle(b.texte) && /[A-Za-zÀ-ÿ]{2,}/.test(b.texte));
+    // Débris de 1-2 lettres avant ou après le nom (bout d'un mot voisin coupé) : écartés.
+    const debris = (b: BoiteTexte) => b.texte.replace(/[^A-Za-zÀ-ÿ]/g, '').length <= 2;
+    while (zonesNom.length > 1 && debris(zonesNom[0])) zonesNom.shift();
+    while (zonesNom.length > 1 && debris(zonesNom[zonesNom.length - 1])) zonesNom.pop();
     const nom = zonesNom.map(b => b.texte).join(' ').replace(/\s+/g, ' ').trim();
     const unite = gauche.find(b => estUnite(b.texte))?.texte ?? '';
     const cellules: CelluleLue[] = cols.map(() => ({ texte: '', douteux: false, motifs: [] }));
     let nombres = 0, mots = 0;
     for (const b of droite) {
       const t = b.texte.replace(/\s+/g, '').replace(/^[^\d<>]+/, ''); // pictogramme « i » devant
+      if (/^[<>]?\d+[.,]$/.test(t)) {
+        // Nombre dont la fin est illisible (« 38. ») : case signalée, jamais devinée.
+        const k = colonneDe(b);
+        if (k >= 0 && !cellules[k].texte) { cellules[k].douteux = true; cellules[k].motifs.push(`fin du nombre illisible sur la photo (lu « ${t} »)`); }
+        continue;
+      }
       if (!NOMBRE.test(t)) { if (/[A-Za-z]{3,}/.test(b.texte)) mots++; continue; }
       const k = colonneDe(b);
       if (k < 0) continue;
@@ -204,8 +217,12 @@ export async function lireTableauPhoto(image: HTMLCanvasElement, opts: OptionsPh
       c.texte = rep.texte;
       if (opts.vignettes) c.vignette = extrait(image, b);
       if (b.confiance < 0.9) { c.douteux = true; c.motifs.push('lecture peu sûre'); }
+      if (b.relu) { c.douteux = true; c.motifs.push('fin du nombre peu nette sur la photo'); }
     }
+    if (!nom && nombres >= 2 && mots === 0) sansNom++;
     if (!nom || !nombres || mots > nombres) continue; // section, « Automate… », « Formule microscope »
+    // Nom qui touche le bord gauche de la photo : il manque peut-être le début.
+    const nomCoupe = zonesNom[0].x0 <= Math.max(3, image.width * 0.004);
     // Virgule perdue, la ligne pour témoin.
     cellules.forEach((c, k) => {
       if (!c.texte) return;
@@ -213,10 +230,76 @@ export async function lireTableauPhoto(image: HTMLCanvasElement, opts: OptionsPh
       if (corrige) { c.motifs.push(`virgule rétablie d’après le reste de la ligne (lu « ${c.texte} »)`); c.texte = corrige; c.douteux = true; }
     });
     sortie.push({
-      nom, unite, nomDouteux: false, nomMotifs: [], cellules,
+      nom, unite, nomDouteux: nomCoupe, nomMotifs: nomCoupe ? ['nom coupé au bord gauche de la photo'] : [], cellules,
       vignetteNom: opts.vignettes ? extrait(image, union(zonesNom)) : undefined,
     });
   }
-  if (sortie.length < 1) return echec('Je n’ai su lire aucune ligne de résultats sur cette photo.');
+  if (sortie.length < 1) {
+    return echec(sansNom >= 2
+      ? 'Les noms des examens ne sont pas sur la photo : reprenez-la en cadrant aussi la colonne de gauche.'
+      : 'Je n’ai su lire aucune ligne de résultats sur cette photo.');
+  }
   return { dates, lignes: sortie, echec: false, message: '' };
+}
+
+const cleNom = (n: string) => n.toUpperCase().replace(/[^A-Z0-9%]/g, '');
+
+/**
+ * DOUBLE LECTURE : la même table lue sur deux images de la rafale. Toute case
+ * dont les deux lectures diffèrent passe en jaune ; une case lue sur une
+ * seule image est reprise, en jaune. Les lignes sont appariées par nom, les
+ * colonnes par date ; ce qui n'a pas d'équivalent reste tel quel.
+ */
+export function confronter(a: TableauLu, b: TableauLu): TableauLu {
+  if (a.echec || b.echec) return a.echec ? b : a;
+  const colB = new Map<string, number>();
+  b.dates.forEach((d, k) => { if (d.iso) colB.set(d.iso + '#' + rang(b.dates, k), k); });
+  const pris = new Set<LigneLue>();
+  for (const l of a.lignes) {
+    const lb = apparier(l.nom, b.lignes.filter(x => !pris.has(x)));
+    if (lb) pris.add(lb);
+    if (!lb) continue;
+    l.cellules.forEach((c, k) => {
+      const d = a.dates[k];
+      if (!d?.iso) return;
+      const kb = colB.get(d.iso + '#' + rang(a.dates, k));
+      if (kb === undefined) return;
+      const cb = lb.cellules[kb];
+      if (!cb) return;
+      if (c.texte && cb.texte && c.texte !== cb.texte) {
+        c.douteux = true; c.motifs.push(`lu « ${c.texte} » sur une image, « ${cb.texte} » sur l’autre`);
+      } else if (!c.texte && cb.texte) {
+        c.texte = cb.texte; c.vignette = cb.vignette; c.douteux = true;
+        c.motifs.push('lu sur une seule des deux images');
+      }
+    });
+  }
+  return a;
+}
+
+/** Ressemblance de deux noms (bigrammes communs, 0..1) : un nom mal lu sur une image reste reconnu. */
+function ressemblance(p: string, q: string): number {
+  const bi = (t: string) => { const m = new Map<string, number>(); for (let i = 0; i + 1 < t.length; i++) m.set(t.slice(i, i + 2), (m.get(t.slice(i, i + 2)) ?? 0) + 1); return m; };
+  const a = bi(p), b = bi(q);
+  let commun = 0;
+  for (const [k, n] of a) commun += Math.min(n, b.get(k) ?? 0);
+  const total = Math.max(1, p.length - 1 + q.length - 1);
+  return (2 * commun) / total;
+}
+
+function apparier(nom: string, lignes: LigneLue[]): LigneLue | null {
+  const k = cleNom(nom);
+  let meilleure: LigneLue | null = null, score = 0.7;
+  for (const l of lignes) {
+    const s = cleNom(l.nom) === k ? 1 : ressemblance(k, cleNom(l.nom));
+    if (s > score || (s === 1 && score < 1)) { score = s; meilleure = l; }
+  }
+  return meilleure;
+}
+
+/** Rang d'une date parmi les colonnes de même date (deux prélèvements le même jour). */
+function rang(dates: DateLue[], k: number): number {
+  let r = 0;
+  for (let j = 0; j < k; j++) if (dates[j].iso === dates[k].iso) r++;
+  return r;
 }

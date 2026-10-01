@@ -55,3 +55,14 @@ describe('prise de vue guidée — consignes', () => {
   it('texte trop petit', () => expect(verdictCadrage({ ...base, echellePleine: 1 }).etat).toBe('petit'));
   it('flou', () => expect(verdictCadrage({ ...base, netteteRelative: 0.2 }).etat).toBe('flou'));
 });
+
+describe('verdictCadrage — colonne des noms', () => {
+  const mesure = (x0: number) => ({
+    tableau: { boite: { x0, y0: 50, x1: 700, y1: 400 }, hL: 10, lignes: 12 },
+    angle: 0, biais: 0, largeur: 720, netteteRelative: 1, echellePleine: 3.5,
+  });
+  it('demande de décaler quand le tableau touche le bord gauche', () => {
+    expect(verdictCadrage(mesure(0)).etat).toBe('coupe');
+    expect(verdictCadrage(mesure(40)).etat).toBe('ok');
+  });
+});

@@ -1,5 +1,28 @@
 # Journal des modifications
 
+## 1.5.0
+
+### Photo d'écran
+- Guide de prise de vue refait sur le détecteur de texte (≈ 200 ms par
+  analyse) : il reconnaît le tableau là où l'ancien échouait, et demande de
+  décaler quand la colonne des noms est coupée ou absente.
+- Lecture environ 3 fois plus rapide : calcul sur plusieurs cœurs (page
+  isolée par le service worker, dès la deuxième visite).
+- Double lecture (à l'essai) : les deux images les plus nettes de la rafale
+  sont lues ; toute case où elles diffèrent passe en jaune, une case lue sur
+  une seule image est reprise en jaune. `?double=0` la désactive.
+- Fin de nombre rognée sur fond peu contrasté relue avec marge ; nombre
+  incomplet signalé, jamais deviné ; débris collés aux noms écartés ; nom
+  coupé au bord gauche mis en doute.
+- Photo choisie dans la galerie : reconnue automatiquement et lue par le
+  moteur photo (une capture d'écran reste lue par le moteur des captures).
+- Moteur et modèles (~26 Mo) gardés en cache d'une version à l'autre.
+- Banc : 95,9 % des cases justes, 0 erreur silencieuse ; captures : 100 %.
+
+### Déploiement
+- Plus d'installation de Chromium (Chrome des machines GitHub), actions
+  GitHub à jour, cache npm.
+
 ## 1.4.0
 
 ### Photo d'écran (encore derrière `?photo=1`)
