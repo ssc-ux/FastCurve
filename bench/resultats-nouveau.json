@@ -210,26 +210,54 @@
       "datesJustes": 12,
       "lignes": 19,
       "lignesTrouvees": 19
+    },
+    {
+      "id": "reel-une-ligne",
+      "cellules": 8,
+      "cellulesJustes": 8,
+      "cellulesFausses": 0,
+      "cellulesManquantes": 0,
+      "fauxSilencieux": 0,
+      "jaunes": 1,
+      "jaunesInutiles": 1,
+      "dates": 8,
+      "datesJustes": 8,
+      "lignes": 1,
+      "lignesTrouvees": 1
+    },
+    {
+      "id": "reel-une-ligne-crp",
+      "cellules": 8,
+      "cellulesJustes": 8,
+      "cellulesFausses": 0,
+      "cellulesManquantes": 0,
+      "fauxSilencieux": 0,
+      "jaunes": 0,
+      "jaunesInutiles": 0,
+      "dates": 8,
+      "datesJustes": 8,
+      "lignes": 1,
+      "lignesTrouvees": 1
     }
   ],
   "total": {
     "id": "TOTAL",
-    "cellules": 605,
-    "cellulesJustes": 605,
+    "cellules": 621,
+    "cellulesJustes": 621,
     "cellulesFausses": 0,
     "cellulesManquantes": 0,
     "fauxSilencieux": 0,
-    "jaunes": 18,
-    "jaunesInutiles": 18,
-    "dates": 67,
-    "datesJustes": 67,
-    "lignes": 123,
-    "lignesTrouvees": 123
+    "jaunes": 19,
+    "jaunesInutiles": 19,
+    "dates": 83,
+    "datesJustes": 83,
+    "lignes": 125,
+    "lignesTrouvees": 125
   },
   "details": [
     {
       "id": "encadre-normal",
-      "ms": 1267,
+      "ms": 1868,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -324,7 +352,7 @@
     },
     {
       "id": "encadre-petit",
-      "ms": 884,
+      "ms": 1287,
       "dates": [
         "2025-03-12",
         "2025-04-09",
@@ -419,7 +447,7 @@
     },
     {
       "id": "zebre-normal",
-      "ms": 1262,
+      "ms": 1974,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -559,7 +587,7 @@
     },
     {
       "id": "zebre-petit",
-      "ms": 1347,
+      "ms": 1827,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -699,7 +727,7 @@
     },
     {
       "id": "serif-palecontraste",
-      "ms": 2307,
+      "ms": 3771,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -829,7 +857,7 @@
     },
     {
       "id": "serif-petit",
-      "ms": 2299,
+      "ms": 3251,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -959,7 +987,7 @@
     },
     {
       "id": "fleches-anormales",
-      "ms": 908,
+      "ms": 1449,
       "dates": [
         "2026-02-03",
         "2026-02-17",
@@ -1096,7 +1124,7 @@
     },
     {
       "id": "encadre-gris",
-      "ms": 2575,
+      "ms": 3919,
       "dates": [
         "2023-11-08",
         "2023-12-06"
@@ -1226,7 +1254,7 @@
     },
     {
       "id": "zebre-hd",
-      "ms": 1138,
+      "ms": 1712,
       "dates": [
         "2026-02-03",
         "2026-02-17",
@@ -1363,7 +1391,7 @@
     },
     {
       "id": "encadre-minuscule",
-      "ms": 1149,
+      "ms": 1909,
       "dates": [
         "2024-01-15",
         "2024-03-04",
@@ -1503,7 +1531,7 @@
     },
     {
       "id": "medecin",
-      "ms": 643,
+      "ms": 990,
       "dates": [
         "2024-03-12",
         "2024-06-15",
@@ -1584,7 +1612,7 @@
     },
     {
       "id": "medecin-petit",
-      "ms": 649,
+      "ms": 1032,
       "dates": [
         "2024-03-12",
         "2024-06-15",
@@ -1665,7 +1693,7 @@
     },
     {
       "id": "reel-hopital",
-      "ms": 936,
+      "ms": 1368,
       "dates": [
         "2026-09-29",
         "2026-09-28",
@@ -1729,7 +1757,7 @@
     },
     {
       "id": "reel-hopital-2",
-      "ms": 3760,
+      "ms": 5843,
       "dates": [
         "2026-09-29",
         "2026-09-28",
@@ -1988,7 +2016,7 @@
     },
     {
       "id": "reel-hopital-3",
-      "ms": 7130,
+      "ms": 9923,
       "dates": [
         "2026-09-30",
         "2026-09-29",
@@ -2666,6 +2694,86 @@
             false,
             false,
             false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reel-une-ligne",
+      "ms": 5069,
+      "dates": [
+        "2026-09-29",
+        "2026-09-28",
+        "2020-03-24",
+        "2020-02-14",
+        "2020-01-30",
+        "2020-01-29",
+        "2020-01-28",
+        "2020-01-27"
+      ],
+      "lignes": [
+        {
+          "nom": "NUMPLAQUETTES",
+          "unite": "G/L",
+          "valeurs": [
+            "11",
+            "5",
+            "28",
+            "19",
+            "127",
+            "34",
+            "2",
+            "2"
+          ],
+          "douteux": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reel-une-ligne-crp",
+      "ms": 2827,
+      "dates": [
+        "2026-09-29",
+        "2026-09-28",
+        "2020-03-24",
+        "2020-02-14",
+        "2020-01-30",
+        "2020-01-29",
+        "2020-01-28",
+        "2020-01-27"
+      ],
+      "lignes": [
+        {
+          "nom": "CRP",
+          "unite": "mg/l",
+          "valeurs": [
+            "",
+            "5",
+            "",
+            "",
+            "",
+            "",
+            "24",
+            "23"
+          ],
+          "douteux": [
             false,
             false,
             false,
