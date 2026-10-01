@@ -15,7 +15,8 @@
   import { loadImage, type CropRect } from '../../lib/ocr/image';
   import { isPdf, pdfToCanvases, canvasToImage } from '../../lib/ocr/pdf';
   import { preheatOcr } from '../../lib/ocr/ocr';
-  import { reconnaitreTableau, type TableauLu } from '../../lib/ocr/pipeline';
+  import { type TableauLu } from '../../lib/ocr/pipeline';
+  import { lireCapture } from '../../lib/ocr/lireCapture';
   import { uid, formatDate, parseDateSouple } from '../../lib/models/types';
   import { matchCatalog } from '../../lib/models/catalog';
   import { learnAnalyte, lookupAnalyte } from '../../lib/learn/memory';
@@ -206,7 +207,7 @@
         // où qu'elles soient. Capture : lecture case par case (Tesseract).
         let t = sh.photo
           ? await lireTableauPhoto(sh.aRedresser ? redresserPhotoFichier(versCanvas(recadrer(sh))) : versCanvas(recadrer(sh)), suivi)
-          : await reconnaitreTableau(recadrer(sh), suivi);
+          : await lireCapture(recadrer(sh), suivi);
         // Double lecture : la seconde image de la rafale, confrontée case par case.
         if (sh.seconde && !t.echec && !annulee) {
           const t2 = await lireTableauPhoto(sh.seconde, {

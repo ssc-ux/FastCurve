@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## 1.5.1
+
+### Captures
+- Tableau d'UN SEUL examen sur plusieurs dates (ex. CRP seule) : il n'était
+  pas lu (refus volontaire du moteur des captures, qui risquait de décaler
+  les colonnes). Quand ce moteur échoue, le moteur photo prend le relais : il
+  rattache chaque valeur à la date au-dessus d'elle. Banc : 2 captures
+  réelles d'une ligne ajoutées, 17 captures à 100 %.
+
 ## 1.5.0
 
 ### Photo d'écran
