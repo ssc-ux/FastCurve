@@ -22,8 +22,8 @@
   import { uiBus } from '../../lib/models/ui.svelte';
   import DicteeBio from './DicteeBio.svelte';
   import CameraGuidee from '../CameraGuidee.svelte';
-  import { cameraDisponible } from '../../lib/photo/camera';
-  import { lireTableauPhoto } from '../../lib/photo/tableauPhoto';
+  import { cameraDisponible, estPhotoEcran, redresserPhotoFichier } from '../../lib/photo/camera';
+  import { confronter, lireTableauPhoto } from '../../lib/photo/tableauPhoto';
 
   let { initialMode = 'photo', onImported = () => {} }: { initialMode?: 'photo' | 'dictee'; onImported?: () => void } = $props();
   // svelte-ignore state_referenced_locally
@@ -43,7 +43,7 @@
 
   // ── Import d'une capture ─────────────────────────────────────
 
-  type Shot = { id: string; img: HTMLImageElement; thumb: string; crop?: CropRect | null; photo?: boolean };
+  type Shot = { id: string; img: HTMLImageElement; thumb: string; crop?: CropRect | null; photo?: boolean; aRedresser?: boolean; seconde?: HTMLCanvasElement };
   let pending = $state<Shot[]>([]);
   let busy = $state(false);
   let etape = $state('');
@@ -127,7 +127,10 @@
     const src = URL.createObjectURL(file);
     try {
       const image = await loadImage(src);
-      pending = [...pending, { id: uid(), img: image, thumb: shotThumb(image) }];
+      // Photo d'écran prise sans la visée (galerie, appareil photo du
+      // téléphone) : même moteur que la photo guidée, après redressement.
+      const photo = estPhotoEcran(image);
+      pending = [...pending, { id: uid(), img: image, thumb: shotThumb(image), photo, aRedresser: photo }];
       planifierLecture();
     } catch {
       errorMsg = "Je n’ai pas su ouvrir cette image.";
@@ -146,14 +149,14 @@
 
   function ouvrirCamera() { errorMsg = ''; cameraOuverte = true; }
 
-  async function surPhoto(photo: HTMLCanvasElement) {
+  async function surPhoto(photo: HTMLCanvasElement, seconde?: HTMLCanvasElement) {
     cameraOuverte = false;
     avantDernierePhoto = {
       rows: vRows.map(r => ({ ...r })), dates: [...vDates], dd: [...vDatesDoute], dm: [...vDatesMotifs], dt: [...vDatesThumbs],
     };
     photosPrises++;
     const image = await canvasToImage(photo);
-    pending = [...pending, { id: uid(), img: image, thumb: shotThumb(image), photo: true }];
+    pending = [...pending, { id: uid(), img: image, thumb: shotThumb(image), photo: true, seconde }];
     await lireTout();
   }
 
@@ -201,9 +204,16 @@
         };
         // Photo d'écran : moteur dédié (PaddleOCR), qui lit les zones de texte
         // où qu'elles soient. Capture : lecture case par case (Tesseract).
-        const t = sh.photo
-          ? await lireTableauPhoto(versCanvas(recadrer(sh)), suivi)
+        let t = sh.photo
+          ? await lireTableauPhoto(sh.aRedresser ? redresserPhotoFichier(versCanvas(recadrer(sh))) : versCanvas(recadrer(sh)), suivi)
           : await reconnaitreTableau(recadrer(sh), suivi);
+        // Double lecture : la seconde image de la rafale, confrontée case par case.
+        if (sh.seconde && !t.echec && !annulee) {
+          const t2 = await lireTableauPhoto(sh.seconde, {
+            ...suivi, onProgress: (f: number, tot: number) => { etape = prefixe + 'Seconde lecture (vérification)…'; progres = tot ? f / tot : 0; },
+          });
+          t = confronter(t, t2);
+        }
         if (annulee) return;
         if (t.echec) echecs.push(t.message);
         else tableaux.push({ t, source: sh });

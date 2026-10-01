@@ -10,6 +10,9 @@ import {
   type BoiteTableau, type MesureCadrage, type Verdict,
 } from './cadrage';
 
+import { detecterZones } from './paddle';
+import { grouperLignes, penteLignes } from './tableauPhoto';
+
 /** Largeur de l'image réduite analysée en direct (compromis vitesse/finesse). */
 const LARGEUR_ANALYSE = 720;
 
@@ -123,9 +126,9 @@ export function analyserImage(video: HTMLVideoElement, meilleureNettete: number)
 }
 
 /** Rafale : `n` images pleine résolution à intervalle régulier ; renvoie la plus nette. */
-export async function rafale(video: HTMLVideoElement, boite: BoiteTableau | null, n = 4, intervalle = 110): Promise<HTMLCanvasElement> {
+export async function rafale(video: HTMLVideoElement, boite: BoiteTableau | null, n = 4, intervalle = 110): Promise<HTMLCanvasElement[]> {
   const vw = video.videoWidth, vh = video.videoHeight;
-  let meilleure: HTMLCanvasElement | null = null, score = -1;
+  const prises: { c: HTMLCanvasElement; s: number }[] = [];
   for (let i = 0; i < n; i++) {
     const c = document.createElement('canvas');
     c.width = vw; c.height = vh;
@@ -135,11 +138,11 @@ export async function rafale(video: HTMLVideoElement, boite: BoiteTableau | null
     const zone = boite
       ? { x0: boite.x0 * petite.width, y0: boite.y0 * petite.height, x1: boite.x1 * petite.width, y1: boite.y1 * petite.height }
       : undefined;
-    const s = nettete(grisCanalMin(petite), zone);
-    if (s > score) { score = s; meilleure = c; }
+    prises.push({ c, s: nettete(grisCanalMin(petite), zone) });
     if (i < n - 1) await new Promise(r => setTimeout(r, intervalle));
   }
-  return meilleure!;
+  // De la plus nette à la moins nette (les deux premières servent à la double lecture).
+  return prises.sort((p, q) => q.s - p.s).map(p => p.c);
 }
 
 /**
@@ -220,6 +223,19 @@ export function cameraDisponible(): boolean {
 }
 
 /**
+ * Double lecture (à l'essai) : active par défaut avec la photo guidée ;
+ * `?double=0` la coupe, `?double=1` la rétablit (mémorisé sur l'appareil).
+ */
+export function doubleLecture(): boolean {
+  try {
+    const p = new URLSearchParams(location.search).get('double');
+    if (p === '0') localStorage.setItem('fastcurve.double-lecture', '0');
+    if (p === '1') localStorage.removeItem('fastcurve.double-lecture');
+    return localStorage.getItem('fastcurve.double-lecture') !== '0';
+  } catch { return true; }
+}
+
+/**
  * Photo → « fausse capture » : on ramène le texte à la taille d'une capture
  * d'écran (≈ 14 px de haut), puis on ne garde que le texte, noir sur blanc —
  * sans filets, fonds colorés ni moiré. La lecture des captures, éprouvée,
@@ -267,4 +283,83 @@ export function redresserPhoto(photo: HTMLCanvasElement, angle: number): HTMLCan
     ? copieRedressee(photo, photo.width, photo.height, photo.width, angle)
     : photo;
   return redresserCisaillement(droite);
+}
+
+/**
+ * Photo d'écran ou capture ? Une capture a de grands aplats d'une couleur
+ * EXACTEMENT identique (le fond) : au moins 24 % des pixels sur le banc, même
+ * en JPEG. Sur une photo, bruit du capteur et moiré : jamais plus de 1,5 %.
+ */
+export function estPhotoEcran(img: HTMLImageElement | HTMLCanvasElement): boolean {
+  const w = img instanceof HTMLImageElement ? img.naturalWidth : img.width;
+  const h = img instanceof HTMLImageElement ? img.naturalHeight : img.height;
+  const e = Math.min(1, 600 / Math.max(1, w));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * e)); c.height = Math.max(1, Math.round(h * e));
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  const d = ctx.getImageData(0, 0, c.width, c.height).data;
+  const compte = new Map<number, number>();
+  let max = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const k = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
+    const n = (compte.get(k) ?? 0) + 1;
+    compte.set(k, n);
+    if (n > max) max = n;
+  }
+  return max / (d.length / 4) < 0.08;
+}
+
+/** Photo venue d'un fichier (sans visée) : inclinaison mesurée puis redressement. */
+export function redresserPhotoFichier(photo: HTMLCanvasElement): HTMLCanvasElement {
+  const largeur = Math.min(LARGEUR_ANALYSE, photo.width);
+  const c = copieRedressee(photo, photo.width, photo.height, largeur, 0);
+  const angle = estimerInclinaison(carteTexte(carteEncreLocale(grisCanalMin(c)).carte));
+  return redresserPhoto(photo, angle);
+}
+
+/**
+ * Analyse en direct par le DÉTECTEUR DE TEXTE de PaddleOCR (sans lecture) :
+ * bien plus sûre que l'analyse d'encre pour repérer un tableau sur une photo
+ * d'écran (moiré, reflets, fonds colorés). ~200 ms sur une image de 960 px.
+ * Le tableau = les lignes d'au moins trois zones de texte.
+ */
+export async function analyserParDetection(video: HTMLVideoElement, meilleureNettete: number): Promise<Analyse> {
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const c = copieRedressee(video, vw, vh, Math.min(960, vw), 0);
+  const zones = await detecterZones(c, 960);
+  const lignes = grouperLignes(zones.map(z => ({ ...z, texte: '', confiance: 1 }))).filter(l => l.length >= 3);
+  let tableau: MesureCadrage['tableau'] = null, angle = 0, biais = 0, netteteBrute = 0, hauteurZones: number | undefined;
+  if (lignes.length >= 4) {
+    const tb = lignes.flat();
+    const boite = {
+      x0: Math.min(...tb.map(b => b.x0)), y0: Math.min(...tb.map(b => b.y0)),
+      x1: Math.max(...tb.map(b => b.x1)), y1: Math.max(...tb.map(b => b.y1)),
+    };
+    const hs = tb.map(b => b.y1 - b.y0).sort((p, q) => p - q);
+    hauteurZones = hs[hs.length >> 1];
+    tableau = { boite, hL: hauteurZones, lignes: lignes.length };
+    // Pente des lignes (y vers le bas) → inclinaison au sens d'estimerInclinaison.
+    const deg = (p: number) => Math.round((-Math.atan(p) * 180 / Math.PI) * 2) / 2;
+    angle = deg(penteLignes(tb));
+    const milieu = (boite.x0 + boite.x1) / 2;
+    biais = deg(penteLignes(tb.filter(b => b.x1 <= milieu))) - deg(penteLignes(tb.filter(b => b.x0 >= milieu)));
+    netteteBrute = nettete(grisCanalMin(c), boite);
+  }
+  const mesure: MesureCadrage = {
+    tableau, angle, biais, largeur: c.width, hauteurZones,
+    netteteRelative: meilleureNettete > 0 ? netteteBrute / meilleureNettete : 1,
+    echellePleine: vw / c.width,
+  };
+  const b = tableau?.boite, m = hauteurZones ?? 0;
+  return {
+    mesure,
+    verdict: verdictCadrage(mesure),
+    boiteRelative: b ? {
+      x0: Math.max(0, (b.x0 - m) / c.width), y0: Math.max(0, (b.y0 - m * 2) / c.height),
+      x1: Math.min(1, (b.x1 + m) / c.width), y1: Math.min(1, (b.y1 + m) / c.height),
+    } : null,
+    netteteBrute,
+  };
 }

@@ -149,7 +149,7 @@ export function nettete(gris: { largeur: number; hauteur: number; v: Float32Arra
   return s2 / n - m * m;
 }
 
-export type EtatCadrage = 'aucun' | 'penche' | 'biais' | 'loin' | 'petit' | 'flou' | 'ok';
+export type EtatCadrage = 'aucun' | 'penche' | 'biais' | 'coupe' | 'loin' | 'petit' | 'flou' | 'ok';
 
 export interface MesureCadrage {
   tableau: TableauRepere | null;
@@ -163,6 +163,8 @@ export interface MesureCadrage {
   netteteRelative: number;
   /** Facteur entre l'image analysée et la photo pleine résolution. */
   echellePleine: number;
+  /** Hauteur médiane des zones de texte détectées (analyse par PaddleOCR), en pixels analysés. */
+  hauteurZones?: number;
 }
 
 export interface Verdict { etat: EtatCadrage; message: string; }
@@ -173,10 +175,13 @@ export function verdictCadrage(m: MesureCadrage): Verdict {
   if (!t) return { etat: 'aucun', message: 'Visez le tableau de résultats' };
   if (Math.abs(m.angle) > 4) return { etat: 'penche', message: 'Tenez le téléphone droit' };
   if (Math.abs(m.biais) > 2.5) return { etat: 'biais', message: 'Placez-vous bien en face de l’écran' };
+  // Tableau collé au bord gauche : la colonne des noms est sans doute coupée.
+  if (t.boite.x0 <= m.largeur * 0.01) return { etat: 'coupe', message: 'Décalez vers la gauche : les noms des examens doivent être visibles' };
   const part = (t.boite.x1 - t.boite.x0) / m.largeur;
   if (part < 0.5) return { etat: 'loin', message: 'Rapprochez-vous du tableau' };
   // Texte trop petit, même en pleine résolution : il ne sera pas lisible.
-  if (t.hL * m.echellePleine < 14) return { etat: 'petit', message: 'Texte trop petit : zoomez dans Sillage ou rapprochez-vous' };
+  const petit = m.hauteurZones !== undefined ? m.hauteurZones * m.echellePleine < 24 : t.hL * m.echellePleine < 14;
+  if (petit) return { etat: 'petit', message: 'Texte trop petit : zoomez dans Sillage ou rapprochez-vous' };
   if (m.netteteRelative < 0.45) return { etat: 'flou', message: 'Image floue : ne bougez plus' };
   return { etat: 'ok', message: 'Ne bougez plus…' };
 }
