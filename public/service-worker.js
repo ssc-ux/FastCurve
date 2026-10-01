@@ -30,6 +30,11 @@
 // depuis le cache tant que le réseau répond.
 
 const CACHE_NAME = 'fastcurve-shell-dev';
+// Moteur et modèles photo (~26 Mo) : cache à part, qui survit aux mises à
+// jour de l'application. Son nom ne change qu'avec le moteur lui-même
+// (version d'ONNX Runtime + modèles), remplacé au build.
+const CACHE_MODELES = 'fastcurve-modeles-dev';
+const estModele = (url) => /\/(paddle|ort)\//.test(new URL(url).pathname);
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -45,10 +50,25 @@ self.addEventListener('activate', (event) => {
         .reverse();
       // Le plus récent des anciens est conservé (voir « Invalidation »).
       await Promise.all(anciens.slice(1).map((name) => caches.delete(name)));
+      await Promise.all(names
+        .filter((name) => name.startsWith('fastcurve-modeles-') && name !== CACHE_MODELES)
+        .map((name) => caches.delete(name)));
       await self.clients.claim();
     })()
   );
 });
+
+// Isolation de la page (COOP/COEP) : GitHub Pages ne permet pas d'ajouter
+// d'en-têtes ; le service worker les pose sur la page. Elle débloque le
+// calcul sur plusieurs cœurs (moteur photo). Tout est servi par ce site,
+// rien d'externe n'est donc bloqué par « require-corp ».
+function isoler(response) {
+  if (!response || response.type === 'opaque' || response.status === 0) return response;
+  const headers = new Headers(response.headers);
+  headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
 
 function isNavigationRequest(request) {
   return request.mode === 'navigate' || request.destination === 'document';
@@ -74,7 +94,7 @@ async function cacheFirst(request) {
   if (cached) return cached;
   const response = await fetch(request);
   if (response && response.ok) {
-    const cache = await caches.open(CACHE_NAME);
+    const cache = await caches.open(estModele(request.url) ? CACHE_MODELES : CACHE_NAME);
     cache.put(request, response.clone());
   }
   return response;
@@ -90,7 +110,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (isNavigationRequest(request)) {
-    event.respondWith(networkFirst(request));
+    event.respondWith(networkFirst(request).then(isoler));
     return;
   }
 
