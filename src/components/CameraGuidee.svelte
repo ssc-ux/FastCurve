@@ -6,11 +6,12 @@
   import { onDestroy, onMount } from 'svelte';
   import Icon from './Icon.svelte';
   import {
-    analyserImage, fermerCamera, ouvrirCamera, rafale, redresserPhoto, viserPourMiseAuPoint, type Analyse,
+    analyserImage, analyserParDetection, fermerCamera, ouvrirCamera, doubleLecture, rafale, redresserPhoto, viserPourMiseAuPoint, type Analyse,
   } from '../lib/photo/camera';
+  import { chargerPaddle } from '../lib/photo/paddle';
 
   let { onPhoto, onClose, partie = 1 }: {
-    onPhoto: (photo: HTMLCanvasElement) => void;
+    onPhoto: (photo: HTMLCanvasElement, seconde?: HTMLCanvasElement) => void;
     onClose: () => void;
     /** Numéro de la partie d'un long tableau pris en plusieurs photos. */
     partie?: number;
@@ -26,6 +27,7 @@
   let minuteur: ReturnType<typeof setTimeout> | undefined;
   let fini = false;
   let dernierPointFocus = 0;
+  let moteurPret = false;
 
   // Rectangle réellement occupé par l'image dans la balise vidéo
   // (object-fit: contain), pour poser le cadre au bon endroit.
@@ -46,7 +48,11 @@
   async function boucle() {
     if (fini || capture || !video || !video.videoWidth) { planifier(); return; }
     try {
-      const a = analyserImage(video, meilleureNettete);
+      // Repérage par le détecteur de texte ; repli sur l'analyse d'encre si
+      // le moteur photo n'a pas pu se charger.
+      const a = moteurPret
+        ? await analyserParDetection(video, meilleureNettete).catch(() => { moteurPret = false; return analyserImage(video!, meilleureNettete); })
+        : analyserImage(video, meilleureNettete);
       // Maximum de netteté récent, qui s'érode lentement (la scène change).
       meilleureNettete = Math.max(a.netteteBrute, meilleureNettete * 0.97);
       analyse = a;
@@ -68,10 +74,12 @@
     capture = true;
     try {
       const a = analyse;
-      const photo = await rafale(video, a?.boiteRelative ?? null);
-      const prete = redresserPhoto(photo, a?.mesure.angle ?? 0);
+      const [photo, seconde] = await rafale(video, a?.boiteRelative ?? null);
+      const angle = a?.mesure.angle ?? 0;
+      const prete = redresserPhoto(photo, angle);
       terminer();
-      onPhoto(prete);
+      // Double lecture : la deuxième image la plus nette est lue aussi.
+      onPhoto(prete, doubleLecture() && seconde ? redresserPhoto(seconde, angle) : undefined);
     } catch (e: any) {
       erreur = 'La photo a échoué : ' + (e?.message || e);
       capture = false; stables = 0; planifier();
@@ -88,6 +96,8 @@
   function fermer() { terminer(); onClose(); }
 
   onMount(async () => {
+    // Le moteur photo se charge pendant que le médecin vise.
+    chargerPaddle().then(() => { moteurPret = true; }, () => {});
     try {
       flux = await ouvrirCamera(video!);
       mesurerZone();

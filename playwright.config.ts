@@ -1,9 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 import { existsSync } from 'node:fs';
 
-// Chromium préinstallé (environnements sans téléchargement) sinon celui de Playwright.
+// Chromium préinstallé (environnements sans téléchargement) ; en intégration
+// continue, le Google Chrome déjà présent sur les machines GitHub (aucune
+// installation : plusieurs minutes gagnées) ; sinon celui de Playwright.
 const chromiumLocal = '/opt/pw-browsers/chromium';
-const launchOptions = existsSync(chromiumLocal) ? { executablePath: chromiumLocal } : {};
+const launchOptions = existsSync(chromiumLocal) ? { executablePath: chromiumLocal }
+  : process.env.CI ? { channel: 'chrome' } : {};
 
 export default defineConfig({
   testDir: 'tests/e2e',

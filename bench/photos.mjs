@@ -15,7 +15,7 @@ await p.goto('http://localhost:5212/bench/banc.html');
 await p.waitForFunction('window.bancPret === true');
 let tot = { c: 0, j: 0, f: 0, fs: 0, m: 0 };
 for (const c0 of cas.filter(x => x.id.includes(filtre))) {
-  const c = { ...c0, flou: process.env.FLOU !== undefined ? +process.env.FLOU : 0.6 };
+  const c = { ...c0, coteMax: process.env.COTE ? +process.env.COTE : undefined, flou: process.env.FLOU !== undefined ? +process.env.FLOU : 0.6 };
   const r = await p.evaluate(async (c) => {
     const cam = await import('/src/lib/photo/camera.ts');
     const { reconnaitreTableau } = await import('/src/lib/ocr/pipeline.ts');
@@ -29,7 +29,7 @@ for (const c0 of cas.filter(x => x.id.includes(filtre))) {
     const prete = cam.redresserPhoto(v, a.mesure.angle);
     window.__prete = prete.toDataURL('image/jpeg', 0.7);
     const { lireTableauPhoto } = await import('/src/lib/photo/tableauPhoto.ts');
-    const t = await lireTableauPhoto(prete);
+    const t = await lireTableauPhoto(prete, { coteMax: c.coteMax });
     window.__traces = [];
     const res = t.echec ? { dates: [], lignes: [] } : {
       dates: t.dates.map(d => d.iso ?? ''),

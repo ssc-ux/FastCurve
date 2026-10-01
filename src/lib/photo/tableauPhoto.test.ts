@@ -21,3 +21,25 @@ describe('grouperLignes', () => {
     l.forEach((ligne, r) => expect(ligne.every(b => b.texte.startsWith(`r${r}`))).toBe(true));
   });
 });
+
+import { confronter } from './tableauPhoto';
+import type { TableauLu } from '../ocr/pipeline';
+
+const tab = (nom: string, valeurs: string[], dates = ['2026-09-30', '2026-09-29']): TableauLu => ({
+  echec: false, message: '',
+  dates: dates.map(iso => ({ iso, brut: iso, douteux: false, motifs: [] })),
+  lignes: [{ nom, unite: '', nomDouteux: false, nomMotifs: [], cellules: valeurs.map(texte => ({ texte, douteux: false, motifs: [] })) }],
+});
+
+describe('confronter (double lecture)', () => {
+  it('met en jaune une case lue différemment, garde les cases identiques', () => {
+    const r = confronter(tab('LEUCOCYTES', ['6.90', '5.63']), tab('LEUCOCYTES', ['6.90', '5.68']));
+    expect(r.lignes[0].cellules.map(c => c.douteux)).toEqual([false, true]);
+    expect(r.lignes[0].cellules[1].texte).toBe('5.63');
+  });
+  it('reprend en jaune une case lue sur une seule image, apparie par nom approché et par date', () => {
+    const r = confronter(tab('POLYNEUTRCS', ['', '51.0']), tab('POLY NEUTRO %', ['51.0', '38.7'], ['2026-09-29', '2026-09-30']));
+    expect(r.lignes[0].cellules[0]).toMatchObject({ texte: '38.7', douteux: true });
+    expect(r.lignes[0].cellules[1].douteux).toBe(false);
+  });
+});
