@@ -38,8 +38,8 @@ async function moteurAncien(img: HTMLImageElement): Promise<TableauMesure> {
 
 /** Nouveau moteur : chaîne complète refondue. */
 async function moteurNouveau(img: HTMLImageElement): Promise<TableauMesure> {
-  const { reconnaitreTableau } = await import('../src/lib/ocr/pipeline');
-  const t = await reconnaitreTableau(img);
+  const { lireCapture } = await import('../src/lib/ocr/lireCapture');
+  const t = await lireCapture(img);
   return {
     dates: t.dates.map(d => d.iso ?? ''),
     datesDouteuses: t.dates.map(d => d.douteux),
