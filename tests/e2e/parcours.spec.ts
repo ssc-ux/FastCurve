@@ -51,15 +51,15 @@ test('collage d’un tableau Excel → grille → courbe', async ({ page }) => {
   expect(s.erreurs).toEqual([]);
 });
 
-test('capture d’écran réelle → valeurs justes, rien ne sort du navigateur', async ({ page }) => {
+test('capture d’écran → valeurs justes, rien ne sort du navigateur', async ({ page }) => {
   const s = surveiller(page);
   await ouvrir(page);
-  const base64 = readFileSync('bench/shots/reel-hopital.jpg').toString('base64');
-  await coller(page, { image: { base64, type: 'image/jpeg' } });
+  const base64 = readFileSync('bench/shots/medecin.png').toString('base64');
+  await coller(page, { image: { base64, type: 'image/png' } });
   const ajouter = page.getByRole('button', { name: 'Ajouter au graphique' });
   await expect(ajouter).toBeVisible({ timeout: 60_000 });
   const valeurs = await page.locator('table input').evaluateAll(els => els.map(e => (e as HTMLInputElement).value));
-  for (const v of ['NUM PLAQUETTES', 'CRP', '11', '127', '24', '23']) expect(valeurs).toContain(v);
+  for (const v of ['CRP', '85', '110', '245', '312']) expect(valeurs).toContain(v);
   expect(valeurs).not.toContain('150400');
   expect(s.externes).toEqual([]);
   expect(s.erreurs).toEqual([]);

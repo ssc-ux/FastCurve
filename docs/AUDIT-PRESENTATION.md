@@ -29,7 +29,7 @@ Résultat : **0 violation axe** sur tous les écrans au bureau et sur téléphon
 
 ### P1 — Écran de vérification trop étroit (fiabilité) *(corrigé)*
 
-![Vérification au bureau](audit/bureau-3-verification.png)
+*(capture retirée : elle montrait des données réelles)*
 
 - Au bureau, la vérification s'affiche dans le panneau de gauche (440 px) :
   les noms sont tronqués (« LEU… »), **aucune valeur n'est visible sans
@@ -39,7 +39,7 @@ Résultat : **0 violation axe** sur tous les écrans au bureau et sur téléphon
 - Sur téléphone, la vignette occupe toute la largeur, les valeurs sont hors
   champ.
 
-![Vérification sur téléphone](audit/mobile-3-verification.png)
+*(capture retirée : elle montrait des données réelles)*
 
 **Proposition** : ouvrir la vérification en **pleine largeur** (le panneau
 s'élargit le temps de la vérification, la courbe revient ensuite). Remplacer
@@ -50,7 +50,7 @@ la saisie mobile existante. *Effort : moyen.*
 
 ### P1 — Courbe écrasée quand les dates sont très dispersées *(corrigé)*
 
-![Courbe](audit/bureau-4-courbe.png)
+*(capture retirée : elle montrait des données réelles)*
 
 Avec des résultats de 2020 et de 2026, l'axe temporel linéaire tasse janvier
 2020 en un trait vertical : six points illisibles à gauche, une longue
@@ -74,7 +74,7 @@ Windows, courant à l'hôpital) et casse l'aspect « outil professionnel ».
 
 ### P2 — Barre d'outils de la courbe sur téléphone *(corrigé)*
 
-![Courbe sur téléphone](audit/mobile-4b-courbe-mobile.png)
+*(capture retirée : elle montrait des données réelles)*
 
 Panneaux / Graphe unique / Affichage / Copier / Exporter occupent deux lignes,
 soit ~15 % de la hauteur utile, avant même la courbe. **Proposition** : une

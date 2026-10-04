@@ -58,10 +58,10 @@ disponible — Recharger ».
 ## Banc d'épreuve OCR
 
 `bench/shots/` contient des captures de résultats de laboratoire et leur
-vérité terrain (`verite.json`), dont des captures réelles d'extranet
-hospitalier. `npm run test:e2e` exige 100 % de cases, dates et lignes justes
+vérité terrain (`verite.json`), toutes fictives. `npm run test:e2e` exige 100 % de cases, dates et lignes justes
 et aucune erreur silencieuse. Pour ajouter une capture qui pose problème :
-la déposer dans `bench/shots/` (anonymisée), ajouter sa vérité terrain dans
+la recréer avec des valeurs fictives dans `bench/shots/` (jamais une capture
+réelle : le dépôt est public), ajouter sa vérité terrain dans
 `verite.json`, puis corriger jusqu'à ce que le banc repasse à 100 %.
 Détail par capture : `npx vite --port 5212 &` puis `node bench/run.mjs nouveau`.
 
