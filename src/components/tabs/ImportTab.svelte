@@ -655,7 +655,7 @@
   @media (max-width: 640px) { .photo-guidee { display: inline-flex; } }
   .photo-actions { gap: 8px; margin-bottom: 10px; }
   .photo-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
-  .filebtn { color: var(--accent); text-decoration: underline; cursor: pointer; }
+  .filebtn { color: var(--accent-text); text-decoration: underline; cursor: pointer; }
   .mobile-only { display: none; }
 
   @media (max-width: 640px) {

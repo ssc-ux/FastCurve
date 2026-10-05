@@ -357,7 +357,7 @@
       {#each annotations as a (a.id)}
         <div class="card mini">
           <span class="tag">◆</span>
-          <input class="grow flat" value={a.text} onchange={(e) => store.updateAnnotation(a.id, { text: e.currentTarget.value })} />
+          <input class="grow flat" aria-label="Texte de l’annotation" value={a.text} onchange={(e) => store.updateAnnotation(a.id, { text: e.currentTarget.value })} />
           <input class="dateinput" type="text" inputmode="numeric" placeholder="JJ/MM/AAAA"
             value={formatDate(a.date)}
             onfocus={dateFocus}
