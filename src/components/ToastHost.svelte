@@ -18,10 +18,13 @@
 </div>
 
 <style>
+  /* En bas à gauche, au-dessus du panneau de saisie : au centre, la
+     notification recouvrait la courbe juste après un ajout, au moment même
+     où l'on veut la regarder. */
   .host {
-    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
-    z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center;
-    pointer-events: none; width: max-content; max-width: 92vw;
+    position: fixed; bottom: 18px; left: 88px;
+    z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+    pointer-events: none; width: max-content; max-width: min(460px, 92vw);
   }
   .toast {
     pointer-events: auto; display: flex; align-items: center; gap: 10px;
@@ -49,6 +52,6 @@
      notifications — un toast qui recouvre la navigation la rend
      inutilisable tant qu'il est affiché. */
   @media (max-width: 640px) {
-    .host { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); max-width: 94vw; }
+    .host { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); max-width: 94vw; left: 50%; transform: translateX(-50%); align-items: center; }
   }
 </style>

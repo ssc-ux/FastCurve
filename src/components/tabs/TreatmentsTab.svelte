@@ -2,7 +2,7 @@
   import Icon from '../Icon.svelte';
   import { store } from '../../lib/models/store.svelte';
   import { todayISO, formatDate, lireDateSouple } from '../../lib/models/types';
-  import type { TreatmentKind } from '../../lib/models/types';
+  import type { Treatment, TreatmentKind } from '../../lib/models/types';
   import { getKnownDrugs, learnDrug } from '../../lib/learn/memory';
   import { uiBus } from '../../lib/models/ui.svelte';
   import { posologiesPour, datesDuSchema, type SchemaPosologie } from '../../lib/models/posologies';
@@ -46,6 +46,28 @@
   let annDate = $state(todayISO());
 
   const treatments = $derived([...store.study.treatments].sort((a, b) => a.start.localeCompare(b.start)));
+
+  /**
+   * Événements répétés d'un même médicament (4 perfusions de rituximab) :
+   * une seule ligne repliable, comme sur la courbe (« Rituximab ×4 »), au
+   * lieu de quatre lignes identiques qui allongeaient la liste.
+   */
+  type Entree = { cle: string; seul: Treatment } | { cle: string; nom: string; items: Treatment[] };
+  const entrees = $derived.by<Entree[]>(() => {
+    const out: Entree[] = [];
+    const groupes = new Map<string, Treatment[]>();
+    for (const t of treatments) {
+      if (t.kind !== 'event') { out.push({ cle: t.id, seul: t }); continue; }
+      const k = t.name.trim().toLowerCase();
+      const g = groupes.get(k);
+      if (g) { g.push(t); continue; }
+      const items = [t];
+      groupes.set(k, items);
+      out.push({ cle: 'g:' + k, nom: t.name, items });
+    }
+    return out.map(e => ('items' in e && e.items.length === 1) ? { cle: e.items[0].id, seul: e.items[0] } : e);
+  });
+  let groupeOuvert = $state<string | null>(null);
   const annotations = $derived([...store.study.annotations].sort((a, b) => a.date.localeCompare(b.date)));
 
   function addAnnotation() {
@@ -218,7 +240,7 @@
 <div class="col" style="gap:14px;">
   <div class="modeseg" role="group" aria-label="Façon de renseigner les traitements">
     <button class:on={mode === 'saisir'} onclick={() => choisirMode('saisir')}><Icon name="keyboard" size={14} inline /> Saisir</button>
-    <button class:on={mode === 'coller'} onclick={() => choisirMode('coller')}><Icon name="file-text" size={14} inline /> Coller</button>
+    <button class:on={mode === 'coller'} onclick={() => choisirMode('coller')}><Icon name="file-text" size={14} inline /> Importer</button>
     <button class:on={mode === 'dicter'} onclick={() => choisirMode('dicter')}><Icon name="mic" size={14} inline /> Dicter</button>
   </div>
 
@@ -314,25 +336,47 @@
 
   {#if treatments.length}
     <div class="col" style="gap:8px;">
-      {#each treatments as t (t.id)}
-        <div class="trow card">
-          <button class="head" onclick={() => (openId = openId === t.id ? null : t.id)}>
-            <span class="dot" style="background:{t.color}"></span>
-            <span class="grow txt">
-              <strong>{t.name}</strong>
-              {#if doseSummary(t)}<span class="muted small"> · {doseSummary(t)}</span>{/if}
-              <span class="faint small">
-                — {t.kind === 'continuous' ? 'continu' : 'événement'} · {formatDate(t.start)}{#if t.kind === 'continuous' && t.end} → {formatDate(t.end)}{/if}
+      {#snippet ligne(t: Treatment)}
+          <div class="trow card">
+            <button class="head" onclick={() => (openId = openId === t.id ? null : t.id)}>
+              <span class="dot" style="background:{t.color}"></span>
+              <span class="grow txt">
+                <strong>{t.name}</strong>
+                {#if doseSummary(t)}<span class="muted small"> · {doseSummary(t)}</span>{/if}
+                <span class="faint small">
+                  — {t.kind === 'continuous' ? 'continu' : 'événement'} · {formatDate(t.start)}{#if t.kind === 'continuous' && t.end} → {formatDate(t.end)}{/if}
+                </span>
               </span>
-            </span>
-            <span class="chev">{openId === t.id ? '▴' : '▾'}</span>
-          </button>
-          {#if openId === t.id}
-            <div style="padding:0 10px 10px;">
-              <TreatmentEditor treatment={t} onClose={() => (openId = null)} />
-            </div>
-          {/if}
-        </div>
+              <span class="chev">{openId === t.id ? '▴' : '▾'}</span>
+            </button>
+            {#if openId === t.id}
+              <div style="padding:0 10px 10px;">
+                <TreatmentEditor treatment={t} onClose={() => (openId = null)} />
+              </div>
+            {/if}
+          </div>
+      {/snippet}
+      {#each entrees as e (e.cle)}
+        {#if 'seul' in e}
+          {@render ligne(e.seul)}
+        {:else}
+          <div class="trow card">
+            <button class="head" onclick={() => (groupeOuvert = groupeOuvert === e.cle ? null : e.cle)}
+                    aria-expanded={groupeOuvert === e.cle}>
+              <span class="dot" style="background:{e.items[0].color}"></span>
+              <span class="grow txt">
+                <strong>{e.nom}</strong> <span class="muted small">×{e.items.length}</span>
+                <span class="faint small">— événements · {formatDate(e.items[0].start)} → {formatDate(e.items[e.items.length - 1].start)}</span>
+              </span>
+              <span class="chev">{groupeOuvert === e.cle ? '▴' : '▾'}</span>
+            </button>
+            {#if groupeOuvert === e.cle}
+              <div class="col sousliste">
+                {#each e.items as t (t.id)}{@render ligne(t)}{/each}
+              </div>
+            {/if}
+          </div>
+        {/if}
       {/each}
     </div>
   {:else}
@@ -380,7 +424,8 @@
     .modeseg { align-self: stretch; width: 100%; }
     .modeseg button { flex: 1; justify-content: center; min-height: 44px; font-size: 13.5px; }
   }
-  .dateinput { width: 108px; text-align: left; font-variant-numeric: tabular-nums; }
+  .dateinput { width: 108px; flex-shrink: 0; text-align: left; font-variant-numeric: tabular-nums; }
+  .flat.grow { min-width: 0; }
   .seg { display: inline-flex; background: #eef1f4; border-radius: 8px; padding: 2px; }
   .seg button { border: none; background: transparent; border-radius: 6px; padding: 5px 11px; font-size: 12.5px; color: var(--muted); }
   .seg button.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
@@ -406,6 +451,7 @@
   .chev { color: var(--faint); }
   .sect-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 6px; }
   .mini { display: flex; align-items: center; gap: 8px; padding: 7px 10px; }
+  .sousliste { gap: 6px; padding: 0 8px 8px; }
   .flat { border: none; background: transparent; }
   .flat:focus { background: #fff; }
   .tag { color: #2a6fb0; font-size: 12px; }

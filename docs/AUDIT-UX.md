@@ -1,4 +1,4 @@
-# Audit UI/UX — FastCurve 1.5.1 (+ nouvel accueil)
+# Audit UI/UX — FastCurve 1.5.1 → 1.6.0
 
 Méthode : parcours complet sur bureau 1440 × 900, tablette 1024 × 768 et
 téléphone 390 × 844. Le parcours couvre l'accueil, la saisie vide, l'import
@@ -16,7 +16,40 @@ palette reste sobre, les textes sont en français soigné et la promesse
 d'« enregistrement » qui se contredisent** dans la barre du haut, et des
 réglages de présentation dispersés.
 
-## Déjà corrigé (branche `claude/accueil-corticoplan`)
+## Bilan 1.6.0 : tous les points sont traités
+
+| Constat (1.5.1) | Correction (1.6.0) |
+|---|---|
+| « Enregistrer • » à côté de « ✓ Enregistré » | « ✓ Sauvegarde auto » ; pastille seulement après un 1ᵉʳ fichier enregistré |
+| Barre du haut qui déborde à 1024 px | icônes seules sous 1280 px, barre de la courbe sur une ligne |
+| Frise des traitements sous le pli | la courbe défile jusqu'à la frise sur l'onglet Traitements |
+| Titre tronqué sur téléphone | titre et sous-titre sur plusieurs lignes |
+| Grille : dates récentes hors champ | colonnes resserrées, défilement automatique vers la dernière date |
+| Grille vide flottant au milieu de l'écran | grille en haut, paramètres proposés en un clic |
+| Trait pointillé de 2020 à 2026 | plus aucun trait à travers une coupure, date visible pour chaque salve |
+| Graphe unique : infobulle « 2 axes Y » trompeuse | infobulle exacte (2ᵉ axe si les ordres de grandeur diffèrent, unités dans la légende) |
+| Réglages fourre-tout, texte « À propos » en double | Ce suivi · Confidentialité · Données · Avancé (replié) · À propos |
+| Rail sans libellés | libellés sous chaque icône |
+| « Importer »/« Coller », « variable »/« paramètre » | « Importer » et « paramètre » partout |
+| 4 lignes « Rituximab » | une ligne « Rituximab ×4 », dépliable |
+| Libellés 9,5 px sur téléphone, icônes muettes | 10 px, libellé sous chaque outil de la courbe |
+| Notifications sur la courbe | en bas à gauche, au-dessus de la saisie |
+| Graduations petites en diapositive | export « Image pour diapositive (texte agrandi) » |
+
+Les 343 tests unitaires et les 10 parcours de bout en bout passent ; axe-core :
+0 violation sur 18 écrans.
+
+| Après — tablette 1024 px | Après — courbe sur téléphone |
+|---|---|
+| ![](audit/ux-apres-t1-tablette.png) | ![](audit/ux-apres-m4-courbe.png) |
+
+| Après — traitements | Après — saisie vide |
+|---|---|
+| ![](audit/ux-apres-d10-traitements.png) | ![](audit/ux-apres-d2-saisie-vide.png) |
+
+Le reste du document décrit l'état **avant** correction (1.5.1).
+
+## Corrigé avant l'audit
 
 | Constat | Correction |
 |---|---|
@@ -75,7 +108,7 @@ est actif. *Effort : faible à moyen.*
 ![Courbe mobile](audit/ux-m4-courbe.png)
 
 - Le **titre est tronqué** (« réponse au tra… ») au lieu de passer à la ligne.
-- Les **dates de l'axe X sont masquées** par la barre de navigation du bas.
+- Les dates de l'axe X sont sous le pli (il faut faire défiler la courbe).
 - La barre d'outils n'affiche que des icônes sans libellé : l'export et la
   copie se ressemblent.
 - La frise des traitements est hors champ.

@@ -209,19 +209,19 @@
     <BarreDocument />
     {#if store.savedAt}
       {#key store.savedAt}
-        <span class="saved" title="Enregistré dans ce navigateur">✓ Enregistré</span>
+        <span class="saved" title="Sauvegardé automatiquement dans ce navigateur (le fichier .json, lui, se crée avec « Enregistrer »)"><Icon name="check" size={13} /><span class="txt"> Sauvegarde auto</span></span>
       {/key}
     {/if}
     <div class="spacer"></div>
     {#if !afficherAccueil}
     <button class="topbtn side-toggle" onclick={toggleCollapse} title={collapsed ? 'Afficher le panneau de saisie' : 'Masquer le panneau : donne toute la place à la courbe'}>
       <Icon name="panel-left" size={14} />
-      {collapsed ? 'Afficher le panneau' : 'Plein écran courbe'}
+      <span class="txt">{collapsed ? 'Afficher le panneau' : 'Plein écran courbe'}</span>
     </button>
     <button class="topbtn sens-btn" onclick={basculerSens}
             title={sens === 'horizontal' ? 'Passer en colonnes : saisie à gauche, courbe à droite' : 'Passer en bandes : saisie en haut sur toute la largeur, courbe dessous'}>
       <Icon name={sens === 'horizontal' ? 'panel-left' : 'table'} size={14} />
-      {sens === 'horizontal' ? 'En colonnes' : 'En bandes'}
+      <span class="txt">{sens === 'horizontal' ? 'En colonnes' : 'En bandes'}</span>
     </button>
     {/if}
     <button class="topbtn uz-btn" disabled={!store.canUndo} onclick={() => store.undo()} title="Annuler (Ctrl+Z)"><Icon name="undo" size={14} /><span class="txt"> Annuler</span></button>
@@ -243,6 +243,7 @@
         <button class="rbtn" class:on={activeTab === t.id} onclick={() => allerTab(t.id)}
                 title={t.label} aria-label={t.label} aria-current={activeTab === t.id ? 'page' : undefined}>
           <Icon name={t.icon} size={19} />
+          <span class="rlab">{t.id === 'data' ? 'Biologie' : t.label}</span>
         </button>
       {/each}
     </nav>
@@ -271,7 +272,7 @@
       {/if}
 
       <main class="chart-area">
-        <ChartPanel />
+        <ChartPanel voirFrise={activeTab === 'treatments'} />
       </main>
     </div>
     {/if}
@@ -314,7 +315,7 @@
   .logo { display: inline-flex; color: var(--rail-ink-on); }
   .title { font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--rail-ink-on); }
 
-  .saved { font-size: 12px; color: #7fe0ab; font-weight: 600; white-space: nowrap; animation: savedpulse 1.4s ease-out; }
+  .saved { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: #7fe0ab; font-weight: 600; white-space: nowrap; animation: savedpulse 1.4s ease-out; }
   @keyframes savedpulse {
     0% { opacity: 0; transform: translateY(-1px); }
     18% { opacity: 1; }
@@ -339,15 +340,18 @@
      repliable/redimensionnable (`Plein écran courbe` ne le masque pas). */
   .shell { flex: 1; display: flex; min-height: 0; }
   .rail {
-    flex: 0 0 auto; width: 56px; background: var(--rail-bg);
+    flex: 0 0 auto; width: 72px; background: var(--rail-bg);
     display: flex; flex-direction: column; align-items: center;
     padding: 12px 0; gap: 4px;
   }
+  /* Icône + libellé : des icônes seules (gélule, curseurs) obligeaient à
+     survoler chaque bouton pour trouver « Traitements ». */
   .rbtn {
-    width: 40px; height: 40px; border: none; background: transparent;
-    border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    color: var(--rail-ink); padding: 0;
+    width: 62px; min-height: 52px; border: none; background: transparent;
+    border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; color: var(--rail-ink); padding: 6px 2px;
   }
+  .rlab { font-size: 10.5px; font-weight: 700; line-height: 1.1; }
   .rbtn:hover { background: rgba(255,255,255,.05); color: var(--rail-ink-on); }
   .rbtn.on { background: var(--rail-bg-on); color: var(--rail-ink-on); }
   .rbtn:active { transform: none; }
@@ -416,6 +420,13 @@
      barre du haut et le tableau disparaissent alors de l'écran. */
   .chart-area { flex: 1; min-width: 0; min-height: 0; background: var(--canvas-bg); }
 
+  /* Portable étroit / tablette : les commandes de mise en page, Annuler et
+     Rétablir passent en icônes (infobulle conservée) ; sinon la barre
+     débordait — « Ouvrir » coupé, « Enregistrer » masqué à 1024 px. */
+  @media (max-width: 1280px) {
+    .side-toggle .txt, .sens-btn .txt, .uz-btn .txt, .saved .txt { display: none; }
+    .side-toggle, .sens-btn, .uz-btn { padding: 6px 9px; }
+  }
   @media (max-width: 900px) { .sens-btn { display: none; } }
 
   @media (max-width: 820px) {

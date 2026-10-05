@@ -58,21 +58,52 @@
 
 <div class="col" style="gap:14px;">
   <div class="card" style="padding:12px;">
-    <div class="section-label">Titre & légende du graphique</div>
+    <div class="section-label">Ce suivi</div>
     <div class="col" style="gap:8px;">
-      <label class="col" style="gap:3px;">Titre
+      <label class="col" style="gap:3px;">Nom du suivi <span class="faint small">(nom du fichier, non affiché sur la courbe)</span>
+        <input value={store.study.patientLabel} onchange={(e) => store.setPatientLabel(e.currentTarget.value)} placeholder="ex. Cas n°12" />
+      </label>
+      <label class="col" style="gap:3px;">Titre de la courbe
         <input value={s().title} onchange={(e) => store.updateSettings({ title: e.currentTarget.value })} />
       </label>
       <label class="col" style="gap:3px;">Sous-titre
         <input value={s().subtitle} onchange={(e) => store.updateSettings({ subtitle: e.currentTarget.value })} placeholder="ex. Patient anonymisé, contexte clinique…" />
       </label>
-      <label class="col" style="gap:3px;">Nom du suivi (sert au nom de fichier, non affiché sur le graphe)
-        <input value={store.study.patientLabel} onchange={(e) => store.setPatientLabel(e.currentTarget.value)} placeholder="ex. Cas n°12" />
-      </label>
+      <p class="faint small">Astuce : un clic sur le titre de la courbe permet aussi de le modifier.</p>
+    </div>
+    <div class="mdiv"></div>
+    <p class="faint small" style="margin-bottom:8px;">Le suivi est sauvegardé automatiquement dans ce navigateur. Pour le garder durablement ou le reprendre sur un autre poste, enregistrez un fichier.</p>
+    <div class="row wrap">
+      <button onclick={exportFile}><Icon name="download" size={14} inline /> Enregistrer le fichier (.json)</button>
+      <label class="filebtn-wrap"><span><Icon name="upload" size={14} inline /> Ouvrir un fichier</span><input type="file" accept=".json,application/json" onchange={importFile} hidden /></label>
     </div>
   </div>
 
   <div class="card" style="padding:12px;">
+    <div class="section-label">Confidentialité</div>
+    <p class="faint small" style="margin-bottom:8px; line-height:1.5;">
+      <Icon name="lock" size={12} inline /> Tout reste dans <strong>ce navigateur</strong> : aucune donnée patient n'est envoyée. Avant de partager un graphique, vérifiez qu'aucun <strong>identifiant patient</strong> n'apparaît (nom, date de naissance, IPP). Utilisez le sous-titre pour un libellé anonymisé (« Cas n°12 »).
+    </p>
+    <label class="row" style="gap:8px; cursor:pointer;">
+      <input type="checkbox" checked={store.clearOnExit} onchange={(e) => store.setClearOnExit(e.currentTarget.checked)} />
+      <span class="small">Effacer le suivi à la fermeture de l'onglet <span class="faint">(un simple rechargement F5 ne l'efface pas. La purge s'exécute à la prochaine ouverture — d'ici là, les données restent dans ce navigateur. Poste partagé : enregistrez le fichier avant !)</span></span>
+    </label>
+  </div>
+
+  <div class="card" style="padding:12px;">
+    <div class="section-label">Données</div>
+    <div class="row wrap">
+      <button onclick={() => loadSample()}>Charger un exemple</button>
+      <button class="danger" title="Vide les valeurs, dates et traitements ; garde les paramètres et le titre du graphique."
+        onclick={() => { store.clearData(); uiBus.toastAction('Données effacées (mesures et traitements).', 'Annuler', () => store.undo()); }}>Effacer les données</button>
+      <button class="danger" title="Repart d'un suivi entièrement vierge : paramètres, titre et traitements compris — comme au tout premier lancement."
+        onclick={() => { store.clearAll(); uiBus.toastAction('Dossier réinitialisé.', 'Annuler', () => store.undo()); }}>Tout réinitialiser</button>
+    </div>
+  </div>
+
+  <details class="card avance" style="padding:12px;">
+    <summary class="section-label">Avancé : modèles de suivi et apprentissage</summary>
+    <div class="sous">
     <div class="section-label">Modèles de suivi</div>
     <p class="faint small" style="margin-bottom:8px;">Enregistrez un jeu de paramètres (ex. « suivi vascularite ») pour le recharger en un clic sur un nouveau suivi.</p>
     <div class="row wrap" style="margin-bottom:8px;">
@@ -92,16 +123,15 @@
     {:else}
       <p class="faint small">Aucun modèle enregistré.</p>
     {/if}
-  </div>
-
-  <div class="card" style="padding:12px;">
+    </div>
+    <div class="sous">
     <div class="section-label">Apprentissage</div>
     <p class="faint small" style="margin-bottom:8px;">
-      À chaque import, quand vous corrigez un nom lu (variable) ou confirmez un médicament, l'outil le <strong>retient</strong> sur ce poste et le réapplique la prochaine fois. Un <strong>dictionnaire intégré</strong> à l'app est déjà partagé par tous les postes. 100% local, aucune donnée patient.
+      À chaque import, quand vous corrigez un nom de paramètre lu ou confirmez un médicament, l'outil le <strong>retient</strong> sur ce poste et le réapplique la prochaine fois. Un <strong>dictionnaire intégré</strong> à l'app est déjà partagé par tous les postes. 100% local, aucune donnée patient.
     </p>
     <div class="row wrap" style="margin-bottom:8px;">
       <span class="badge">{learn.builtinDrugs + learn.drugs} médicaments reconnus</span>
-      <span class="badge">{learn.analytes} correction{learn.analytes > 1 ? 's' : ''} de variable (ce poste)</span>
+      <span class="badge">{learn.analytes} correction{learn.analytes > 1 ? 's' : ''} de paramètre (ce poste)</span>
     </div>
     <p class="faint small" style="margin-bottom:8px;">Pour faire profiter <strong>tous les postes</strong> de ce que ce poste a appris : exportez, et transmettez le fichier pour l'intégrer au dictionnaire de l'app.</p>
     <div class="row wrap">
@@ -111,38 +141,8 @@
       <button class="danger small" title="N'efface aucun patient : oublie seulement les corrections de lecture apprises sur ce poste."
         onclick={() => { const snap = exportLearning(); resetLearning(); learn = learnStats(); uiBus.toastAction('Apprentissage de ce poste réinitialisé.', 'Annuler', () => { importLearning(snap); learn = learnStats(); }); }}>Réinitialiser (ce poste)</button>
     </div>
-  </div>
-
-  <div class="card" style="padding:12px;">
-    <div class="section-label">Sauvegarde</div>
-    <p class="faint small" style="margin-bottom:8px;">Votre suivi est enregistré automatiquement dans ce navigateur : vous le retrouvez à la réouverture. Pour le garder durablement ou le reprendre sur un autre poste, enregistrez un fichier.</p>
-    <div class="row wrap">
-      <button onclick={exportFile}><Icon name="download" size={14} inline /> Enregistrer le fichier (.json)</button>
-      <label class="filebtn-wrap"><span><Icon name="upload" size={14} inline /> Ouvrir un fichier</span><input type="file" accept=".json,application/json" onchange={importFile} hidden /></label>
     </div>
-  </div>
-
-  <div class="card" style="padding:12px;">
-    <div class="section-label">Confidentialité</div>
-    <p class="faint small" style="margin-bottom:8px; line-height:1.5;">
-      <Icon name="lock" size={12} inline /> Tout reste dans <strong>ce navigateur</strong> : aucune donnée patient n'est envoyée. Avant de partager un graphique, vérifiez qu'aucun <strong>identifiant patient</strong> n'apparaît (nom, date de naissance, IPP). Utilisez le sous-titre pour un libellé anonymisé (« Cas n°12 »).
-    </p>
-    <label class="row" style="gap:8px; cursor:pointer;">
-      <input type="checkbox" checked={store.clearOnExit} onchange={(e) => store.setClearOnExit(e.currentTarget.checked)} />
-      <span class="small">Effacer le suivi à la fermeture de l'onglet <span class="faint">(un simple rechargement F5 ne l'efface pas. La purge s'exécute à la prochaine ouverture — d'ici là, les données restent dans ce navigateur. Poste partagé : enregistrez le fichier avant !)</span></span>
-    </label>
-  </div>
-
-  <div class="card" style="padding:12px;">
-    <div class="section-label">Démarrage rapide</div>
-    <div class="row wrap">
-      <button onclick={() => loadSample()}>Charger un exemple</button>
-      <button class="danger" title="Vide les valeurs, dates et traitements ; garde les paramètres (variables) et le titre du graphique."
-        onclick={() => { store.clearData(); uiBus.toastAction('Données effacées (mesures et traitements).', 'Annuler', () => store.undo()); }}>Effacer les données</button>
-      <button class="danger" title="Repart d'un suivi entièrement vierge : paramètres, titre et traitements compris — comme au tout premier lancement."
-        onclick={() => { store.clearAll(); uiBus.toastAction('Dossier réinitialisé.', 'Annuler', () => store.undo()); }}>Tout réinitialiser</button>
-    </div>
-  </div>
+  </details>
 
   <div class="card" style="padding:12px;">
     <div class="section-label">À propos</div>
@@ -155,6 +155,15 @@
 
 <style>
   .filebtn-wrap { display: inline-flex; }
+  .mdiv { height: 1px; background: var(--border); margin: 12px 0; }
+  /* Réglages rarement utilisés : repliés par défaut pour que l'onglet reste
+     lisible (ils remplissaient la moitié de l'écran). */
+  .avance summary { cursor: pointer; margin: 0; list-style: none; display: flex; align-items: center; gap: 6px; }
+  .avance summary::-webkit-details-marker { display: none; }
+  .avance summary::before { content: '▸'; font-size: 11px; transition: transform .15s; }
+  .avance[open] summary::before { transform: rotate(90deg); }
+  .avance .sous { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .avance .sous :global(.section-label) { font-size: 11px; }
   .filebtn-wrap span {
     display: inline-block; border: 1px solid var(--border-strong); background: var(--panel);
     border-radius: 6px; padding: 6px 12px; cursor: pointer;

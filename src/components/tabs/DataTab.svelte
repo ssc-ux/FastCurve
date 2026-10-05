@@ -475,6 +475,39 @@
     return p.id;
   }
 
+  // Suivi vide : quelques variables fréquentes à un clic, pour ne pas laisser
+  // l'utilisateur face à une grille blanche sans savoir où taper.
+  const DEPARTS = ['CRP', 'Créatinine', 'CPK', 'Hémoglobine', 'Plaquettes', 'CVF', 'DLCO']
+    .map(n => CATALOG.find(e => e.name === n)).filter((e): e is CatalogEntry => !!e);
+
+  // Les dates les plus récentes (à droite) sont souvent les plus utiles : la
+  // grille y défile d'elle-même quand une colonne apparaît.
+  /** Défile jusqu'à la dernière date, y compris si le panneau se redimensionne
+   *  juste après (retour d'une vérification d'import en pleine largeur). */
+  function allerALaFin(el: HTMLDivElement) {
+    el.scrollLeft = el.scrollWidth;
+    const ro = new ResizeObserver(() => { el.scrollLeft = el.scrollWidth; });
+    ro.observe(el);
+    setTimeout(() => ro.disconnect(), 700);
+  }
+  let grilleEl = $state<HTMLDivElement | undefined>();
+  let nbColonnesVues = 0;
+  let grilleVue: HTMLDivElement | undefined;
+  $effect(() => {
+    const n = colonnes.length;
+    const el = grilleEl;
+    if (!el) return;
+    // À l'affichage de la grille (retour d'un import) ou quand une colonne
+    // s'ajoute ; pas quand on en supprime une.
+    const nouvelle = el !== grilleVue;
+    const ajout = n > nbColonnesVues;
+    grilleVue = el;
+    nbColonnesVues = n;
+    // Une date tapée dans la grille y garde le focus, qui l'amène déjà à
+    // l'écran : on ne déplace alors rien.
+    if (nouvelle || (ajout && !el.contains(document.activeElement))) tick().then(() => allerALaFin(el));
+  });
+
   async function creerPuisFocus(choix?: CatalogEntry) {
     const id = creerLigne(choix);
     if (!id) return;
@@ -839,11 +872,9 @@
     <div class="aux">{#key importInitial}<ImportTab initialMode={importInitial} onImported={() => (mode = 'saisir')} />{/key}</div>
   {:else}
 
-  <!-- Suivi vide : ce bloc (tableau + « Série de dates ») est centré dans le
-       reste de la hauteur disponible plutôt que collé en haut, laissant un
-       grand vide au-dessus de la poignée de redimensionnement. Le sélecteur
-       Saisir/Importer/Dicter, lui, reste ancré en haut — un repère de
-       navigation ne doit pas se déplacer selon l'état du suivi. -->
+  <!-- Suivi vide : la grille reste en haut, sous des paramètres proposés à
+       un clic. Centrée verticalement, elle flottait au milieu d'un grand vide
+       et l'on ne savait pas où cliquer. -->
   <div class="corps" class:centrer={estDepart}>
 
   {#if pasteReview}
@@ -978,7 +1009,7 @@
           {/each}
 
           <div class="mrow madd-row">
-            <input class="mnew" placeholder="+ variable" aria-label="Nouvelle variable"
+            <input class="mnew" placeholder="+ paramètre" aria-label="Nouveau paramètre"
                    bind:value={nomNeuf} oninput={() => { iSugg = 0; suggMasquees = false; }}
                    onkeydown={mNouvelleLigneKey} onblur={nouvelleLigneBlur} />
             {#if suggestions.length}
@@ -996,9 +1027,18 @@
       {/if}
     </div>
   {:else}
+  {#if estDepart}
+    <div class="departs">
+      <span class="dp-t">Commencez par un paramètre :</span>
+      {#each DEPARTS as d (d.name)}
+        <button class="dp" onclick={() => creerPuisFocus(d)}>{d.name}</button>
+      {/each}
+      <span class="dp-t">ou tapez son nom dans « + paramètre ».</span>
+    </div>
+  {/if}
   <div class="tablecard" class:depart={estDepart}
-       title={estDepart ? "Tapez le nom de la variable à gauche, la date en haut. Ctrl+V colle une capture ou un tableau de résultats." : undefined}>
-    <div class="tablescroll">
+       title={estDepart ? "Tapez le nom du paramètre à gauche, la date en haut. Ctrl+V colle une capture ou un tableau de résultats." : undefined}>
+    <div class="tablescroll" bind:this={grilleEl}>
       <table class="dgrid">
         <thead>
           <tr>
@@ -1074,7 +1114,7 @@
           {/each}
           <tr class="newrow">
             <th class="rowname">
-              <input class="newrow-inp" placeholder="+ variable" aria-label="Nouvelle variable"
+              <input class="newrow-inp" placeholder="+ paramètre" aria-label="Nouveau paramètre"
                 bind:value={nomNeuf} oninput={() => { iSugg = 0; suggMasquees = false; }}
                 onkeydown={nouvelleLigneKey} onblur={nouvelleLigneBlur} />
               {#if suggestions.length}
@@ -1141,7 +1181,14 @@
      vide au-dessus de la poignée de redimensionnement (grief du médecin). Le
      bloc est centré dans la hauteur qui lui est réservée ; `.tab-content.centrer`
      (App.svelte) est ce qui donne à `.data`/`.corps` une hauteur à remplir. */
-  .corps.centrer { flex: 1; min-height: 0; justify-content: center; }
+  .corps.centrer { flex: 1; min-height: 0; justify-content: flex-start; }
+  .departs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+  .dp-t { margin-right: 2px; }
+  .dp {
+    border: 1px solid var(--border-strong); background: var(--panel); color: var(--ink);
+    border-radius: 999px; padding: 4px 11px; font-size: 12.5px; font-weight: 600;
+  }
+  .dp:hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
 
   .tablecard { background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius); box-shadow: none; overflow: hidden; }
   /* Suivi vide : c'est LE tableau à remplir, et il doit se voir tout de suite —
@@ -1185,13 +1232,13 @@
      — seule différence, la date elle-même reste éditable (input), donc pas
      de petites capitales dessus (ça rendrait la saisie illisible). */
   .datecol {
-    padding: 2px 4px 6px 8px; position: relative; white-space: nowrap; vertical-align: top;
+    padding: 2px 3px 6px 3px; position: relative; white-space: nowrap; vertical-align: top;
     background: var(--panel-2); border-bottom: 1px solid var(--border-strong); border-right: 1px solid var(--border);
   }
   /* Les commandes de colonne sont sur leur propre ligne, à l'écart du champ de
      date : viser la date ne doit jamais pouvoir supprimer la colonne. */
   .colbar { display: flex; justify-content: flex-end; align-items: center; gap: 2px; height: 22px; }
-  .dateinput { border: none; background: transparent; font-size: 12px; font-weight: 700; color: #57657f; width: 88px; padding: 3px; text-align: center; font-variant-numeric: tabular-nums; }
+  .dateinput { border: none; background: transparent; font-size: 11.5px; font-weight: 700; color: #57657f; width: 78px; padding: 3px; text-align: center; font-variant-numeric: tabular-nums; }
   .dateinput:focus { background: #fff; border-radius: 5px; box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); color: var(--ink); }
   .dateinput.neuve { color: var(--faint); font-weight: 500; }
   .dateinput.neuve:focus { color: var(--ink); }
@@ -1245,7 +1292,7 @@
   /* Bordures fines complètes (verticales comprises), pas seulement
      horizontales, comme dans la maquette « Console clinique dense ». */
   .dgrid td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
-  .cell { width: 80px; text-align: center; border: none; background: transparent; padding: 7px 4px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .cell { width: 70px; text-align: center; border: none; background: transparent; padding: 7px 4px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
   .cell:focus { background: #fff; box-shadow: inset 0 0 0 2px rgba(42,111,176,.25); border-radius: 4px; }
 
   /* Mise en évidence hors-norme (bascule « Marquer les valeurs hors-norme »,

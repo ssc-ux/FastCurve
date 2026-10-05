@@ -573,7 +573,7 @@
             <thead>
               <tr>
                 <th></th>
-                <th style="text-align:left;">Variable</th>
+                <th style="text-align:left;">Paramètre</th>
                 {#each vDates as _d, i (i)}
                   <th class:doute={vDatesDoute[i] || missingDateCols.has(i)}>
                     {#if vDatesThumbs[i]}<img class="extrait" src={vDatesThumbs[i]} alt="" />{/if}
@@ -591,7 +591,7 @@
                   <td><input type="checkbox" bind:checked={row.include} aria-label="Inclure la ligne {row.name}" /></td>
                   <td class="name" class:doute={row.nameDoute}>
                     {#if row.nameThumb}<img class="extrait" src={row.nameThumb} alt="" />{/if}
-                    <input class="ninp" bind:value={row.name} title={infobulle(row.nameMotifs)} aria-label="Nom de la variable" />
+                    <input class="ninp" bind:value={row.name} title={infobulle(row.nameMotifs)} aria-label="Nom du paramètre" />
                     {#if catalogHint(row.name)}<div class="faint" style="font-size:12px;">{catalogHint(row.name)}</div>{/if}
                   </td>
                   {#each row.values as _v, ci (ci)}
