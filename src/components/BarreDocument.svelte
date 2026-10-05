@@ -78,6 +78,7 @@
   }
 
   function nouveau() {
+    uiBus.accueil = true;
     if (vide) { store.nouvelleEtude(); return; }
     const avant = store.exportJSON();
     store.nouvelleEtude();

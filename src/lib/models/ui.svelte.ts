@@ -71,8 +71,10 @@ class UiBus {
     this.toasts = this.toasts.filter(t => t.id !== id);
   }
 
-  /** Affichage de la présentation d'accueil. */
-  welcomeOpen = $state(false);
+  /** Écran d'accueil affiché à la place du plan de travail (suivi vide). */
+  accueil = $state(false);
+  /** Mode d'import demandé depuis l'accueil, à appliquer par DataTab. */
+  demandeImport = $state<'photo' | 'dictee' | null>(null);
   /** Un écran de vérification (import, traitements lus) est ouvert : le
    *  panneau de saisie prend toute la largeur le temps de vérifier. */
   verification = $state(false);

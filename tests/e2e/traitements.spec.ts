@@ -2,8 +2,8 @@ import { test, expect, type Page } from '@playwright/test';
 
 async function ouvrirTraitements(page: Page) {
   await page.goto('/');
-  const commencer = page.getByRole('button', { name: 'Commencer' });
-  if (await commencer.isVisible().catch(() => false)) await commencer.click();
+  const saisir = page.getByRole('button', { name: 'Saisir à la main' });
+  if (await saisir.isVisible().catch(() => false)) await saisir.click();
   await page.getByRole('button', { name: 'Traitements' }).first().click();
 }
 

@@ -150,7 +150,6 @@
       <strong>FastCurve</strong> {__APP_VERSION__} — courbes de suivi biologique et EFR, 100 % local.
     </p>
     <InfosLegales />
-    <button onclick={() => (uiBus.welcomeOpen = true)}>Revoir la présentation</button>
   </div>
 </div>
 

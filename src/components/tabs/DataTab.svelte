@@ -39,6 +39,12 @@
   let importInitial = $state<'photo' | 'dictee'>('photo');
   function openImport(kind: 'photo' | 'dictee') { importInitial = kind; mode = 'importer'; }
 
+  // Choix fait sur l'écran d'accueil (« Coller une capture », « Dicter »)
+  $effect(() => {
+    const k = uiBus.demandeImport;
+    if (k) { uiBus.demandeImport = null; openImport(k); }
+  });
+
   // Collage global d'image → bascule automatiquement en import
   $effect(() => {
     if (uiBus.pendingImage) { importInitial = 'photo'; mode = 'importer'; }
