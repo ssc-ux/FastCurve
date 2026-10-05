@@ -6,6 +6,9 @@
   import { formatDate, parseDateSouple } from '../lib/models/types';
   import { uiBus } from '../lib/models/ui.svelte';
 
+  /** Onglet Traitements ouvert : la frise (en bas de la courbe) est amenée à l'écran. */
+  let { voirFrise = false }: { voirFrise?: boolean } = $props();
+
   let container: HTMLDivElement;
   let width = $state(920);
   let hover = $state<{ x: number; y: number; label: string } | null>(null);
@@ -38,6 +41,15 @@
 
   // Rendu réactif : dépend de l'étude et de la largeur disponible
   const result = $derived<RenderResult>(renderChart(store.study, width));
+
+  // Sans cela, la frise des traitements restait sous le pli pendant qu'on
+  // modifiait une décroissance : on ne voyait pas le résultat de sa saisie.
+  $effect(() => {
+    if (!voirFrise || !container) return;
+    void store.study.treatments.length;
+    void result;
+    requestAnimationFrame(() => container?.scrollTo({ top: container.scrollHeight, behavior: 'smooth' }));
+  });
 
   $effect(() => {
     if (!container) return;
@@ -126,6 +138,16 @@
     const blob = await svgToPngBlob(result.svg, result.width, result.height, scale);
     downloadBlob(blob, `${filenameBase()}.png`);
   }
+  /**
+   * Image pour diapositive : la courbe est recalculée sur une largeur plus
+   * étroite puis agrandie, si bien que textes, graduations et marqueurs
+   * ressortent environ 1,4 fois plus gros une fois projetés.
+   */
+  async function exportDiapo() {
+    const r = renderChart(store.study, 660);
+    const blob = await svgToPngBlob(r.svg, r.width, r.height, 5);
+    downloadBlob(blob, `${filenameBase()}_diapo.png`);
+  }
   function exportSvg() {
     downloadText(result.svg, `${filenameBase()}.svg`, 'image/svg+xml');
   }
@@ -159,7 +181,7 @@
   <div class="toolbar">
     <div class="seg">
       <button class:active={s().chartMode === 'stacked'} onclick={() => store.updateSettings({ chartMode: 'stacked' })} title="Un panneau par paramètre, axe du temps commun" aria-label="Panneaux"><Icon name="rows" size={14} inline /><span class="txt"> Panneaux</span></button>
-      <button class:active={s().chartMode === 'single'} onclick={() => store.updateSettings({ chartMode: 'single' })} title="Un seul graphe, 2 axes Y" aria-label="Graphe unique"><Icon name="chart-spline" size={14} inline /><span class="txt"> Graphe unique</span></button>
+      <button class:active={s().chartMode === 'single'} onclick={() => store.updateSettings({ chartMode: 'single' })} title="Tous les paramètres sur un seul graphe (un second axe s’ajoute si les ordres de grandeur diffèrent ; unités dans la légende)" aria-label="Graphe unique"><Icon name="chart-spline" size={14} inline /><span class="txt"> Graphe unique</span></button>
     </div>
 
     <div class="menu-wrap">
@@ -167,7 +189,7 @@
         e.stopPropagation();
         showMenu = !showMenu;
         if (showMenu) { saisieDu = s().fromDate ? formatDate(s().fromDate!) : ''; saisieAu = s().toDate ? formatDate(s().toDate!) : ''; }
-      }} aria-label="Affichage" title="Options d'affichage"><Icon name="settings" size={14} inline /><span class="txt"> Affichage</span> ▾</button>
+      }} aria-label="Affichage" title="Options d'affichage"><Icon name="settings" size={14} inline /><span class="txt"> Affichage</span><span class="caret"> ▾</span></button>
       {#if showMenu}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div class="menu" onclick={(e) => e.stopPropagation()}>
@@ -234,6 +256,7 @@
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div class="menu export-menu" onclick={(e) => e.stopPropagation()}>
           <button class="mitem" onclick={() => { showExport = false; exportPng(4); }}>Télécharger l'image (PNG)</button>
+          <button class="mitem" onclick={() => { showExport = false; exportDiapo(); }}>Image pour diapositive (texte agrandi)</button>
           <button class="mitem" onclick={() => { showExport = false; exportSvg(); }}>Télécharger en vectoriel (SVG)</button>
           <button class="mitem" onclick={() => { showExport = false; copyImg(); }}>{copied ? '✓ Copié' : 'Copier dans le presse-papiers'}</button>
           <button class="mitem" onclick={() => { showExport = false; setTimeout(() => window.print(), 60); }}>Imprimer / PDF (A4)</button>
@@ -277,9 +300,9 @@
 </div>
 
 <style>
-  .chart-wrap { display: flex; flex-direction: column; height: 100%; min-width: 0; }
+  .chart-wrap { display: flex; flex-direction: column; height: 100%; width: 100%; flex: 1 1 auto; min-width: 0; container-type: inline-size; }
   .toolbar {
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;
     padding: 8px 14px; border-bottom: 1px solid var(--border-strong); background: var(--panel);
   }
   .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 7px; padding: 2px; }
@@ -320,6 +343,8 @@
     background: #fdeeea; color: #8a3423; border: 1px solid #f3c4b8;
     border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 600; white-space: nowrap;
   }
+  .ecrase-badge, .period-badge { min-width: 0; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; }
+  .toolbar > :not(.ecrase-badge):not(.period-badge):not(.spacer) { flex-shrink: 0; }
   .ecrase-badge:hover { background: #f9ded7; border-color: #e8a897; }
   .copy-btn { padding: 5px 14px; }
   .export-main { border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 5px 14px; }
@@ -341,12 +366,22 @@
 
   .toolbar button { padding: 5px 12px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; }
   .seg button { display: inline-flex; align-items: center; gap: 5px; }
-  /* Téléphone : une seule ligne d'outils, icônes seules (libellés en
-     aria-label/title) — la courbe récupère la hauteur. */
-  @media (max-width: 700px) {
-    .toolbar { flex-wrap: nowrap; gap: 6px; }
-    .toolbar .txt { display: none; }
-    .toolbar button { min-width: 40px; min-height: 40px; padding: 6px 10px; }
+  /* Zone de courbe étroite (tablette, portable avec le panneau ouvert) :
+     les boutons de mode et « Affichage » passent en icônes ; Copier et
+     Exporter gardent leur libellé, et la barre reste sur une seule ligne —
+     sinon « Exporter » tombait seul en dessous et son menu couvrait le titre. */
+  @container (max-width: 640px) {
+    .seg .txt, .menu-btn .txt { display: none; }
+    .toolbar { gap: 6px; padding: 8px 10px; }
+  }
+  /* Téléphone : chaque outil garde un libellé court sous son icône. */
+  @media (max-width: 640px) {
+    .toolbar { gap: 4px; padding: 6px 8px; }
+    .toolbar .txt { display: block !important; font-size: 10px; line-height: 1.1; }
+    .toolbar button { flex-direction: column; gap: 2px; min-width: 44px; min-height: 44px; padding: 4px 8px; }
+    .seg button { flex-direction: column; }
+    .menu-btn .caret { display: none; }
+    .export-caret { min-width: 30px !important; padding: 4px 6px !important; }
   }
   .canvas { position: relative; flex: 1; overflow: auto; padding: 18px; background: var(--canvas-bg); display: flex; justify-content: center; align-items: flex-start; }
   /* Suivi vide : la petite carte de placeholder (juste le titre + « Ajoutez

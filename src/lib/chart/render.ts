@@ -103,6 +103,20 @@ export function largeurTexte(texte: string, taille: number, gras = false): numbe
  * l'étiquette/échelle : les valeurs saisies (des pourcentages) sont tracées
  * telles quelles.
  */
+/** Découpe un texte en lignes tenant dans `largeur` (mots entiers). */
+export function couperLignes(texte: string, taille: number, largeur: number, gras = false): string[] {
+  const mots = texte.split(/\s+/).filter(Boolean);
+  const lignes: string[] = [];
+  let courante = '';
+  for (const mot of mots) {
+    const essai = courante ? courante + ' ' + mot : mot;
+    if (courante && largeurTexte(essai, taille, gras) > largeur) { lignes.push(courante); courante = mot; }
+    else courante = essai;
+  }
+  if (courante) lignes.push(courante);
+  return lignes.length ? lignes : [texte];
+}
+
 function plottedValue(_p: Parameter, value: number): number | null {
   return value;
 }
@@ -195,23 +209,24 @@ interface Layout {
 // Amincit une liste de dates pour que les étiquettes ne se chevauchent pas :
 // on garde une graduation seulement si elle est à ≥ minGap px de la précédente
 // (la première et la dernière sont toujours conservées).
-function thinTicks(dates: string[], xOf: (d: string) => number, minGap: number) {
-  const ticks: { x: number; label: string }[] = [];
-  let lastX = -Infinity;
-  const lastIdx = dates.length - 1;
-  dates.forEach((d, i) => {
-    const x = xOf(d);
-    const isEdge = i === 0 || i === lastIdx;
-    if (isEdge || x - lastX >= minGap) {
-      ticks.push({ x, label: formatDate(d) });
-      lastX = x;
-    }
-  });
-  // Si la dernière étiquette est trop proche de l'avant-dernière, retirer l'avant-dernière.
-  if (ticks.length >= 2 && ticks[ticks.length - 1].x - ticks[ticks.length - 2].x < minGap) {
-    ticks.splice(ticks.length - 2, 1);
+//
+// Priorités : première et dernière date, puis le début de chaque salve après
+// une coupure d'axe (sinon une salve entière pouvait rester sans aucune date
+// lisible), puis les autres dates de gauche à droite.
+function thinTicks(dates: string[], xOf: (d: string) => number, minGap: number, coupures: number[] = []) {
+  if (!dates.length) return [];
+  const xs = dates.map(xOf);
+  const ordre: number[] = [0];
+  if (dates.length > 1) ordre.push(dates.length - 1);
+  for (let i = 1; i < dates.length - 1; i++) {
+    if (coupures.some(c => c > xs[i - 1] && c < xs[i])) ordre.push(i);
   }
-  return ticks;
+  for (let i = 1; i < dates.length - 1; i++) if (!ordre.includes(i)) ordre.push(i);
+  const retenus: number[] = [];
+  for (const i of ordre) {
+    if (retenus.every(j => Math.abs(xs[j] - xs[i]) >= minGap)) retenus.push(i);
+  }
+  return retenus.sort((a, b) => a - b).map(i => ({ x: xs[i], label: formatDate(dates[i]) }));
 }
 
 // X mapping partagé par tous les panneaux
@@ -248,7 +263,7 @@ function buildXMapper(dates: string[], timeAxis: boolean, layout: Layout) {
     const scaleX = (d: number) => marginLeft + ((virtuel(d) - dmin) / (dmax - dmin)) * plotWidth;
     const xOf = (date: string) => scaleX(dayNumber(date));
     const coupures = trous.map(c => (scaleX(c.debut) + scaleX(c.fin)) / 2);
-    return { xOf, ticks: thinTicks(dates, xOf, minGap), dayOf: (d: string) => dayNumber(d), domain: [dmin, dmax] as [number, number], coupures };
+    return { xOf, ticks: thinTicks(dates, xOf, minGap, coupures), dayOf: (d: string) => dayNumber(d), domain: [dmin, dmax] as [number, number], coupures };
   }
   // Catégoriel : espacement régulier
   const n = dates.length;
@@ -383,15 +398,22 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
 
   // En-tête
   let cursorY = 8;
-  const titleH = s.title ? 26 : 0;
-  const subtitleH = s.subtitle ? 18 : 0;
+  // Titre et sous-titre passent à la ligne plutôt que d'être coupés par le
+  // bord du graphique (écran de téléphone, titre long de compte-rendu).
+  const largeurEnTete = width - marginLeft - 12;
   if (s.title) {
-    parts.push(`<text x="${marginLeft}" y="${cursorY + 18}" font-family="${FONT}" font-size="17" font-weight="700" fill="${INK}">${esc(s.title)}</text>`);
-    cursorY += titleH;
+    for (const ligne of couperLignes(s.title, 17, largeurEnTete, true)) {
+      parts.push(`<text x="${marginLeft}" y="${cursorY + 18}" font-family="${FONT}" font-size="17" font-weight="700" fill="${INK}">${esc(ligne)}</text>`);
+      cursorY += 23;
+    }
+    cursorY += 3;
   }
   if (s.subtitle) {
-    parts.push(`<text x="${marginLeft}" y="${cursorY + 12}" font-family="${FONT}" font-size="12" fill="${MUTED}">${esc(s.subtitle)}</text>`);
-    cursorY += subtitleH;
+    for (const ligne of couperLignes(s.subtitle, 12, largeurEnTete)) {
+      parts.push(`<text x="${marginLeft}" y="${cursorY + 12}" font-family="${FONT}" font-size="12" fill="${MUTED}">${esc(ligne)}</text>`);
+      cursorY += 16;
+    }
+    cursorY += 2;
   }
   // Un export réalisé avec un filtre de période ne doit pas laisser croire que
   // le suivi est complet : la fenêtre est inscrite dans le graphique lui-même.
@@ -1113,12 +1135,9 @@ function series(
   const d = pts.map((pt, i) => `${i === 0 || pt.apresCoupure ? 'M' : 'L'}${pt.x.toFixed(1)},${yOf(pt.value).toFixed(1)}`).join(' ');
   const trait = dash ? ` stroke-dasharray="${dash}"` : '';
   out += `<path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${trait}/>`;
-  // À travers une coupure d'axe : simple pointillé discret.
-  pts.forEach((pt, i) => {
-    if (!pt.apresCoupure) return;
-    const a = pts[i - 1];
-    out += `<path d="M${a.x.toFixed(1)},${yOf(a.value).toFixed(1)} L${pt.x.toFixed(1)},${yOf(pt.value).toFixed(1)}" fill="none" stroke="${color}" stroke-width="1.2" stroke-dasharray="2 4" opacity="0.6"/>`;
-  });
+  // À travers une coupure d'axe : aucun trait. Relier deux prélèvements
+  // séparés de plusieurs années, même en pointillé, suggérait une tendance
+  // que rien ne mesure.
   // Marqueurs + indicateurs
   pts.forEach((pt, i) => {
     const cy = yOf(pt.value);

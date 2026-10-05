@@ -16,8 +16,8 @@ function surveiller(page: Page) {
 
 async function ouvrir(page: Page) {
   await page.goto('/');
-  const commencer = page.getByRole('button', { name: 'Commencer' });
-  if (await commencer.isVisible().catch(() => false)) await commencer.click();
+  const saisir = page.getByRole('button', { name: 'Saisir à la main' });
+  if (await saisir.isVisible().catch(() => false)) await saisir.click();
 }
 
 /** Simule un Ctrl+V (texte ou image) sur la page. */

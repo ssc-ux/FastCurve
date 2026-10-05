@@ -156,7 +156,7 @@
     <div style="margin-top:10px; overflow-x:auto;">
       <table class="grid vgrid dtable">
         <thead>
-          <tr><th></th><th style="text-align:left;">Variable</th><th>Valeur</th><th>Date</th><th></th></tr>
+          <tr><th></th><th style="text-align:left;">Paramètre</th><th>Valeur</th><th>Date</th><th></th></tr>
         </thead>
         <tbody>
           {#each lignes as l (l.id)}

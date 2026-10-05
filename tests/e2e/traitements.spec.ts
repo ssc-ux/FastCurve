@@ -2,14 +2,14 @@ import { test, expect, type Page } from '@playwright/test';
 
 async function ouvrirTraitements(page: Page) {
   await page.goto('/');
-  const commencer = page.getByRole('button', { name: 'Commencer' });
-  if (await commencer.isVisible().catch(() => false)) await commencer.click();
+  const saisir = page.getByRole('button', { name: 'Saisir à la main' });
+  if (await saisir.isVisible().catch(() => false)) await saisir.click();
   await page.getByRole('button', { name: 'Traitements' }).first().click();
 }
 
 test('traitements — coller le carré bleu : analyse au clic puis ajout', async ({ page }) => {
   await ouvrirTraitements(page);
-  await page.getByRole('button', { name: 'Coller' }).click();
+  await page.getByRole('button', { name: 'Importer' }).click();
   const zone = page.getByRole('textbox', { name: 'Texte du carré bleu' });
   await expect(zone).toBeFocused();
   await zone.evaluate((el: HTMLTextAreaElement) => {
@@ -48,7 +48,7 @@ test('traitements — saisie manuelle', async ({ page }) => {
 test('traitements — carré bleu réel : frise cohérente (relai, arrêt, reprise, paliers)', async ({ page }) => {
   const { CARRE_SCLERODERMIE } = await import('../../src/lib/text/__fixtures__/carres-bleus');
   await ouvrirTraitements(page);
-  await page.getByRole('button', { name: 'Coller' }).click();
+  await page.getByRole('button', { name: 'Importer' }).click();
   await page.getByRole('textbox', { name: 'Texte du carré bleu' }).fill(CARRE_SCLERODERMIE);
   await page.getByRole('button', { name: 'Analyser' }).click();
   await page.getByRole('button', { name: 'Ajouter au graphique' }).click();

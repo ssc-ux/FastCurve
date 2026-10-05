@@ -1,5 +1,41 @@
 # Journal des modifications
 
+## 1.6.0
+
+### Accueil
+- Nouvelle page d'arrivée au style de CorticoPlan : logo, accroche qui défile
+  (courbe EFR, courbe de CPK, évolution sous traitement, partage d'un suivi),
+  barre « collez une capture », boutons Saisir / Dicter / Voir un exemple.
+- Encadré de confidentialité : aucune IA en ligne, aucune donnée ne sort du
+  navigateur, aucun enregistrement sur un serveur, pas de document
+  permettant d'identifier le patient. Remplace la fenêtre de présentation.
+
+### Interface (audit UI/UX, `docs/AUDIT-UX.md`)
+- Barre du haut : « ✓ Sauvegarde auto » (navigateur) ne contredit plus
+  « Enregistrer » (fichier) ; la pastille orange n'apparaît qu'après un
+  premier fichier enregistré.
+- Tablette / petit portable : barre du haut et barre de la courbe sur une
+  seule ligne (icônes sous 1280 px), plus de bouton masqué ni de menu sur le
+  titre.
+- Rail latéral avec libellés (Biologie, Traitements, Réglages).
+- Onglet Traitements : la courbe défile jusqu'à la frise ; événements répétés
+  regroupés (« Rituximab ×4 »).
+- Grille : paramètres proposés en un clic quand le suivi est vide, grille en
+  haut, colonnes plus étroites, défilement automatique vers les dates les
+  plus récentes.
+- Courbe : titre et sous-titre passent à la ligne (téléphone), plus de trait
+  à travers une coupure d'axe, date visible pour chaque salve.
+- Téléphone : libellés sous les icônes de la barre de la courbe.
+- Export « Image pour diapositive (texte agrandi) ».
+- Réglages réorganisés : Ce suivi, Confidentialité, Données, Avancé (replié),
+  À propos.
+- Vocabulaire unifié (« paramètre », « Importer ») ; notifications en bas à
+  gauche, hors de la courbe.
+
+### Accessibilité
+- 0 violation axe-core (WCAG 2.1 AA) sur 18 écrans : champ d'annotation
+  nommé, contraste du lien « choisir un fichier ».
+
 ## 1.5.1
 
 ### Captures

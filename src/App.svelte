@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import ChartPanel from './components/ChartPanel.svelte';
   import DataTab from './components/tabs/DataTab.svelte';
   import TreatmentsTab from './components/tabs/TreatmentsTab.svelte';
   import SettingsTab from './components/tabs/SettingsTab.svelte';
-  import WelcomeModal from './components/WelcomeModal.svelte';
+  import Accueil from './components/Accueil.svelte';
   import BarreDocument from './components/BarreDocument.svelte';
   import ToastHost from './components/ToastHost.svelte';
   import { store } from './lib/models/store.svelte';
@@ -38,11 +39,23 @@
     downloadText(store.exportJSON(), `${name}.fastcurve.json`, 'application/json');
   }
 
-  const WELCOME_KEY = 'fastcurve.welcome.v1';
-  try { if (localStorage.getItem(WELCOME_KEY) !== '1') uiBus.welcomeOpen = true; } catch { /* ignore */ }
-  function closeWelcome() {
-    try { localStorage.setItem(WELCOME_KEY, '1'); } catch { /* ignore */ }
-    uiBus.welcomeOpen = false;
+  /**
+   * Écran d'accueil : remplace le plan de travail tant que le suivi est vide
+   * (à l'ouverture, ou après « Nouveau »). Il s'efface dès qu'un choix est
+   * fait, qu'une capture est collée ou qu'on navigue vers un autre écran.
+   */
+  const suiviVide = $derived(
+    store.study.parameters.length === 0 &&
+    store.study.treatments.length === 0 &&
+    store.study.annotations.length === 0,
+  );
+  if (untrack(() => suiviVide)) uiBus.accueil = true; // à l'ouverture seulement
+  const afficherAccueil = $derived(uiBus.accueil && suiviVide);
+  function choixAccueil(dest: 'saisir' | 'photo' | 'dictee') {
+    uiBus.accueil = false;
+    activeTab = 'data';
+    mobileChart = false;
+    if (dest !== 'saisir' && !uiBus.pendingImage) uiBus.demandeImport = dest;
   }
 
   // Reprise d'une modification faite dans un autre onglet : on le dit, sinon
@@ -74,7 +87,7 @@
       for (const it of items) {
         if (it.type.startsWith('image/')) {
           const f = it.getAsFile();
-          if (f) { uiBus.pasteImage(f); activeTab = 'data'; e.preventDefault(); return; }
+          if (f) { uiBus.pasteImage(f); uiBus.accueil = false; activeTab = 'data'; e.preventDefault(); return; }
         }
       }
     }
@@ -83,7 +96,7 @@
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     const text = e.clipboardData?.getData('text') ?? '';
     const looksTabular = /\t/.test(text) && text.split(/\r?\n/).filter(l => l.trim()).length >= 1;
-    if (looksTabular) { uiBus.pasteTable(text); activeTab = 'data'; e.preventDefault(); }
+    if (looksTabular) { uiBus.pasteTable(text); uiBus.accueil = false; activeTab = 'data'; e.preventDefault(); }
   }
 
   type Tab = 'data' | 'treatments' | 'settings';
@@ -109,7 +122,7 @@
    * deux en même temps.
    */
   let mobileChart = $state(false);
-  function allerTab(id: Tab) { activeTab = id; mobileChart = false; }
+  function allerTab(id: Tab) { activeTab = id; mobileChart = false; uiBus.accueil = false; }
 
   /**
    * Tant qu'aucune valeur n'a été saisie, il n'y a rien à montrer sur la
@@ -196,19 +209,21 @@
     <BarreDocument />
     {#if store.savedAt}
       {#key store.savedAt}
-        <span class="saved" title="Enregistré dans ce navigateur">✓ Enregistré</span>
+        <span class="saved" title="Sauvegardé automatiquement dans ce navigateur (le fichier .json, lui, se crée avec « Enregistrer »)"><Icon name="check" size={13} /><span class="txt"> Sauvegarde auto</span></span>
       {/key}
     {/if}
     <div class="spacer"></div>
+    {#if !afficherAccueil}
     <button class="topbtn side-toggle" onclick={toggleCollapse} title={collapsed ? 'Afficher le panneau de saisie' : 'Masquer le panneau : donne toute la place à la courbe'}>
       <Icon name="panel-left" size={14} />
-      {collapsed ? 'Afficher le panneau' : 'Plein écran courbe'}
+      <span class="txt">{collapsed ? 'Afficher le panneau' : 'Plein écran courbe'}</span>
     </button>
     <button class="topbtn sens-btn" onclick={basculerSens}
             title={sens === 'horizontal' ? 'Passer en colonnes : saisie à gauche, courbe à droite' : 'Passer en bandes : saisie en haut sur toute la largeur, courbe dessous'}>
       <Icon name={sens === 'horizontal' ? 'panel-left' : 'table'} size={14} />
-      {sens === 'horizontal' ? 'En colonnes' : 'En bandes'}
+      <span class="txt">{sens === 'horizontal' ? 'En colonnes' : 'En bandes'}</span>
     </button>
+    {/if}
     <button class="topbtn uz-btn" disabled={!store.canUndo} onclick={() => store.undo()} title="Annuler (Ctrl+Z)"><Icon name="undo" size={14} /><span class="txt"> Annuler</span></button>
     <button class="topbtn uz-btn" disabled={!store.canRedo} onclick={() => store.redo()} title="Rétablir (Ctrl+Maj+Z)"><Icon name="redo" size={14} /><span class="txt"> Rétablir</span></button>
   </header>
@@ -225,13 +240,17 @@
   <div class="shell">
     <nav class="rail" aria-label="Navigation entre les écrans">
       {#each tabs as t (t.id)}
-        <button class="rbtn" class:on={activeTab === t.id} onclick={() => (activeTab = t.id)}
+        <button class="rbtn" class:on={activeTab === t.id} onclick={() => allerTab(t.id)}
                 title={t.label} aria-label={t.label} aria-current={activeTab === t.id ? 'page' : undefined}>
           <Icon name={t.icon} size={19} />
+          <span class="rlab">{t.id === 'data' ? 'Biologie' : t.label}</span>
         </button>
       {/each}
     </nav>
 
+    {#if afficherAccueil}
+      <Accueil onChoix={choixAccueil} />
+    {:else}
     <div class="body" class:dragging class:horizontal={sens === 'horizontal'} class:vide={sansDonnees && !collapsed} class:mob-chart={mobileChart} class:verif={uiBus.verification}>
       <aside class="sidebar" class:collapsed
              style={sens === 'horizontal'
@@ -253,9 +272,10 @@
       {/if}
 
       <main class="chart-area">
-        <ChartPanel />
+        <ChartPanel voirFrise={activeTab === 'treatments'} />
       </main>
     </div>
+    {/if}
   </div>
 
   <!-- Barre de navigation du bas (téléphone uniquement — voir media query
@@ -268,17 +288,13 @@
         <span>{t.id === 'data' ? 'Biologie' : t.label}</span>
       </button>
     {/each}
-    <button class="bnav-btn" class:on={mobileChart} onclick={() => (mobileChart = true)}
+    <button class="bnav-btn" class:on={mobileChart} onclick={() => { mobileChart = true; uiBus.accueil = false; }}
             aria-current={mobileChart ? 'page' : undefined}>
       <Icon name="chart-spline" size={20} />
       <span>Courbe</span>
     </button>
   </nav>
 </div>
-
-{#if uiBus.welcomeOpen}
-  <WelcomeModal onClose={closeWelcome} />
-{/if}
 
 <ToastHost />
 
@@ -299,7 +315,7 @@
   .logo { display: inline-flex; color: var(--rail-ink-on); }
   .title { font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--rail-ink-on); }
 
-  .saved { font-size: 12px; color: #7fe0ab; font-weight: 600; white-space: nowrap; animation: savedpulse 1.4s ease-out; }
+  .saved { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: #7fe0ab; font-weight: 600; white-space: nowrap; animation: savedpulse 1.4s ease-out; }
   @keyframes savedpulse {
     0% { opacity: 0; transform: translateY(-1px); }
     18% { opacity: 1; }
@@ -324,15 +340,18 @@
      repliable/redimensionnable (`Plein écran courbe` ne le masque pas). */
   .shell { flex: 1; display: flex; min-height: 0; }
   .rail {
-    flex: 0 0 auto; width: 56px; background: var(--rail-bg);
+    flex: 0 0 auto; width: 72px; background: var(--rail-bg);
     display: flex; flex-direction: column; align-items: center;
     padding: 12px 0; gap: 4px;
   }
+  /* Icône + libellé : des icônes seules (gélule, curseurs) obligeaient à
+     survoler chaque bouton pour trouver « Traitements ». */
   .rbtn {
-    width: 40px; height: 40px; border: none; background: transparent;
-    border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    color: var(--rail-ink); padding: 0;
+    width: 62px; min-height: 52px; border: none; background: transparent;
+    border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; color: var(--rail-ink); padding: 6px 2px;
   }
+  .rlab { font-size: 10.5px; font-weight: 700; line-height: 1.1; }
   .rbtn:hover { background: rgba(255,255,255,.05); color: var(--rail-ink-on); }
   .rbtn.on { background: var(--rail-bg-on); color: var(--rail-ink-on); }
   .rbtn:active { transform: none; }
@@ -401,6 +420,13 @@
      barre du haut et le tableau disparaissent alors de l'écran. */
   .chart-area { flex: 1; min-width: 0; min-height: 0; background: var(--canvas-bg); }
 
+  /* Portable étroit / tablette : les commandes de mise en page, Annuler et
+     Rétablir passent en icônes (infobulle conservée) ; sinon la barre
+     débordait — « Ouvrir » coupé, « Enregistrer » masqué à 1024 px. */
+  @media (max-width: 1280px) {
+    .side-toggle .txt, .sens-btn .txt, .uz-btn .txt, .saved .txt { display: none; }
+    .side-toggle, .sens-btn, .uz-btn { padding: 6px 9px; }
+  }
   @media (max-width: 900px) { .sens-btn { display: none; } }
 
   @media (max-width: 820px) {

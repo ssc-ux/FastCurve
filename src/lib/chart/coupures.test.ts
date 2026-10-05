@@ -34,9 +34,13 @@ describe('coupure de l’axe du temps', () => {
       },
     } as StudyState;
     const { svg } = renderChart(study);
-    expect(svg).toContain('stroke-dasharray="2 4"');
+    // Un seul tracé, interrompu (deux « M ») : rien ne relie les deux salves.
+    const trace = svg.match(/<path d="(M[^"]+)" fill="none" stroke="#2a78d6"/)![1];
+    expect(trace.match(/M/g)).toHaveLength(2);
+    // La salve de 2026 a sa propre date lisible.
+    expect(svg).toMatch(/\d\d\/09\/2026/);
     // Sans axe proportionnel au temps, rien à couper.
     const regulier = renderChart({ ...study, settings: { ...study.settings, timeAxis: false } });
-    expect(regulier.svg).not.toContain('stroke-dasharray="2 4"');
+    expect(regulier.svg.match(/<path d="(M[^"]+)" fill="none" stroke="#2a78d6"/)![1].match(/M/g)).toHaveLength(1);
   });
 });

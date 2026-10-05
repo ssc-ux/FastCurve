@@ -48,7 +48,10 @@
     try { return localStorage.getItem(CLE_EMPREINTE) ?? ''; } catch { return ''; }
   }
   let empreinteFichier = $state(lireEmpreinte());
-  const nonEnregistre = $derived(!vide && empreinte(store.exportJSON()) !== empreinteFichier);
+  // La pastille ne s'affiche qu'une fois un fichier déjà enregistré : avant,
+  // elle signalait en permanence un « non enregistré » à côté de la
+  // sauvegarde automatique, et les deux se contredisaient.
+  const nonEnregistre = $derived(!vide && empreinteFichier !== '' && empreinte(store.exportJSON()) !== empreinteFichier);
   function memoriserEmpreinte() {
     empreinteFichier = empreinte(store.exportJSON());
     try { localStorage.setItem(CLE_EMPREINTE, empreinteFichier); } catch { /* ignore */ }
@@ -78,6 +81,7 @@
   }
 
   function nouveau() {
+    uiBus.accueil = true;
     if (vide) { store.nouvelleEtude(); return; }
     const avant = store.exportJSON();
     store.nouvelleEtude();
@@ -162,7 +166,7 @@
     .doc { gap: 3px; padding-left: 6px; }
     /* Icône + libellé court dessous : des icônes seules (dossier, fichier+,
        flèche, disquette) laissaient deviner leur rôle. */
-    .act, .nom { flex-direction: column; gap: 2px; padding: 4px 5px; font-size: 9.5px; line-height: 1.1; }
+    .act, .nom { flex-direction: column; gap: 2px; padding: 4px 4px; font-size: 10px; line-height: 1.1; }
     .act .txt { display: block; overflow: visible; }
     .nom .txt { display: block; max-width: 52px; }
   }
