@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { voter } from './pipeline';
+import { voter } from './vote';
 import { corrigerNomParCatalogue } from './roles';
 import { effacerFilets } from './structure';
 import { matchCatalogExact } from '../models/catalog';

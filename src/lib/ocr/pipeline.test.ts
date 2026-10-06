@@ -17,7 +17,7 @@ import { jugerDate, jugerNom, jugerValeur, type ContexteValeur } from './confian
 import {
   blocPourColonne, blocsDeBande, ecartMaxInterne, ecarterBandesDecoratives, etendue,
   isolerTableau, plageEntete, retenirBlocEntete,
-} from './pipeline';
+} from './decoupage';
 import { sansDecorationsCouleur, seuilDeBruit, type CarteCouleur, type CarteEncre } from './structure';
 
 // ── Outils : fabriquer une carte d'encre à la main ──────────────

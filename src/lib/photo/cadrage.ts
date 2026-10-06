@@ -10,7 +10,7 @@
 // ──────────────────────────────────────────────────────────────
 
 import { detecterBandes, effacerFilets, hauteurLigne, type Bande, type CarteEncre } from '../ocr/structure';
-import { ecartMaxInterne, etendue } from '../ocr/pipeline';
+import { ecartMaxInterne, etendue } from '../ocr/decoupage';
 
 export interface BoiteTableau { x0: number; y0: number; x1: number; y1: number; }
 
