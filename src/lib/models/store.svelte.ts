@@ -38,6 +38,7 @@ function defaultSettings(): Settings {
     showValues: false,
     timeAxis: true,
     markOutOfRange: false,
+    impression: false,
   };
 }
 

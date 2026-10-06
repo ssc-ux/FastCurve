@@ -90,6 +90,8 @@ export interface Settings {
   timeAxis: boolean;
   /** Entourer les points hors des normes usuelles. */
   markOutOfRange: boolean;
+  /** Préréglage « Impression / N&B » : gros textes, palette Okabe-Ito, hachures. */
+  impression?: boolean;
   /** Fenêtre temporelle affichée (ISO) — null = pas de borne. */
   fromDate?: string | null;
   toDate?: string | null;

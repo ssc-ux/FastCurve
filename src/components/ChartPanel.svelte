@@ -198,6 +198,7 @@
           <label class="mitem"><input type="checkbox" checked={s().showValues} onchange={(e) => store.updateSettings({ showValues: e.currentTarget.checked })} /> Valeurs sur les points</label>
           <label class="mitem"><input type="checkbox" checked={s().markOutOfRange} onchange={(e) => store.updateSettings({ markOutOfRange: e.currentTarget.checked })} /> Marquer les valeurs hors-norme</label>
           <label class="mitem" title="Coché : les dates sont espacées proportionnellement au temps réel écoulé. Décoché : toutes les dates sont espacées régulièrement."><input type="checkbox" checked={s().timeAxis} onchange={(e) => store.updateSettings({ timeAxis: e.currentTarget.checked })} /> Espacer selon le temps réel</label>
+          <label class="mitem" title="Pour un document imprimé ou photocopié : textes plus grands et plus foncés, couleurs lisibles par les daltoniens et en niveaux de gris, bandes de normale hachurées."><input type="checkbox" checked={!!s().impression} onchange={(e) => store.updateSettings({ impression: e.currentTarget.checked })} /> Impression / N&amp;B</label>
           <div class="mdiv"></div>
           <div class="mperiod">
             <span class="mp-title">Période affichée</span>

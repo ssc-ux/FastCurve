@@ -1,6 +1,7 @@
 import type { StudyState, Parameter } from '../models/types';
 import { dayNumber, formatDate } from '../models/types';
 import { niceScale, fmtNum, fmtTick } from './scale';
+import { versionImpression } from './impression';
 
 // ──────────────────────────────────────────────────────────────
 // Rendu SVG type publication scientifique (NEJM)
@@ -798,7 +799,7 @@ export function renderChart(study: StudyState, width = 920): RenderResult {
     + parts.join('')
     + `</svg>`;
 
-  return { svg, width, height, hotspots, ecrasees, empty: isEmpty };
+  return { svg: study.settings.impression ? versionImpression(svg) : svg, width, height, hotspots, ecrasees, empty: isEmpty };
 }
 
 // ── Helpers de tracé ──────────────────────────────────────────
