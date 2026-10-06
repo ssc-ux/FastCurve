@@ -103,11 +103,22 @@ export function exportLearning(): string {
 /** Fusionne un fichier d'apprentissage dans la mémoire locale. */
 export function importLearning(json: string): boolean {
   try {
-    const inc = JSON.parse(json) as Partial<LearnData>;
+    if (json.length > 2_000_000) return false;
+    const inc: unknown = JSON.parse(json);
+    if (typeof inc !== 'object' || inc === null || Array.isArray(inc)) return false;
+    const { analyteAliases, drugAliases, drugs } = inc as Record<string, unknown>;
+    const objet = (x: unknown): Record<string, unknown> =>
+      typeof x === 'object' && x !== null && !Array.isArray(x) ? (x as Record<string, unknown>) : {};
     const d = load();
-    Object.assign(d.analyteAliases, inc.analyteAliases || {});
-    Object.assign(d.drugAliases, inc.drugAliases || {});
-    for (const x of inc.drugs || []) if (!d.drugs.some(y => norm(y) === norm(x))) d.drugs.push(x);
+    // Fichier venu d'ailleurs : on ne reprend que les entrées bien formées.
+    for (const [k, v] of Object.entries(objet(analyteAliases))) {
+      const e = objet(v);
+      if (typeof e.name === 'string' && typeof e.unit === 'string') d.analyteAliases[k.slice(0, 200)] = { name: e.name.slice(0, 200), unit: e.unit.slice(0, 50) };
+    }
+    for (const [k, v] of Object.entries(objet(drugAliases))) if (typeof v === 'string') d.drugAliases[k.slice(0, 200)] = v.slice(0, 200);
+    for (const x of Array.isArray(drugs) ? drugs : []) {
+      if (typeof x === 'string' && !d.drugs.some(y => norm(y) === norm(x))) d.drugs.push(x.slice(0, 200));
+    }
     save(d);
     return true;
   } catch {

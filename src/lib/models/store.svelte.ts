@@ -4,6 +4,7 @@ import type {
 } from './types';
 import { uid, SERIES_COLORS, TREATMENT_COLORS } from './types';
 import { matchCatalog, type CatalogEntry } from './catalog';
+import { validerEtude, TAILLE_MAX_JSON } from './validation';
 
 // Un seul document de travail. Le navigateur le retrouve à la réouverture ;
 // pour le garder ou le reprendre ailleurs, on exporte un fichier .json.
@@ -80,8 +81,8 @@ class Store {
     window.addEventListener('storage', (e) => {
       if (!e.key || e.key !== ETUDE_KEY || !e.newValue) return;
       try {
-        const externe = this.mergeDefaults(JSON.parse(e.newValue) as StudyState);
-        if (JSON.stringify(externe) === JSON.stringify(this.study)) return;
+        const externe = this.mergeDefaults(JSON.parse(e.newValue));
+        if (!externe || JSON.stringify(externe) === JSON.stringify(this.study)) return;
         this.study = externe;
         this.externalReload = Date.now();
       } catch { /* contenu illisible : on garde l'état courant */ }
@@ -171,12 +172,9 @@ class Store {
   }
 
   // ── Persistance du document ──────────────────
-  private mergeDefaults(parsed: StudyState): StudyState {
-    return {
-      ...emptyStudy(),
-      ...parsed,
-      settings: { ...defaultSettings(), ...(parsed.settings || {}) },
-    };
+  /** Suivi lu de l'extérieur (fichier, stockage) : validé, `null` s'il n'en est pas un. */
+  private mergeDefaults(parsed: unknown): StudyState | null {
+    return validerEtude(parsed, emptyStudy());
   }
 
   private flagSaveError(e: unknown) {
@@ -198,7 +196,7 @@ class Store {
   private lireDocument(): StudyState | null {
     try {
       const raw = localStorage.getItem(ETUDE_KEY);
-      return raw ? this.mergeDefaults(JSON.parse(raw) as StudyState) : null;
+      return raw ? this.mergeDefaults(JSON.parse(raw)) : null;
     } catch (e) {
       console.warn('Lecture du document échouée', e);
       return null;
@@ -220,14 +218,14 @@ class Store {
         const choisi = index.find(d => d.id === courant)
           ?? [...index].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
         const raw = choisi ? localStorage.getItem(legacyDossierKey(choisi.id)) : null;
-        if (raw) repris = this.mergeDefaults(JSON.parse(raw) as StudyState);
+        if (raw) repris = this.mergeDefaults(JSON.parse(raw));
         for (const d of index) localStorage.removeItem(legacyDossierKey(d.id));
         localStorage.removeItem(LEGACY_DOSSIERS);
         localStorage.removeItem(LEGACY_CURRENT);
       }
       if (!repris) {
         const raw = localStorage.getItem(LEGACY_KEY);
-        if (raw) repris = this.mergeDefaults(JSON.parse(raw) as StudyState);
+        if (raw) repris = this.mergeDefaults(JSON.parse(raw));
       }
       localStorage.removeItem(LEGACY_KEY);
       if (repris) { this.study = repris; this.save(); }
@@ -689,9 +687,10 @@ class Store {
   /** Ouvre un fichier .json : il devient le document de travail. */
   importJSON(json: string): boolean {
     try {
-      const parsed = JSON.parse(json) as StudyState;
-      if (!parsed || !Array.isArray(parsed.parameters)) return false;
-      this.study = this.mergeDefaults(parsed);
+      if (json.length > TAILLE_MAX_JSON) return false;
+      const etude = this.mergeDefaults(JSON.parse(json));
+      if (!etude) return false;
+      this.study = etude;
       this.history = []; this.future = [];
       this.save();
       return true;
