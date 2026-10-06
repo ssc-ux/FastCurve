@@ -63,6 +63,8 @@
     values: string[];
     doutes: boolean[];
     motifs: string[][];
+    /** Correction proposée par case (virgule perdue), à accepter d'un clic. */
+    propositions: (string | undefined)[];
     thumb?: string;
     /** Extrait d'image du nom, et de chaque case (par colonne). */
     nameThumb?: string;
@@ -254,7 +256,7 @@
     colonnes.forEach((iso, i) => { if (iso) indexCol.set('d:' + iso, i); });
     const parNom = new Map<string, VRow>();
     for (const r of vRows) {
-      parNom.set(normName(r.name), { ...r, values: [...r.values], doutes: [...r.doutes], motifs: r.motifs.map(m => [...m]), cellThumbs: [...r.cellThumbs] });
+      parNom.set(normName(r.name), { ...r, values: [...r.values], doutes: [...r.doutes], motifs: r.motifs.map(m => [...m]), propositions: [...r.propositions], cellThumbs: [...r.cellThumbs] });
     }
     let sansDate = 0;
     let conflitsMemeJour = 0;
@@ -282,7 +284,7 @@
           ligne = {
             include: true, name: nom, nameDoute: l.nomDouteux, nameMotifs: l.nomMotifs,
             unit: appris && appris.unit ? appris.unit : l.unite,
-            values: [], doutes: [], motifs: [], thumb: l.vignette, nameThumb: l.vignetteNom, cellThumbs: [], origName: l.nom,
+            values: [], doutes: [], motifs: [], propositions: [], thumb: l.vignette, nameThumb: l.vignetteNom, cellThumbs: [], origName: l.nom,
           };
           parNom.set(cle, ligne);
         }
@@ -305,6 +307,7 @@
             return;
           }
           ligne!.values[gi] = c.texte;
+          ligne!.propositions[gi] = c.proposition;
           if (c.vignette) ligne!.cellThumbs[gi] = c.vignette;
           ligne!.doutes[gi] = c.douteux || !!ligne!.doutes[gi];
           ligne!.motifs[gi] = [...(ligne!.motifs[gi] ?? []), ...c.motifs];
@@ -325,6 +328,7 @@
       values: colonnes.map((_, i) => r.values[i] ?? ''),
       doutes: colonnes.map((_, i) => r.doutes[i] ?? false),
       motifs: colonnes.map((_, i) => r.motifs[i] ?? []),
+      propositions: colonnes.map((_, i) => r.propositions[i]),
       include: colonnes.some((_, i) => (r.values[i] ?? '') !== ''),
     }));
   }
@@ -598,6 +602,9 @@
                     <td class:doute={row.doutes[ci]}>
                       {#if row.cellThumbs[ci]}<img class="extrait" src={row.cellThumbs[ci]} alt="" />{/if}
                       <input bind:value={row.values[ci]} title={infobulle(row.motifs[ci] ?? [])} aria-label="{row.name} — {vDates[ci] ? formatDate(vDates[ci]) : 'date manquante'}" />
+                      {#if row.propositions[ci] && row.propositions[ci] !== row.values[ci]}
+                        <button type="button" class="proposition" title="Virgule probablement perdue à la lecture : remplacer « {row.values[ci]} » par « {row.propositions[ci]} »" onclick={() => { row.values[ci] = row.propositions[ci]!; }}>→ {row.propositions[ci]?.replace('.', ',')} ?</button>
+                      {/if}
                     </td>
                   {/each}
                 </tr>
@@ -713,6 +720,7 @@
      compare case par case, sans rouvrir l'image. */
   .vgrid img.extrait { display: block; height: 22px; width: auto; max-width: 110px; margin: 0 auto 3px; border-radius: 3px; }
   .vgrid td.name img.extrait { margin-left: 0; max-width: 200px; }
+  .vgrid button.proposition { display: block; margin: 3px auto 0; padding: 1px 6px; font-size: 12px; min-height: 0; }
   @media (max-width: 640px) {
     .vgrid td:first-child, .vgrid th:first-child { width: 30px; padding: 2px; }
     .vgrid .ninp { width: 104px; }

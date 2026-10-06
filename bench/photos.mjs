@@ -33,7 +33,7 @@ for (const c0 of cas.filter(x => x.id.includes(filtre))) {
     window.__traces = [];
     const res = t.echec ? { dates: [], lignes: [] } : {
       dates: t.dates.map(d => d.iso ?? ''),
-      lignes: t.lignes.map(l => ({ nom: l.nom, unite: l.unite, valeurs: l.cellules.map(x => x.texte), douteux: l.cellules.map(x => x.douteux) })),
+      lignes: t.lignes.map(l => ({ nom: l.nom, unite: l.unite, valeurs: l.cellules.map(x => x.proposition ?? x.texte), douteux: l.cellules.map(x => x.douteux) })),
     };
     return { traces: window.__traces, img: window.__prete, lu: [res.dates.join(' '), ...res.lignes.map(l => l.nom + ': ' + l.valeurs.map((v, k) => v + (l.douteux[k] ? '?' : '')).join('|'))], verdict: a.verdict.message, angle: a.mesure.angle, boite: !!a.boiteRelative, echec: t.echec ? t.message : '', score: noter(c, res) };
   }, c);

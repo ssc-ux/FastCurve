@@ -53,6 +53,8 @@ export interface CelluleLue {
   motifs: string[];
   /** Extrait de l'image d'origine pour CETTE case (data-URL). */
   vignette?: string;
+  /** Correction PROPOSÉE (virgule perdue) : jamais appliquée sans le médecin. */
+  proposition?: string;
 }
 
 export interface LigneLue {
@@ -975,13 +977,13 @@ async function reconnaitreTableauDepuis(
         colonneAnormale: colonneAnormale[c],
         picto: v.picto,
       });
-      // Virgule perdue, la ligne pour témoin : on la rétablit — la case reste
-      // jaune, le médecin confirme.
+      // Virgule perdue, la ligne pour témoin : on PROPOSE la correction, le
+      // texte lu reste tel quel tant que le médecin ne l'a pas acceptée.
       const corrige = corrigerDecimalePerdue(v.texte, valeurs.filter((_, k) => k !== c).map(o => o.texte));
       if (corrige) {
         return {
-          texte: corrige, douteux: true,
-          motifs: [...verdict.motifs.filter(m => !m.includes('facteur 10')), `virgule rétablie d’après le reste de la ligne (lu « ${v.texte} »)`],
+          texte: v.texte, douteux: true, proposition: corrige,
+          motifs: [...verdict.motifs.filter(m => !m.includes('facteur 10')), `virgule probablement perdue : lu « ${v.texte} », proposé « ${corrige} »`],
           vignette: opts.vignettes && v.encre > 0 ? vignette(source, boitesValeurs[c][r]) : undefined,
         };
       }

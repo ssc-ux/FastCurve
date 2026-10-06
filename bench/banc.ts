@@ -46,7 +46,7 @@ async function moteurNouveau(img: HTMLImageElement): Promise<TableauMesure> {
     lignes: t.lignes.map(l => ({
       nom: l.nom,
       unite: l.unite,
-      valeurs: l.cellules.map(c => c.texte),
+      valeurs: l.cellules.map(c => c.proposition ?? c.texte),
       douteux: l.cellules.map(c => c.douteux),
     })),
   };

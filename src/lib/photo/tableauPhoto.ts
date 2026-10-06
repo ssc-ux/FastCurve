@@ -227,7 +227,7 @@ export async function lireTableauPhoto(image: HTMLCanvasElement, opts: OptionsPh
     cellules.forEach((c, k) => {
       if (!c.texte) return;
       const corrige = corrigerDecimalePerdue(c.texte, cellules.filter((_, j) => j !== k).map(o => o.texte));
-      if (corrige) { c.motifs.push(`virgule rétablie d’après le reste de la ligne (lu « ${c.texte} »)`); c.texte = corrige; c.douteux = true; }
+      if (corrige) { c.motifs.push(`virgule probablement perdue : lu « ${c.texte} », proposé « ${corrige} »`); c.proposition = corrige; c.douteux = true; }
     });
     sortie.push({
       nom, unite, nomDouteux: nomCoupe, nomMotifs: nomCoupe ? ['nom coupé au bord gauche de la photo'] : [], cellules,
