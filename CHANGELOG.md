@@ -10,7 +10,7 @@
   navigateur, aucun enregistrement sur un serveur, pas de document
   permettant d'identifier le patient. Remplace la fenêtre de présentation.
 
-### Interface (audit UI/UX, `docs/AUDIT-UX.md`)
+### Interface (audit UI/UX)
 - Barre du haut : « ✓ Sauvegarde auto » (navigateur) ne contredit plus
   « Enregistrer » (fichier) ; la pastille orange n'apparaît qu'après un
   premier fichier enregistré.

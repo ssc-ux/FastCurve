@@ -1,7 +1,7 @@
 // Page de banc d'épreuve : exécute un moteur OCR sur toutes les captures de
 // bench/shots/ et renvoie les scores. Pilotée par bench/run.mjs (Playwright).
 //
-//   window.lancerBanc('ancien' | 'nouveau') → { scores, total, details }
+//   window.lancerBanc('nouveau') → { scores, total, details }
 
 import { noter, cumuler, type CasVerite, type Score, type TableauMesure } from './notation';
 import { casMedecin, cumulerCas, type CasMedecin } from './medecin';
@@ -15,25 +15,6 @@ function charger(url: string): Promise<HTMLImageElement> {
     im.onerror = () => rej(new Error('image illisible ' + url));
     im.src = url;
   });
-}
-
-/** Ancien moteur : prétraitement par défaut → OCR global → reconstruction géométrique. */
-async function moteurAncien(img: HTMLImageElement): Promise<TableauMesure> {
-  const { processImage, defaultProcessOptions } = await import('./ancien/image');
-  const { runOcr } = await import('./ancien/ocr');
-  const { parseTable } = await import('./ancien/tableParser');
-  const canvas = processImage(img, defaultProcessOptions());
-  const t = parseTable((await runOcr(canvas)).words);
-  return {
-    dates: t.dates,
-    lignes: t.rows.map(r => ({
-      nom: r.name,
-      unite: r.unit,
-      valeurs: r.values.map(v => (v === null ? '' : String(v))),
-      // L'ancien écran surligne en dessous de 65 % de confiance Tesseract.
-      douteux: r.conf.map(c => c > 0 && c < 65),
-    })),
-  };
 }
 
 /** Nouveau moteur : chaîne complète refondue. */
@@ -52,7 +33,7 @@ async function moteurNouveau(img: HTMLImageElement): Promise<TableauMesure> {
   };
 }
 
-async function lancerBanc(moteur: 'ancien' | 'nouveau', filtre?: string) {
+async function lancerBanc(moteur: 'nouveau' = 'nouveau', filtre?: string) {
   const verite: CasVerite[] = await (await fetch('./shots/verite.json')).json();
   const cas = filtre ? verite.filter(c => c.id.includes(filtre)) : verite;
   const scores: Score[] = [];
@@ -63,7 +44,7 @@ async function lancerBanc(moteur: 'ancien' | 'nouveau', filtre?: string) {
     const img = await charger('./shots/' + c.fichier);
     let res: TableauMesure;
     try {
-      res = moteur === 'ancien' ? await moteurAncien(img) : await moteurNouveau(img);
+      res = await moteurNouveau(img);
     } catch (e: any) {
       res = { dates: [], lignes: [] };
       details.push({ id: c.id, erreur: String(e?.message || e) });

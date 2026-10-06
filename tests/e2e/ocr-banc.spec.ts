@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // Verrou de qualité de la reconnaissance : toutes les captures du banc
-// (bench/shots, dont deux captures réelles d'extranet hospitalier) doivent
+// (bench/shots, captures fictives) doivent
 // être lues sans AUCUNE erreur. Une régression de l'OCR fait échouer la CI.
 test('banc OCR : 100 % des cases, dates et lignes, aucune erreur', async ({ page }) => {
   test.setTimeout(300_000);

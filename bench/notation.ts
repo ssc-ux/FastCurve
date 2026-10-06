@@ -1,5 +1,4 @@
 // Notation du banc d'épreuve : compare un tableau reconnu à la vérité terrain.
-// Utilisé pour l'ancien comme pour le nouveau moteur (mêmes règles).
 
 export interface LigneVerite { nom: string; unite: string; valeurs: string[]; }
 export interface CasVerite { id: string; fichier: string; dates: string[]; lignes: LigneVerite[]; }

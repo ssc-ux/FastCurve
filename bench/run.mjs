@@ -1,7 +1,7 @@
 // Pilote le banc d'épreuve dans un vrai Chromium.
 //
 //   npx vite --port 5212 &   (serveur de développement)
-//   node bench/run.mjs ancien|nouveau [filtre]
+//   node bench/run.mjs nouveau [filtre]
 //
 // Écrit bench/resultats-<moteur>.json et affiche un tableau récapitulatif.
 
