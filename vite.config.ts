@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { svelteTesting } from '@testing-library/svelte/vite';
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -28,7 +29,7 @@ const isolation = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-E
 // Base relative : fonctionne à la racine comme sous /<repo>/ (GitHub Pages).
 export default defineConfig({
   base: './',
-  plugins: [svelte(), versionnerServiceWorker],
+  plugins: [svelte(), svelteTesting(), versionnerServiceWorker],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __BUILD_ID__: JSON.stringify(buildId),

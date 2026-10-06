@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '../Icon.svelte';
+  import { toucheVerification } from '../../lib/clavier';
   // ──────────────────────────────────────────────────────────────
   // ÉCRAN D'IMPORT — il ne fait qu'une chose.
   //
@@ -452,16 +453,7 @@
   // Échap depuis un champ rend le focus ; Échap global annule (réversible).
   function onValidationKey(e: KeyboardEvent) {
     if (!hasValidation) return;
-    const el = e.target as HTMLElement | null;
-    const inField = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
-    if (e.key === 'Enter') {
-      const commitWanted = inField ? (e.ctrlKey || e.metaKey) : (!e.shiftKey && !e.ctrlKey && !e.metaKey);
-      if (commitWanted && !hasMissingDate) { e.preventDefault(); commit(); }
-    } else if (e.key === 'Escape') {
-      if (inField) { (el as HTMLInputElement).blur(); return; }
-      e.preventDefault();
-      cancelValidation();
-    }
+    toucheVerification(e, { valider: commit, annuler: cancelValidation, peutValider: !hasMissingDate });
   }
 
   const infobulle = (motifs: string[]) => (motifs.length ? 'À vérifier : ' + motifs.join(' ; ') : '');

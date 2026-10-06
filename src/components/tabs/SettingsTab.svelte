@@ -98,6 +98,7 @@
     <div class="section-label">Données</div>
     <div class="row wrap">
       <button onclick={() => loadSample()}>Charger un exemple</button>
+      <button onclick={() => (uiBus.aideClavier = true)} title="Touche « ? »">Raccourcis clavier</button>
       <button class="danger" title="Vide les valeurs, dates et traitements ; garde les paramètres et le titre du graphique."
         onclick={() => { store.clearData(); uiBus.toastAction('Données effacées (mesures et traitements).', 'Annuler', () => store.undo()); }}>Effacer les données</button>
       <button class="danger" title="Repart d'un suivi entièrement vierge : paramètres, titre et traitements compris — comme au tout premier lancement."

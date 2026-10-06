@@ -73,6 +73,8 @@ class UiBus {
 
   /** Écran d'accueil affiché à la place du plan de travail (suivi vide). */
   accueil = $state(false);
+  /** Aide des raccourcis clavier ouverte. */
+  aideClavier = $state(false);
   /** Mode d'import demandé depuis l'accueil, à appliquer par DataTab. */
   demandeImport = $state<'photo' | 'dictee' | null>(null);
   /** Un écran de vérification (import, traitements lus) est ouvert : le

@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from '../Icon.svelte';
+  import { toucheVerification } from '../../lib/clavier';
   import { tick, onDestroy } from 'svelte';
   import { store } from '../../lib/models/store.svelte';
   import { CATALOG, type CatalogEntry, normalize } from '../../lib/models/catalog';
@@ -107,15 +108,7 @@
   // C8 : mêmes règles clavier sûres que l'écran OCR (Entrée hors champ / Ctrl+Entrée, Échap réversible).
   function onPasteReviewKey(e: KeyboardEvent) {
     if (!pasteReview) return;
-    const el = e.target as HTMLElement | null;
-    const inField = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
-    if (e.key === 'Enter') {
-      const commitWanted = inField ? (e.ctrlKey || e.metaKey) : (!e.shiftKey && !e.ctrlKey && !e.metaKey);
-      if (commitWanted && !pasteHasMissing) { e.preventDefault(); commitPaste(); }
-    } else if (e.key === 'Escape') {
-      if (inField) { (el as HTMLInputElement).blur(); return; }
-      e.preventDefault(); cancelPaste();
-    }
+    toucheVerification(e, { valider: commitPaste, annuler: cancelPaste, peutValider: !pasteHasMissing });
   }
 
   type LigneCollee = { include: boolean; name: string; values: (number | null)[]; qualifiers: ('<' | '>' | null)[] };

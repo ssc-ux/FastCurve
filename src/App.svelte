@@ -1,6 +1,8 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import ChartPanel from './components/ChartPanel.svelte';
+  import AideClavier from './components/AideClavier.svelte';
+  import { dansChamp } from './lib/clavier';
   import DataTab from './components/tabs/DataTab.svelte';
   import TreatmentsTab from './components/tabs/TreatmentsTab.svelte';
   import SettingsTab from './components/tabs/SettingsTab.svelte';
@@ -76,6 +78,7 @@
   });
 
   function onKey(e: KeyboardEvent) {
+    if (e.key === '?' && !e.ctrlKey && !e.metaKey && !dansChamp(e.target)) { e.preventDefault(); uiBus.aideClavier = true; return; }
     if (!(e.ctrlKey || e.metaKey)) return;
     const tag = (e.target as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -301,6 +304,7 @@
 </div>
 
 <ToastHost />
+<AideClavier />
 
 <style>
   .app { display: flex; flex-direction: column; height: 100vh; }
