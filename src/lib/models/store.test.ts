@@ -334,3 +334,25 @@ describe('store — groupParameterWith (panneaux groupés)', () => {
     expect(store.study.parameters.find(p => p.id === a.id)!.panelGroup ?? null).toBeNull();
   });
 });
+
+describe('store — confidentialité', () => {
+  it('purge à la fermeture activée par défaut, désactivable', async () => {
+    const store = await neufStore();
+    expect(store.clearOnExit).toBe(true);
+    store.setClearOnExit(false);
+    vi.resetModules();
+    const { store: relu } = await import('./store.svelte');
+    expect(relu.clearOnExit).toBe(false);
+  });
+
+  it('« Tout effacer » retire toutes les clés FastCurve et vide le suivi', async () => {
+    const store = await neufStore();
+    store.addParameter({ name: 'CRP', unit: 'mg/L', category: 'biologie' });
+    localStorage.setItem('fastcurve.templates.v1', '[]');
+    localStorage.setItem('autre.appli', 'garde');
+    store.effacerTout();
+    expect(store.estVide).toBe(true);
+    expect(Object.keys(localStorage).filter(k => k.startsWith('fastcurve'))).toEqual([]);
+    expect(localStorage.getItem('autre.appli')).toBe('garde');
+  });
+});

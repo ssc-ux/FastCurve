@@ -25,9 +25,13 @@
   }
 
   // Confidentialité : armer une purge à la fermeture (un simple F5 ne l'active pas).
-  function onBeforeUnload() {
+  function onBeforeUnload(e: BeforeUnloadEvent) {
     validerSaisieEnCours();
-    if (store.clearOnExit) store.armExitWipe();
+    if (!store.clearOnExit) return;
+    store.armExitWipe();
+    // Le suivi sera effacé : le navigateur demande confirmation avant de
+    // fermer (texte imposé par le navigateur, non personnalisable).
+    if (!store.estVide) { e.preventDefault(); e.returnValue = ''; }
   }
   function onVisibilityChange() {
     if (document.visibilityState === 'hidden') validerSaisieEnCours();

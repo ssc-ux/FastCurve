@@ -86,8 +86,12 @@
     </p>
     <label class="row" style="gap:8px; cursor:pointer;">
       <input type="checkbox" checked={store.clearOnExit} onchange={(e) => store.setClearOnExit(e.currentTarget.checked)} />
-      <span class="small">Effacer le suivi à la fermeture de l'onglet <span class="faint">(un simple rechargement F5 ne l'efface pas. La purge s'exécute à la prochaine ouverture — d'ici là, les données restent dans ce navigateur. Poste partagé : enregistrez le fichier avant !)</span></span>
+      <span class="small">Effacer le suivi à la fermeture de l'onglet <span class="faint">(activé par défaut ; le navigateur demande confirmation avant de fermer. Un simple rechargement F5 n'efface rien. La purge s'exécute à la prochaine ouverture — d'ici là, les données restent dans ce navigateur. Enregistrez le fichier avant de fermer !)</span></span>
     </label>
+    <div class="row" style="margin-top:8px;">
+      <button class="danger" title="Efface toutes les traces de FastCurve dans ce navigateur : suivi, modèles, mémoire de lecture et préférences."
+        onclick={() => { if (confirm('Tout effacer ?\n\nLe suivi, les modèles, la mémoire de lecture et les préférences de FastCurve seront supprimés de ce navigateur. Cette action est définitive : enregistrez le fichier avant si vous voulez le garder.')) { store.effacerTout(); uiBus.toast('Toutes les données de FastCurve ont été effacées de ce navigateur.', 'info'); } }}>Tout effacer</button>
+    </div>
   </div>
 
   <div class="card" style="padding:12px;">

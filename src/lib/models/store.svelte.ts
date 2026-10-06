@@ -612,7 +612,9 @@ class Store {
   clearOnExit = $state<boolean>(this.readClearOnExit());
 
   private readClearOnExit(): boolean {
-    try { return localStorage.getItem('fastcurve.clearOnExit.v1') === '1'; } catch { return false; }
+    // Activée par défaut (données de santé sur un poste souvent partagé) :
+    // seul un refus explicite (« 0 ») la désactive.
+    try { return localStorage.getItem('fastcurve.clearOnExit.v1') !== '0'; } catch { return true; }
   }
   setClearOnExit(on: boolean) {
     this.clearOnExit = on;
@@ -641,6 +643,24 @@ class Store {
   }
 
   /** Efface le document de ce navigateur (option « effacer à la fermeture »). */
+  /** Le suivi contient-il quelque chose qu'une purge ferait perdre ? */
+  get estVide(): boolean {
+    return this.study.parameters.length === 0 && this.study.treatments.length === 0 && this.study.annotations.length === 0;
+  }
+
+  /**
+   * « Tout effacer » : toutes les traces de FastCurve dans ce navigateur —
+   * suivi, modèles, mémoire de lecture, préférences — puis un suivi vierge.
+   * Sans annulation possible : c'est le but.
+   */
+  effacerTout() {
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith('fastcurve')) localStorage.removeItem(k);
+    } catch { /* ignore */ }
+    this.study = emptyStudy();
+    this.clearOnExit = true;
+  }
+
   wipeAll() {
     try {
       localStorage.removeItem(ETUDE_KEY);
