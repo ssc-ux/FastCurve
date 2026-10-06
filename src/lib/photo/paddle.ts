@@ -28,6 +28,8 @@ export function chargerPaddle(): Promise<Moteur> {
   if (!moteur) {
     moteur = (async () => {
       ort.env.wasm.wasmPaths = base() + 'ort/';
+      // Inférence dans un Worker : l'interface reste fluide pendant la lecture.
+      ort.env.wasm.proxy = true;
       // Plusieurs cœurs seulement si la page est isolée (SharedArrayBuffer).
       ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
       const opts: ort.InferenceSession.SessionOptions = { executionProviders: ['wasm'] };

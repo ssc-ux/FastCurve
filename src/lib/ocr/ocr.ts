@@ -3,6 +3,7 @@
 // origine via public/tesseract/.
 
 import { createWorker, type Worker } from 'tesseract.js';
+import { relaxedSimd } from 'wasm-feature-detect';
 
 export interface OcrWord {
   text: string;
@@ -26,9 +27,13 @@ let workerPromise: Promise<Worker> | null = null;
 export function initOcr(onProgress?: (p: number, status: string) => void): Promise<Worker> {
   if (workerPromise) return workerPromise;
   const base = assetBase();
-  workerPromise = createWorker('fra', 1, {
+  // Deux moteurs seulement sont servis : SIMD « relaxé » (Chrome, Edge) et
+  // générique (partout ailleurs). On désigne le fichier nous-mêmes : laissé
+  // libre, tesseract.js réclamerait sur Safari/Firefox une variante « simd »
+  // que le site ne sert pas.
+  workerPromise = relaxedSimd().catch(() => false).then(relaxe => createWorker('fra', 1, {
     workerPath: base + 'worker.min.js',
-    corePath: base,
+    corePath: base + (relaxe ? 'tesseract-core-relaxedsimd-lstm.wasm.js' : 'tesseract-core-lstm.wasm.js'),
     langPath: base,
     gzip: true,
     logger: (m: any) => {
@@ -41,7 +46,7 @@ export function initOcr(onProgress?: (p: number, status: string) => void): Promi
       tessedit_pageseg_mode: '6' as any,
     });
     return w;
-  });
+  }));
   return workerPromise;
 }
 

@@ -25,7 +25,8 @@
   "type": "module",
   "dependencies": {
     "pdfjs-dist": "^4.10.38",
-    "tesseract.js": "^7.0.0"
+    "tesseract.js": "^7.0.0",
+    "wasm-feature-detect": "^1.9.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
