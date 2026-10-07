@@ -28,8 +28,9 @@ export function chargerPaddle(): Promise<Moteur> {
   if (!moteur) {
     moteur = (async () => {
       ort.env.wasm.wasmPaths = base() + 'ort/';
-      // Inférence dans un Worker : l'interface reste fluide pendant la lecture.
-      ort.env.wasm.proxy = true;
+      // Pas de mode « proxy » (Worker) : une fois l'appli assemblée par Vite,
+      // ce Worker charge le paquet de l'interface (« document is not defined »)
+      // et le moteur photo ne démarre plus.
       // Plusieurs cœurs seulement si la page est isolée (SharedArrayBuffer).
       ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
       const opts: ort.InferenceSession.SessionOptions = { executionProviders: ['wasm'] };
