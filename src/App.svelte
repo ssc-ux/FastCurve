@@ -17,7 +17,10 @@
 
   // Préchauffe l'OCR après le premier rendu (le 1er import paraît instantané).
   const ric = (globalThis as any).requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1200));
-  ric(() => preheatOcr());
+  // Pas de préchauffage (≈ 4 Mo) en mode « économie de données » ou sur réseau lent :
+  // le moteur se charge alors au premier import.
+  const reseau = (navigator as any).connection;
+  if (!reseau?.saveData && !/2g|3g/.test(reseau?.effectiveType ?? '')) ric(() => preheatOcr());
 
   /** Valide la cellule en cours d'édition : sans cela, la dernière valeur
    *  tapée est perdue si l'onglet est fermé sans avoir quitté le champ. */

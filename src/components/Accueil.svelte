@@ -83,6 +83,7 @@
     <p class="pied">
       Outil d’illustration, pas d’aide au diagnostic : vérifiez les valeurs lues sur le document source.
       · Version {__APP_VERSION__} · Informations légales dans Réglages › À propos
+      · <a href="https://ssc-ux.github.io/MedInt-Tools/">Tous les outils MedInt Tools</a>
     </p>
   </div>
 </section>
